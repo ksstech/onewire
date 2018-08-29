@@ -33,7 +33,6 @@
 #include	"x_debug.h"
 #include	"x_buffers.h"
 #include	"x_errors_events.h"
-#include	"x_retarget.h"					// getchar_stdin()
 #include	"x_ticktimer.h"					// timing debugging
 #include	"x_syslog.h"
 
