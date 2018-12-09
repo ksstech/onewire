@@ -27,6 +27,7 @@
 #if		(halHAS_DS2482 > 0)
 
 #include	"ds2482.h"
+#include	"rules_engine.h"
 
 #include	"hal_i2c.h"
 
@@ -874,7 +875,6 @@ uint8_t	OWCalcCRC8(DS2482_t * psDS2482, uint8_t data) {
 // ################################# Application support functions #################################
 
 #include	"task_events.h"
-//#include	"x_sensors.h"
 
 ow_rom_t	LastROM		= { 0 } ;
 seconds_t	LastRead	= 0 ;
@@ -993,4 +993,15 @@ int32_t	halDS2482_Identify(uint8_t chanI2C, uint8_t addrI2C) {
 	sDS2482.sI2Cdev.epidI2C.epunit		= UNIT_IDENT ;
 	return erSUCCESS ;
 }
+
+int32_t halDS2482_ConfigMode(rule_t * psRule) {
+	if (psRule->para.u32[psRule->ActIdx][0] == 1) {		// Mode p0=1 specifies scan interval
+		table_work[URI_DS2482].tSenseIntvl	= psRule->para.u32[psRule->ActIdx][1] ; // Set new interval
+	} else {
+		myASSERT(0) ;
+	}
+	SL_DBG("Mode set") ;
+	return erSUCCESS ;
+}
+
 #endif

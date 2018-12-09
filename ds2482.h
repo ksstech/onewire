@@ -154,7 +154,6 @@ int32_t	halDS2482_ScanChannel(DS2482_t * psDS2482, uint8_t Chan) ;
 
 int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) ;
 
-
 // ####################################### Global functions ########################################
 
 // 1-Wire API for DS2482 function prototypes
@@ -188,3 +187,5 @@ int32_t	halDS2482_CountDevices(DS2482_t * psDS2482) ;
 void	halDS2482_PrintROM(ow_rom_t * psOW_ROM) ;
 int32_t	halDS2482_Diagnostics(void) ;
 int32_t	halDS2482_Identify(uint8_t chanI2C, uint8_t addrI2C) ;
+struct rule_s ;
+int32_t halDS2482_ConfigMode(struct rule_s * psRule) ;
