@@ -40,16 +40,14 @@
 #include	<stdint.h>
 #include	<string.h>
 
-// ######################################### DEBUG MACROS ##########################################
+#define	debugFLAG					0x0700
+#define	debugTIMING					(debugFLAG & 0x0001)
+#define	debugRESULT					(debugFLAG & 0x0002)
+#define	debugTRACK					(debugFLAG & 0x0004)
 
-#define	ds2482DEBUG					0x0700
-#define	ds2482DEBUG_TIMING			(ds2482DEBUG & 0x0001)
-#define	ds2482DEBUG_RESULT			(ds2482DEBUG & 0x0002)
-#define	ds2482DEBUG_TRACK			(ds2482DEBUG & 0x0004)
-
-#define	ds2482DEBUG_PARAM			(ds2482DEBUG & 0x0100)
-#define	ds2482DEBUG_BUS_CFG			(ds2482DEBUG & 0x0200)
-#define	ds2482DEBUG_CONFIG			(ds2482DEBUG & 0x0400)
+#define	debugPARAM					(debugFLAG & 0x0100)
+#define	debugBUS_CFG				(debugFLAG & 0x0200)
+#define	debugCONFIG					(debugFLAG & 0x0400)
 
 // DS2484 channel Number to Selection (1's complement) translation
 static	const	uint8_t		ds2482_N2S[configHAL_I2C_1WIRE_IN] = { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 } ;
@@ -65,7 +63,7 @@ DS2482_t	sDS2482 = { 0 } ;
  */
 void	halDS2482_PrintRegister(DS2482_t * psDS2482, uint8_t Reg) {
 int32_t channel ;
-	IF_myASSERT(ds2482DEBUG_PARAM, Reg < DS2482_REGNUM_MAX) ;
+	IF_myASSERT(debugPARAM, Reg < DS2482_REGNUM_MAX) ;
 	switch (Reg) {
 	case DS2482_REGNUM_STAT:
 		PRINT("STAT(%d)= 0x%02X DIR=%c TSB=%c SBR=%c RST=%c LL=%c SD=%c PPD=%c 1WB=%c\n",
@@ -111,7 +109,7 @@ int32_t channel ;
  */
 uint8_t	halDS2482_ReadRegister(DS2482_t * psDS2482, uint8_t Reg) {
 int32_t iRetVal ;
-	IF_myASSERT(ds2482DEBUG_PARAM, Reg < DS2482_REGNUM_MAX)
+	IF_myASSERT(debugPARAM, Reg < DS2482_REGNUM_MAX)
 	iRetVal = halI2C_Read(&psDS2482->sI2Cdev, (uint8_t *) &psDS2482->Regs.RegX[Reg], sizeof(uint8_t)) ;
 	if (iRetVal != erSUCCESS) {
 		SL_ERR("Failed !!!") ;
@@ -189,7 +187,7 @@ int32_t iRetVal = halI2C_WriteRead(&psDS2482->sI2Cdev, &cChr, sizeof(cChr), &sta
 int32_t	halDS2482_SetReadPointer(DS2482_t * psDS2482, uint8_t Reg) {
 int32_t	iRetVal ;
 uint8_t		cBuf[2] ;
-	IF_myASSERT(ds2482DEBUG_PARAM, Reg < DS2482_REGNUM_MAX)
+	IF_myASSERT(debugPARAM, Reg < DS2482_REGNUM_MAX)
 	cBuf[0] = CMD_SRP ;
 	cBuf[1] = (~Reg << 4) | Reg ;
 	iRetVal = halI2C_Write(&psDS2482->sI2Cdev, cBuf, sizeof(cBuf)) ;
@@ -219,7 +217,7 @@ uint8_t	config = psDS2482->Regs.RegX[DS2482_REGNUM_CONF] & 0x0F ;
 uint8_t new_conf ;
 uint8_t	cBuf[2] ;
 	myASSERT(config < 0x10)
-	IF_myASSERT(ds2482DEBUG_BUS_CFG, psDS2482->Regs.OWB == 0) ;				// check that bus not busy
+	IF_myASSERT(debugBUS_CFG, psDS2482->Regs.OWB == 0) ;				// check that bus not busy
 	cBuf[0]	= CMD_WCFG ;
 	cBuf[1] = (~config << 4) | config ;
 	int32_t iRetVal = halI2C_WriteRead(&psDS2482->sI2Cdev, cBuf, sizeof(cBuf), &new_conf, sizeof(new_conf)) ;
@@ -257,7 +255,7 @@ int32_t halDS2482_detect(DS2482_t * psDS2482) {
 	psDS2482->Regs.OWS	= 0 ;
 	psDS2482->Regs.RES1	= 0 ;						// MSBit
 // confirm bit packing order is correct
-	IF_myASSERT(ds2482DEBUG_CONFIG, psDS2482->Regs.RegX[DS2482_REGNUM_CONF] == CONFIG_APU) ;
+	IF_myASSERT(debugCONFIG, psDS2482->Regs.RegX[DS2482_REGNUM_CONF] == CONFIG_APU) ;
 // write the default configuration setup
 	return halDS2482_write_config(psDS2482) ;
 }
@@ -275,9 +273,9 @@ int32_t halDS2482_channel_select(DS2482_t * psDS2482, uint8_t Chan) {
 //  [] indicates from slave
 //  CC channel value
 //  RR channel read back
-	IF_myASSERT(ds2482DEBUG_PARAM, Chan < configHAL_I2C_1WIRE_IN) ;
-	IF_myASSERT(ds2482DEBUG_BUS_CFG, psDS2482->Regs.OWB == 0) ;				// check that bus not busy
-	IF_PRINT(ds2482DEBUG_TRACK, "Chan=%d\n", Chan) ;
+	IF_myASSERT(debugPARAM, Chan < configHAL_I2C_1WIRE_IN) ;
+	IF_myASSERT(debugBUS_CFG, psDS2482->Regs.OWB == 0) ;				// check that bus not busy
+	IF_PRINT(debugTRACK, "Chan=%d\n", Chan) ;
 	uint8_t	cBuf[2] ;
 	cBuf[0]	= CMD_CHSL ;
 	cBuf[1] = ds2482_N2S[Chan] ;
@@ -319,7 +317,7 @@ uint8_t halDS2482_search_triplet(DS2482_t * psDS2482, uint8_t search_direction) 
 //  [] indicates from slave
 //  SS indicates byte containing search direction bit value in msbit
 uint8_t	cBuf[2] ;
-	IF_myASSERT(ds2482DEBUG_PARAM, search_direction < 2) ;
+	IF_myASSERT(debugPARAM, search_direction < 2) ;
 	cBuf[0]	= CMD_1WT ;
 	cBuf[1]	= search_direction ? 0x80 : 0x00 ;
 	if (halDS2482_WriteAndWait(psDS2482, cBuf, sizeof(cBuf)) == erFAILURE) {
@@ -337,9 +335,9 @@ uint8_t	cBuf[2] ;
  * 					1-Wire device ROM SN# will be in the structure
  */
 int32_t	halDS2482_ScanChannel(DS2482_t * psDS2482, uint8_t Chan) {
-	IF_myASSERT(ds2482DEBUG_PARAM, INRANGE_SRAM(psDS2482)) ;
-	IF_myASSERT(ds2482DEBUG_PARAM, Chan < configHAL_I2C_1WIRE_IN) ;
-	IF_PRINT(ds2482DEBUG_TRACK, "Chan=%d\n", Chan) ;
+	IF_myASSERT(debugPARAM, INRANGE_SRAM(psDS2482)) ;
+	IF_myASSERT(debugPARAM, Chan < configHAL_I2C_1WIRE_IN) ;
+	IF_PRINT(debugTRACK, "Chan=%d\n", Chan) ;
 	int32_t	iRetVal ;
 	if (psDS2482->CurChan != Chan) {
 		iRetVal = halDS2482_channel_select(psDS2482, Chan) ;
@@ -367,8 +365,8 @@ int32_t OWReset(DS2482_t * psDS2482) {
 //									\--------/
 //						Repeat until 1WB bit has changed to 0
 //  [] indicates from slave
-	IF_myASSERT(ds2482DEBUG_BUS_CFG, psDS2482->Regs.OWB == 0) ;			// check bus not busy
-	IF_myASSERT(ds2482DEBUG_BUS_CFG, psDS2482->Regs.SPU == 0) ;			// check SPU not enabled
+	IF_myASSERT(debugBUS_CFG, psDS2482->Regs.OWB == 0) ;			// check bus not busy
+	IF_myASSERT(debugBUS_CFG, psDS2482->Regs.SPU == 0) ;			// check SPU not enabled
 	uint8_t	cChr = CMD_1WRS ;
 	if (halDS2482_WriteAndWait(psDS2482, &cChr, sizeof(cChr)) == erFAILURE) {
 		halDS2482_reset(psDS2482);
@@ -412,8 +410,8 @@ uint8_t OWTouchBit(DS2482_t * psDS2482, uint8_t sendbit) {
 //  [] indicates from slave
 //  BB indicates byte containing bit value in msbit
 uint8_t	cBuf[2] ;
-	IF_myASSERT(ds2482DEBUG_PARAM, sendbit < 2) ;
-	IF_myASSERT(ds2482DEBUG_BUS_CFG, psDS2482->Regs.OWB == 0)	;
+	IF_myASSERT(debugPARAM, sendbit < 2) ;
+	IF_myASSERT(debugBUS_CFG, psDS2482->Regs.OWB == 0)	;
 	cBuf[0]	= CMD_1WSB ;
 	cBuf[1] = sendbit ? 0x80 : 0x00 ;
 	if (halDS2482_WriteAndWait(psDS2482, cBuf, sizeof(cBuf)) == erFAILURE) {
@@ -439,7 +437,7 @@ void	OWWriteByte(DS2482_t * psDS2482, uint8_t sendbyte) {
 //  [] indicates from slave
 //  DD data to write
 uint8_t	cBuf[2] ;
-	IF_myASSERT(ds2482DEBUG_BUS_CFG, psDS2482->Regs.OWB == 0)	;
+	IF_myASSERT(debugBUS_CFG, psDS2482->Regs.OWB == 0)	;
 	cBuf[0]	= CMD_1WWB ;
 	cBuf[1] = sendbyte ;
 	if (halDS2482_WriteAndWait(psDS2482, cBuf, sizeof(cBuf)) == erFAILURE) {
@@ -891,15 +889,15 @@ int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) {
 				 *  will be ignored. */
 				if ((memcmp(&LastROM, &sDS2482.ROM, sizeof(ow_rom_t)) == 0) &&
 					(NowRead - LastRead) <= OWdelay) {
-					IF_PRINT(ds2482DEBUG_RESULT, "SAME iButton in 5sec, Skipped...\n") ;
+					IF_PRINT(debugRESULT, "SAME iButton in 5sec, Skipped...\n") ;
 					break ;
 				}
 				memcpy(&LastROM, &sDS2482.ROM, sizeof(ow_rom_t)) ;
 				LastRead = NowRead ;
 				xTaskNotify(EventsHandle, 1UL << (Chan + se1W_CH0), eSetBits) ;
 				portYIELD() ;
-				IF_PRINT(ds2482DEBUG_RESULT, "NEW iButton Read, or >5sec passed\n") ;
-				IF_EXEC_1(ds2482DEBUG_RESULT, halDS2482_PrintROM, &sDS2482.ROM) ;
+				IF_PRINT(debugRESULT, "NEW iButton Read, or >5sec passed\n") ;
+				IF_EXEC_1(debugRESULT, halDS2482_PrintROM, &sDS2482.ROM) ;
 				break ;
 			}
 			default:
@@ -920,8 +918,8 @@ int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) {
 int32_t	halDS2482_CountDevices(DS2482_t * psDS2482) {
 int32_t	iCount = 0 ;
 int32_t	iRetVal ;
-	IF_myASSERT(ds2482DEBUG_PARAM, INRANGE_SRAM(psDS2482)) ;
-	IF_TICKTIMER_START(ds2482DEBUG_TIMING, tickTIMER_DS2482) ;
+	IF_myASSERT(debugPARAM, INRANGE_SRAM(psDS2482)) ;
+	IF_TICKTIMER_START(debugTIMING, tickTIMER_DS2482) ;
 	for (int32_t Chan = 0; Chan < configHAL_I2C_1WIRE_IN; Chan++) {
 		do {
 			iRetVal = halDS2482_ScanChannel(psDS2482, Chan) ;
@@ -930,13 +928,13 @@ int32_t	iRetVal ;
 			}
 			if (iRetVal == 1) {
 				iCount++ ;
-				IF_EXEC_1(ds2482DEBUG_RESULT, halDS2482_PrintROM, &psDS2482->ROM) ;
+				IF_EXEC_1(debugRESULT, halDS2482_PrintROM, &psDS2482->ROM) ;
 			}
 		} while (iRetVal == 1) ;
 	}
-	IF_TICKTIMER_STOP(ds2482DEBUG_TIMING, tickTIMER_DS2482) ;
-	IF_TICKTIMER_SHOW(ds2482DEBUG_TIMING, 1, 1<<tickTIMER_DS2482) ;
-	IF_PRINT(ds2482DEBUG_TRACK, "DS2482: Found %d devices\n", iCount) ;
+	IF_TICKTIMER_STOP(debugTIMING, tickTIMER_DS2482) ;
+	IF_TICKTIMER_SHOW(debugTIMING, 1, 1<<tickTIMER_DS2482) ;
+	IF_PRINT(debugTRACK, "DS2482: Found %d devices\n", iCount) ;
 	return iCount ;
 }
 
