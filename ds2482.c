@@ -883,7 +883,7 @@ int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) {
 		if (halDS2482_ScanChannel(&sDS2482, Chan) == 1) {		// found a device
 			switch (sDS2482.ROM.Family) {
 			case OWFAMILY_01: {							// DS1990A/R, 2401/11 devices
-				seconds_t NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
+				seconds_t NowRead = xTimeStampAsSeconds(nvsVars.sTSZ.usecs) ;
 				/* To avoid registering multiple reads if the iButton is held in place for too long
 				 * we enforce a period of 'x' seconds within which successive reads of the same tag
 				 *  will be ignored. */
