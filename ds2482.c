@@ -883,7 +883,7 @@ int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) {
 		if (halDS2482_ScanChannel(&sDS2482, Chan) == 1) {		// found a device
 			switch (sDS2482.ROM.Family) {
 			case OWFAMILY_01: {							// DS1990A/R, 2401/11 devices
-				seconds_t NowRead = xTimeStampAsSeconds(nvsVars.sTSZ.usecs) ;
+				seconds_t NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
 				/* To avoid registering multiple reads if the iButton is held in place for too long
 				 * we enforce a period of 'x' seconds within which successive reads of the same tag
 				 *  will be ignored. */
@@ -919,7 +919,8 @@ int32_t	halDS2482_CountDevices(DS2482_t * psDS2482) {
 int32_t	iCount = 0 ;
 int32_t	iRetVal ;
 	IF_myASSERT(debugPARAM, INRANGE_SRAM(psDS2482)) ;
-	IF_TICKTIMER_START(debugTIMING, tickTIMER_DS2482) ;
+	IF_SYSTIMER_RESET_NUM(debugTIMING, systimerDS2482, 1, myMS_TO_CLOCKS(1), myMS_TO_CLOCKS(10)) ;
+	IF_SYSTIMER_START(debugTIMING, systimerDS2482) ;
 	for (int32_t Chan = 0; Chan < configHAL_I2C_1WIRE_IN; Chan++) {
 		do {
 			iRetVal = halDS2482_ScanChannel(psDS2482, Chan) ;
@@ -932,8 +933,8 @@ int32_t	iRetVal ;
 			}
 		} while (iRetVal == 1) ;
 	}
-	IF_TICKTIMER_STOP(debugTIMING, tickTIMER_DS2482) ;
-	IF_TICKTIMER_SHOW(debugTIMING, 1, 1<<tickTIMER_DS2482) ;
+	IF_SYSTIMER_STOP(debugTIMING, systimerDS2482) ;
+	IF_SYSTIMER_SHOW_NUM(debugTIMING, 1, systimerDS2482) ;
 	IF_PRINT(debugTRACK, "DS2482: Found %d devices\n", iCount) ;
 	return iCount ;
 }
