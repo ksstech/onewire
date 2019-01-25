@@ -919,7 +919,7 @@ int32_t	halDS2482_CountDevices(DS2482_t * psDS2482) {
 int32_t	iCount = 0 ;
 int32_t	iRetVal ;
 	IF_myASSERT(debugPARAM, INRANGE_SRAM(psDS2482)) ;
-	IF_SYSTIMER_RESET_NUM(debugTIMING, systimerDS2482, 1, myMS_TO_CLOCKS(1), myMS_TO_CLOCKS(10)) ;
+	IF_SYSTIMER_RESET_NUM(debugTIMING, systimerDS2482, systimerCLOCKS, "DS2482", myMS_TO_CLOCKS(1), myMS_TO_CLOCKS(10)) ;
 	IF_SYSTIMER_START(debugTIMING, systimerDS2482) ;
 	for (int32_t Chan = 0; Chan < configHAL_I2C_1WIRE_IN; Chan++) {
 		do {
