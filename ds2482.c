@@ -40,14 +40,15 @@
 #include	<stdint.h>
 #include	<string.h>
 
-#define	debugFLAG					0x0700
-#define	debugTIMING					(debugFLAG & 0x0001)
-#define	debugRESULT					(debugFLAG & 0x0002)
-#define	debugTRACK					(debugFLAG & 0x0004)
+#define	debugFLAG					0x400C
 
-#define	debugPARAM					(debugFLAG & 0x0100)
-#define	debugBUS_CFG				(debugFLAG & 0x0200)
-#define	debugCONFIG					(debugFLAG & 0x0400)
+#define	debugTIMING					(debugFLAG & 0x0001)
+#define	debugTRACK					(debugFLAG & 0x0002)
+#define	debugBUS_CFG				(debugFLAG & 0x0004)
+#define	debugCONFIG					(debugFLAG & 0x0008)
+
+#define	debugPARAM					(debugFLAG & 0x4000)
+#define	debugRESULT					(debugFLAG & 0x8000)
 
 // DS2484 channel Number to Selection (1's complement) translation
 static	const	uint8_t		ds2482_N2S[configHAL_I2C_1WIRE_IN] = { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 } ;
@@ -83,12 +84,12 @@ int32_t channel ;
 		break ;
 	case DS2482_REGNUM_CHAN:
 		// start by finding the matching Channel #
-		for (channel = 0; channel < configHAL_I2C_1WIRE_IN; channel++) {
+		for (channel = 0; channel < configHAL_I2C_1WIRE_IN; ++channel) {
 			if (psDS2482->Regs.RegX[DS2482_REGNUM_CHAN] == ds2482_V2N[channel]) {
 				break ;
 			}
 		}
-		myASSERT(channel < configHAL_I2C_1WIRE_IN)
+		IF_myASSERT(debugRESULT, channel < configHAL_I2C_1WIRE_IN)
 		PRINT("CHAN(%d)= 0x%02x ==> %d\n",
 				Reg, psDS2482->Regs.RegX[DS2482_REGNUM_CHAN], channel) ;
 		break ;
@@ -216,7 +217,7 @@ int32_t halDS2482_write_config(DS2482_t * psDS2482) {
 uint8_t	config = psDS2482->Regs.RegX[DS2482_REGNUM_CONF] & 0x0F ;
 uint8_t new_conf ;
 uint8_t	cBuf[2] ;
-	myASSERT(config < 0x10)
+	IF_myASSERT(debugPARAM, config < 0x10)
 	IF_myASSERT(debugBUS_CFG, psDS2482->Regs.OWB == 0) ;				// check that bus not busy
 	cBuf[0]	= CMD_WCFG ;
 	cBuf[1] = (~config << 4) | config ;
@@ -291,7 +292,7 @@ int32_t halDS2482_channel_select(DS2482_t * psDS2482, uint8_t Chan) {
  * so verify the return against the code expected, but
  * store the actual channel number if successful */
 	if (result != ds2482_V2N[Chan]) {
-		myASSERT(0) ;
+		IF_myASSERT(debugRESULT, 0) ;
 		return erFAILURE ;
 	}
 // update saved channel selected value (translated value)
@@ -975,7 +976,7 @@ int32_t	halDS2482_Diagnostics(void) {
  * @return				erSUCCESS if device identifies as DS2482 else erFAILURE
  */
 int32_t	halDS2482_Identify(uint8_t chanI2C, uint8_t addrI2C) {
-	myASSERT(chanI2C < halI2C_NUM) ;
+	IF_myASSERT(debugPARAM, chanI2C < halI2C_NUM) ;
 	sDS2482.sI2Cdev.chanI2C	= chanI2C ;
 	sDS2482.sI2Cdev.addrI2C	= addrI2C ;
 	sDS2482.sI2Cdev.dlayI2C	= pdMS_TO_TICKS(750) ;
@@ -997,7 +998,7 @@ int32_t halDS2482_ConfigMode(rule_t * psRule) {
 	if (psRule->para.u32[psRule->ActIdx][0] == 1) {		// Mode p0=1 specifies scan interval
 		table_work[URI_DS2482].tSenseIntvl	= psRule->para.u32[psRule->ActIdx][1] ; // Set new interval
 	} else {
-		myASSERT(0) ;
+		IF_myASSERT(debugPARAM, 0) ;
 	}
 	SL_DBG("Mode set") ;
 	return erSUCCESS ;
