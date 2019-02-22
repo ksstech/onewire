@@ -24,7 +24,7 @@
 
 #include	"FreeRTOS_Support.h"
 
-#if		(halHAS_DS2482 > 0)
+//#if		(halHAS_DS2482 > 0)
 
 #include	"ds2482.h"
 #include	"rules_engine.h"
@@ -43,10 +43,10 @@
 #define	debugFLAG					0x400C
 
 #define	debugTIMING					(debugFLAG & 0x0001)
-#define	debugTRACK					(debugFLAG & 0x0002)
 #define	debugBUS_CFG				(debugFLAG & 0x0004)
 #define	debugCONFIG					(debugFLAG & 0x0008)
 
+#define	debugTRACK					(debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG & 0x8000)
 
@@ -78,10 +78,11 @@ int32_t channel ;
 				psDS2482->Regs.PPD ? '1' : '0',
 				psDS2482->Regs.OWB ? '1' : '0') ;
 		break ;
+
 	case DS2482_REGNUM_DATA:
-		PRINT("DATA(%d)= 0x%02X\n",
-				Reg, psDS2482->Regs.RegX[DS2482_REGNUM_DATA]) ;
+		PRINT("DATA(%d)= 0x%02X\n", Reg, psDS2482->Regs.RegX[DS2482_REGNUM_DATA]) ;
 		break ;
+
 	case DS2482_REGNUM_CHAN:
 		// start by finding the matching Channel #
 		for (channel = 0; channel < configHAL_I2C_1WIRE_IN; ++channel) {
@@ -90,9 +91,9 @@ int32_t channel ;
 			}
 		}
 		IF_myASSERT(debugRESULT, channel < configHAL_I2C_1WIRE_IN)
-		PRINT("CHAN(%d)= 0x%02x ==> %d\n",
-				Reg, psDS2482->Regs.RegX[DS2482_REGNUM_CHAN], channel) ;
+		PRINT("CHAN(%d)= 0x%02x ==> %d\n", Reg, psDS2482->Regs.RegX[DS2482_REGNUM_CHAN], channel) ;
 		break ;
+
 	case DS2482_REGNUM_CONF:
 		PRINT("CONF(%d)= 0x%02X RES1=0x%02X 1WS=%c SPU=%c RES2=%c APU=%c\n",
 				Reg, psDS2482->Regs.RegX[DS2482_REGNUM_CONF],
@@ -113,7 +114,6 @@ int32_t iRetVal ;
 	IF_myASSERT(debugPARAM, Reg < DS2482_REGNUM_MAX)
 	iRetVal = halI2C_Read(&psDS2482->sI2Cdev, (uint8_t *) &psDS2482->Regs.RegX[Reg], sizeof(uint8_t)) ;
 	if (iRetVal != erSUCCESS) {
-		SL_ERR("Failed !!!") ;
 		return 0 ;
 	}
 	return 1 ;
@@ -170,7 +170,6 @@ uint8_t status ;
 uint8_t	cChr = CMD_DRST ;
 int32_t iRetVal = halI2C_WriteRead(&psDS2482->sI2Cdev, &cChr, sizeof(cChr), &status, 1) ;
 	if (iRetVal != erSUCCESS) {
-		SL_ERR("Failed !!!") ;
 		return 0 ;
 	}
 // update the saved status
@@ -193,7 +192,6 @@ uint8_t		cBuf[2] ;
 	cBuf[1] = (~Reg << 4) | Reg ;
 	iRetVal = halI2C_Write(&psDS2482->sI2Cdev, cBuf, sizeof(cBuf)) ;
 	if (iRetVal != erSUCCESS) {
-		SL_ERR("Failed !!!") ;
 		return 0 ;
 	}
 // update the read pointer
@@ -223,7 +221,6 @@ uint8_t	cBuf[2] ;
 	cBuf[1] = (~config << 4) | config ;
 	int32_t iRetVal = halI2C_WriteRead(&psDS2482->sI2Cdev, cBuf, sizeof(cBuf), &new_conf, sizeof(new_conf)) ;
 	if (iRetVal != erSUCCESS) {
-		SL_ERR("Failed !!!") ;
 		return 0 ;
 	}
 // update the saved configuration
@@ -283,7 +280,6 @@ int32_t halDS2482_channel_select(DS2482_t * psDS2482, uint8_t Chan) {
 	uint8_t result ;
 	int32_t iRetVal = halI2C_WriteRead(&psDS2482->sI2Cdev, cBuf, sizeof(cBuf), &result, sizeof(result)) ;
 	if (iRetVal != erSUCCESS) {
-		SL_ERR("Chan=%d Failed !!!", Chan) ;
 		return erFAILURE ;
 	}
 // update the read pointer
@@ -416,7 +412,6 @@ uint8_t	cBuf[2] ;
 	cBuf[0]	= CMD_1WSB ;
 	cBuf[1] = sendbit ? 0x80 : 0x00 ;
 	if (halDS2482_WriteAndWait(psDS2482, cBuf, sizeof(cBuf)) == erFAILURE) {
-		SL_ERR("Failed !!!") ;
 		return 0;
 	}
 // return bit state
@@ -443,7 +438,6 @@ uint8_t	cBuf[2] ;
 	cBuf[1] = sendbyte ;
 	if (halDS2482_WriteAndWait(psDS2482, cBuf, sizeof(cBuf)) == erFAILURE) {
 		halDS2482_reset(psDS2482) ;
-		SL_ERR("Failed !!!") ;
 	}
 }
 
@@ -880,6 +874,7 @@ seconds_t	LastRead	= 0 ;
 uint8_t		OWdelay		= ONEWIRE_DEFAULT_DELAY ;
 
 int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) {
+	IF_SYSTIMER_START(debugTIMING, systimerDS2482) ;
 	for (uint8_t Chan = 0; Chan < configHAL_I2C_1WIRE_IN; Chan++) {
 		if (halDS2482_ScanChannel(&sDS2482, Chan) == 1) {		// found a device
 			switch (sDS2482.ROM.Family) {
@@ -906,6 +901,7 @@ int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) {
 			}
 		}
 	}
+	IF_SYSTIMER_STOP(debugTIMING, systimerDS2482) ;
 	return erSUCCESS ;
 }
 
@@ -917,11 +913,8 @@ int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) {
  * @return			number of devices found
  */
 int32_t	halDS2482_CountDevices(DS2482_t * psDS2482) {
-int32_t	iCount = 0 ;
-int32_t	iRetVal ;
+	int32_t	iCount = 0, iRetVal ;
 	IF_myASSERT(debugPARAM, INRANGE_SRAM(psDS2482)) ;
-	IF_SYSTIMER_RESET_NUM(debugTIMING, systimerDS2482, systimerCLOCKS, "DS2482", myMS_TO_CLOCKS(1), myMS_TO_CLOCKS(10)) ;
-	IF_SYSTIMER_START(debugTIMING, systimerDS2482) ;
 	for (int32_t Chan = 0; Chan < configHAL_I2C_1WIRE_IN; Chan++) {
 		do {
 			iRetVal = halDS2482_ScanChannel(psDS2482, Chan) ;
@@ -934,8 +927,6 @@ int32_t	iRetVal ;
 			}
 		} while (iRetVal == 1) ;
 	}
-	IF_SYSTIMER_STOP(debugTIMING, systimerDS2482) ;
-	IF_SYSTIMER_SHOW_NUM(debugTIMING, 1, systimerDS2482) ;
 	IF_PRINT(debugTRACK, "DS2482: Found %d devices\n", iCount) ;
 	return iCount ;
 }
@@ -960,7 +951,6 @@ void	halDS2482_PrintROM(ow_rom_t * psOW_ROM) {
  */
 int32_t	halDS2482_Diagnostics(void) {
 	if (halDS2482_DecodeRegisters(&sDS2482) == 0) {
-		SL_ERR("Failed !!!") ;
 		return erFAILURE ;
 	}
 	if (halDS2482_CountDevices(&sDS2482) == erFAILURE) {
@@ -991,6 +981,7 @@ int32_t	halDS2482_Identify(uint8_t chanI2C, uint8_t addrI2C) {
 	sDS2482.sI2Cdev.epidI2C.subclass	= subIBUTTON ;
 	sDS2482.sI2Cdev.epidI2C.epuri		= URI_DS2482 ;
 	sDS2482.sI2Cdev.epidI2C.epunit		= UNIT_IDENT ;
+	IF_SYSTIMER_RESET_NUM(debugTIMING, systimerDS2482, systimerTICKS, "DS2482", myMS_TO_CLOCKS(5), myMS_TO_CLOCKS(25)) ;
 	return erSUCCESS ;
 }
 
@@ -998,10 +989,11 @@ int32_t halDS2482_ConfigMode(rule_t * psRule) {
 	if (psRule->para.u32[psRule->ActIdx][0] == 1) {		// Mode p0=1 specifies scan interval
 		table_work[URI_DS2482].tSenseIntvl	= psRule->para.u32[psRule->ActIdx][1] ; // Set new interval
 	} else {
-		IF_myASSERT(debugPARAM, 0) ;
+		SL_DBG("Invalid mode specified") ;
+		return erFAILURE ;
 	}
-	SL_DBG("Mode set") ;
+	IF_SL_DBG(debugTRACK, "Mode %d set to %d", psRule->para.u32[psRule->ActIdx][0], psRule->para.u32[psRule->ActIdx][1]) ;
 	return erSUCCESS ;
 }
 
-#endif
+//#endif
