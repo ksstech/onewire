@@ -24,7 +24,7 @@
 
 #include	"FreeRTOS_Support.h"
 
-//#if		(halHAS_DS2482 > 0)
+#if		(halHAS_DS2482 > 0)
 
 #include	"ds2482.h"
 #include	"rules_engine.h"
@@ -996,4 +996,4 @@ int32_t halDS2482_ConfigMode(rule_t * psRule) {
 	return erSUCCESS ;
 }
 
-//#endif
+#endif
