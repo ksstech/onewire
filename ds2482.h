@@ -124,7 +124,7 @@ typedef union {
 
 	// CONFiguration register
 /*LSB*/	uint8_t		APU		: 1 ;			// Active Pull Up
-		uint8_t		PPM		: 1 ;			// PPM
+		uint8_t		RES2	: 1 ;			// Reserved (PPM)
 		uint8_t		SPU		: 1 ;			// Strong Pull Up
 		uint8_t		OWS		: 1 ;			// 1-Wire Speed
 /*MSB*/	uint8_t		RES1	: 4 ;
