@@ -129,6 +129,12 @@ typedef union {
 		uint8_t		OWS		: 1 ;			// 1-Wire Speed
 /*MSB*/	uint8_t		RES1	: 4 ;
 	} ;
+	struct {
+		uint8_t		Rstat ;
+		uint8_t		Rchan ;
+		uint8_t		Rdata ;
+		uint8_t		Rconf ;
+	} ;
 	uint8_t			RegX[4] ;
 } ds2482_regs_t ;
 
