@@ -49,7 +49,7 @@
 #define	OWFAMILY_0B		0x0B			// (DS1985), DS2505	16Kb EPROM memory
 #define	OWFAMILY_0C		0x0C			// (DS1996)	64Kb NV RAM memory
 #define	OWFAMILY_OF		0x0F			// (DS1986), DS2506	64Kb EPROM memory
-#define	OWFAMILY_10		0x10			// (DS1920)	Temperature with alarm trips
+#define	OWFAMILY_10		0x10			// (DS1820), DS18S20 Temperature with alarm trips
 #define	OWFAMILY_12		0x12			// DS2406, DS2407¹	1Kb EPROM memory, 2-channel addressable switch
 #define	OWFAMILY_14		0x14			// (DS1971), DS2430A¹	256-bit EEPROM memory and 64-bit OTP register
 #define	OWFAMILY_1A		0x1A			// (DS1963L)¹	4Kb NV RAM memory with write cycle counters
@@ -61,6 +61,7 @@
 #define	OWFAMILY_23		0x23			// (DS1973), DS2433	4Kb EEPROM memory
 #define	OWFAMILY_24		0x24			// (DS1904), DS2415	Real-time clock (RTC)
 #define	OWFAMILY_27		0x27			// DS2417	RTC with interrupt
+#define	OWFAMILY_28		0x28			// DS18B20 (9-12 bit programmable) Thermometer
 #define	OWFAMILY_29		0x29			// DS2408	8-channel addressable switch
 #define	OWFAMILY_2C		0x2C			// DS2890¹	1-channel digital potentiometer
 #define	OWFAMILY_2D		0x2D			// (DS1972), DS2431	1024-bit, 1-Wire EEPROM
