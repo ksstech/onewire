@@ -83,6 +83,13 @@
 // ######################################## Enumerations ###########################################
 
 enum {
+	idxOWFAMILY_01,
+	idxOWFAMILY_10,
+	idxOWFAMILY_28,
+	idxOWFAMILY_NUM,
+} ;
+
+enum {
 	sd2482CHAN_0,
 	sd2482CHAN_1,
 	sd2482CHAN_2,
