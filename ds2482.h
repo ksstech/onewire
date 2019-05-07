@@ -33,7 +33,6 @@
 
 // Device base address
 #define	configHAL_I2C_DS2482_ADDR			0x18
-#define configHAL_I2C_1WIRE_IN				8
 
 // misc constants
 #define POLL_LIMIT  						200
@@ -165,24 +164,26 @@ int32_t halDS2482_channel_select(DS2482_t * psDS2482, uint8_t Chan) ;
 int32_t	halDS2482_SetReadPointer(DS2482_t * psDS2482, uint8_t Reg) ;
 int32_t	halDS2482_ScanChannel(DS2482_t * psDS2482, uint8_t Chan) ;
 
+int32_t	xDS2482_ScanAll(void) ;
 int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) ;
 
 // ####################################### Global functions ########################################
 
 // 1-Wire API for DS2482 function prototypes
 void	OWWriteByte(DS2482_t * psDS2482, uint8_t sendbyte) ;
-uint8_t	OWReadByte(DS2482_t * psDS2482) ;
+int32_t	OWReadByte(DS2482_t * psDS2482) ;
 uint8_t	OWTouchByte(DS2482_t * psDS2482, uint8_t sendbyte) ;
 uint8_t	OWTouchBit(DS2482_t * psDS2482, uint8_t sendbit) ;
 void	OWWriteBit(DS2482_t * psDS2482, uint8_t sendbit) ;
 uint8_t	OWReadBit(DS2482_t * psDS2482) ;
 void	OWBlock(DS2482_t * psDS2482, uint8_t *tran_buf, int tran_len) ;
-int32_t	OWFirst(DS2482_t * psDS2482) ;
-int32_t	OWNext(DS2482_t * psDS2482) ;
 int32_t	OWVerify(DS2482_t * psDS2482) ;
 void	OWTargetSetup(DS2482_t * psDS2482, uint8_t family_code) ;
 void	OWFamilySkipSetup(DS2482_t * psDS2482) ;
+
 int32_t	OWSearch(DS2482_t * psDS2482) ;
+int32_t	OWFirst(DS2482_t * psDS2482) ;
+int32_t	OWNext(DS2482_t * psDS2482) ;
 
 // Extended 1-Wire functions
 int32_t	OWSpeed(DS2482_t * psDS2482, int32_t new_speed) ;
