@@ -51,9 +51,9 @@
 #define	debugRESULT					(debugFLAG & 0x8000)
 
 // DS2484 channel Number to Selection (1's complement) translation
-static	const	uint8_t		ds2482_N2S[configHAL_I2C_1WIRE_IN] = { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 } ;
+static	const	uint8_t		ds2482_N2S[sd2482CHAN_NUM] = { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 } ;
 // DS2482 channel Value (read/check) to Number translation
-static	const	uint8_t		ds2482_V2N[configHAL_I2C_1WIRE_IN] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 } ;
+static	const	uint8_t		ds2482_V2N[sd2482CHAN_NUM] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 } ;
 
 DS2482_t	sDS2482 = { 0 } ;
 
@@ -265,7 +265,7 @@ int32_t halDS2482_channel_select(DS2482_t * psDS2482, uint8_t Chan) {
 //  [] indicates from slave
 //  CC channel value
 //  RR channel read back
-	IF_myASSERT(debugPARAM, Chan < configHAL_I2C_1WIRE_IN) ;
+	IF_myASSERT(debugPARAM, Chan < sd2482CHAN_NUM) ;
 	IF_myASSERT(debugBUS_CFG, psDS2482->Regs.OWB == 0) ;				// check that bus not busy
 	uint8_t	cBuf[2] ;
 	cBuf[0]	= CMD_CHSL ;
@@ -843,7 +843,7 @@ uint8_t	OWremapTable[configHAL_I2C_1WIRE_IN] = { 3,	2,	1,	0,	4,	5,	6,	7 } ;
 
 int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) {
 	IF_SYSTIMER_START(debugTIMING, systimerDS2482) ;
-	for (uint8_t Chan = 0; Chan < configHAL_I2C_1WIRE_IN; ++Chan) {
+	for (uint8_t Chan = 0; Chan < sd2482CHAN_NUM; ++Chan) {
 		if (halDS2482_ScanChannel(&sDS2482, Chan) == 1) {		// found a device
 			switch (sDS2482.ROM.Family) {
 			case OWFAMILY_01: {							// DS1990A/R, 2401/11 devices
