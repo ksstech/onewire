@@ -35,7 +35,6 @@
 #define ONEWIRE_CMD_ALARMSEARCH   			0xEC
 
 #define ONEWIRE_ROM_LENGTH        			8
-#define	ONEWIRE_DEFAULT_DELAY				5		// number of seconds to ignore reread of last tag read
 
 // ##################################### iButton Family Codes #####################################
 
