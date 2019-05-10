@@ -73,6 +73,11 @@
 
 // ######################################## Enumerations ###########################################
 
+enum {													// API mode bit flags
+	owMODE_STANDARD,									// for Speed & PullUp
+	owMODE_OVERDRIVE,									// Speed only
+	owMODE_STRONG,										// PullUp only
+} ;
 
 // ######################################### Structures ############################################
 

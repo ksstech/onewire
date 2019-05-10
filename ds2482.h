@@ -64,32 +64,25 @@
 #define STATUS_TSB							0x40		// Triplet Second Bit
 #define STATUS_DIR							0x80		// branch DIRection taken
 
-// API mode bit flags
-#define MODE_STANDARD						0x00
-#define MODE_OVERDRIVE						0x01
-#define MODE_STRONG							0x02
-
-/*
- * DS2482 Register numbers
- */
-#define	DS2482_REGNUM_STAT					0
-#define	DS2482_REGNUM_DATA					1
-#define	DS2482_REGNUM_CHAN					2
-#define	DS2482_REGNUM_CONF					3
-#define	DS2482_REGNUM_MAX					4
-
-
 // ######################################## Enumerations ###########################################
 
-enum {
+enum {													// DS2482 Register numbers
+	ds2482REG_STAT = 0,
+	ds2482REG_DATA,
+	ds2482REG_CHAN,
+	ds2482REG_CONF,
+	ds2482REG_NUM,
+} ;
+
+enum {													// Supported 1W family numbers
 	idxOWFAMILY_01,
 	idxOWFAMILY_10,
 	idxOWFAMILY_28,
 	idxOWFAMILY_NUM,
 } ;
 
-enum {
-	sd2482CHAN_0,
+enum {													// Channels
+	sd2482CHAN_0 = 0,
 	sd2482CHAN_1,
 	sd2482CHAN_2,
 	sd2482CHAN_3,
@@ -130,8 +123,8 @@ typedef union {
 	} ;
 	struct {
 		uint8_t		Rstat ;
-		uint8_t		Rchan ;
 		uint8_t		Rdata ;
+		uint8_t		Rchan ;
 		uint8_t		Rconf ;
 	} ;
 	uint8_t			RegX[4] ;
@@ -153,53 +146,11 @@ extern DS2482_t	sDS2482 ;
 
 // ###################################### Private functions ########################################
 
-void	halDS2482_PrintRegister(DS2482_t * psDS2482, uint8_t Reg) ;
-uint8_t	halDS2482_ReadRegister(DS2482_t * psDS2482, uint8_t Reg) ;
-uint8_t	halDS2482_DecodeRegisters(DS2482_t * psDS2482) ;
-int32_t	halDS2482_reset(DS2482_t * psDS2482) ;
-int32_t halDS2482_detect(DS2482_t * psDS2482) ;
-uint8_t halDS2482_search_triplet(DS2482_t * psDS2482, uint8_t search_direction) ;
-int32_t halDS2482_write_config(DS2482_t * psDS2482) ;
-int32_t halDS2482_channel_select(DS2482_t * psDS2482, uint8_t Chan) ;
-int32_t	halDS2482_SetReadPointer(DS2482_t * psDS2482, uint8_t Reg) ;
-int32_t	halDS2482_ScanChannel(DS2482_t * psDS2482, uint8_t Chan) ;
-
-int32_t	xDS2482_ScanAll(void) ;
-int32_t	xDS2482_ScanCB(ep_work_t * pEpWork) ;
-
-// ####################################### Global functions ########################################
-
-// 1-Wire API for DS2482 function prototypes
-void	OWWriteByte(DS2482_t * psDS2482, uint8_t sendbyte) ;
-int32_t	OWReadByte(DS2482_t * psDS2482) ;
-uint8_t	OWTouchByte(DS2482_t * psDS2482, uint8_t sendbyte) ;
-uint8_t	OWTouchBit(DS2482_t * psDS2482, uint8_t sendbit) ;
-void	OWWriteBit(DS2482_t * psDS2482, uint8_t sendbit) ;
-uint8_t	OWReadBit(DS2482_t * psDS2482) ;
-void	OWBlock(DS2482_t * psDS2482, uint8_t *tran_buf, int tran_len) ;
-int32_t	OWVerify(DS2482_t * psDS2482) ;
-void	OWTargetSetup(DS2482_t * psDS2482, uint8_t family_code) ;
-void	OWFamilySkipSetup(DS2482_t * psDS2482) ;
-
-int32_t	OWSearch(DS2482_t * psDS2482) ;
-int32_t	OWFirst(DS2482_t * psDS2482) ;
-int32_t	OWNext(DS2482_t * psDS2482) ;
-
-// Extended 1-Wire functions
-int32_t	OWSpeed(DS2482_t * psDS2482, int32_t new_speed) ;
-int32_t	OWLevel(DS2482_t * psDS2482, int32_t new_level) ;
-int32_t OWWriteBytePower(DS2482_t * psDS2482, int32_t sendbyte) ;
-int32_t OWReadBitPower(DS2482_t * psDS2482, int32_t applyPowerResponse) ;
-void 	OWAddress(DS2482_t * psDS2482, uint8_t nAddrMethod) ;
-uint8_t	OWCheckCRC(DS2482_t * psDS2482, uint8_t * buf, uint8_t buflen) ;
-
-// Helper functions
-uint8_t OWCalcCRC8(DS2482_t * psDS2482, uint8_t data) ;
-
-// DS2482 Diagnostics function(s)
-int32_t	halDS2482_CountDevices(DS2482_t * psDS2482) ;
 void	halDS2482_PrintROM(ow_rom_t * psOW_ROM) ;
+uint8_t	halDS2482_Report(DS2482_t * psDS2482) ;
+
+int32_t	halDS2482_ScanAll(void) ;
+int32_t	halDS2482_ScanButton(void) ;
+
 int32_t	halDS2482_Diagnostics(void) ;
 int32_t	halDS2482_Identify(uint8_t chanI2C, uint8_t addrI2C) ;
-struct rule_s ;
-int32_t halDS2482_ConfigMode(struct rule_s * psRule) ;
