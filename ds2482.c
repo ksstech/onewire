@@ -28,6 +28,7 @@
 #if		(halHAS_DS2482 > 0)
 
 #include	"ds2482/ds2482.h"
+#include	"ds2482/ds18x20.h"
 #include	"rules_engine.h"
 
 #include	"hal_i2c.h"
@@ -38,6 +39,10 @@
 #include	"x_systiming.h"					// timing debugging
 #include	"x_syslog.h"
 #include	"x_formprint.h"
+
+#if		(halHAS_PCA9555 == 1)
+	#include	"pca9555/pca9555.h"
+#endif
 
 #include	<stdint.h>
 #include	<string.h>
@@ -74,6 +79,8 @@ static	const	uint8_t		ds2482_V2N[sd2482CHAN_NUM] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9
 static	const	uint8_t	CommandDelays[] = {	1,		0,		0,		0,		3,		2,		2,		1,		2 } ;
 
 DS2482_t	sDS2482 = { 0 } ;
+uint8_t		FamilyCount[idxOWFAMILY_NUM] = { 0 },
+			ChannelCount[sd2482CHAN_NUM] = { 0 } ;
 
 // ############################## DS2482-800 CORE support functions ################################
 

@@ -26,13 +26,22 @@
 
 #include	<stdint.h>
 
-// ############################################# Macros ############################################
+// ################################## Generic 1-Wire Commands ######################################
 
-#define ONEWIRE_CMD_SEARCHROM     			0xF0
-#define ONEWIRE_CMD_READROM       			0x33
-#define ONEWIRE_CMD_MATCHROM      			0x55
-#define ONEWIRE_CMD_SKIPROM       			0xCC
-#define ONEWIRE_CMD_ALARMSEARCH   			0xEC
+#define OW_CMD_SEARCHROM     				0xF0
+#define OW_CMD_READROM       				0x33
+#define OW_CMD_MATCHROM      				0x55
+#define OW_CMD_SKIPROM       				0xCC
+#define OW_CMD_ALARMSEARCH   				0xEC
+
+// ################################## DS18X20 Function Commands ####################################
+
+#define	DS18X20_CONVERT						0x44
+#define	DS18X20_COPY_SP						0x48
+#define	DS18X20_WRITE_SP					0x4E
+#define	DS18X20_READ_PSU					0xB4
+#define	DS18X20_RECALL_EE					0xB8
+#define	DS18X20_READ_SP						0xBE
 
 #define ONEWIRE_ROM_LENGTH        			8
 
@@ -77,6 +86,13 @@ enum {													// API mode bit flags
 	owMODE_STANDARD,									// for Speed & PullUp
 	owMODE_OVERDRIVE,									// Speed only
 	owMODE_STRONG,										// PullUp only
+} ;
+
+enum {
+	owFAM28_RES9B,
+	owFAM28_RES10B,
+	owFAM28_RES11B,
+	owFAM28_RES12B,
 } ;
 
 // ######################################### Structures ############################################

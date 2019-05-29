@@ -74,10 +74,11 @@ enum {													// DS2482 Register numbers
 	ds2482REG_NUM,
 } ;
 
-enum {													// Supported 1W family numbers
+enum {													// Supported 1W families & devices
 	idxOWFAMILY_01,
-	idxOWFAMILY_10,
-	idxOWFAMILY_28,
+#if		(configBUILD_WITH_DS18X20 == 1)
+	idxOWFAM10_28,
+#endif
 	idxOWFAMILY_NUM,
 } ;
 
@@ -143,6 +144,7 @@ typedef struct {
 } DS2482_t ;
 
 extern DS2482_t	sDS2482 ;
+extern uint8_t	FamilyCount[], ChannelCount[] ;
 
 // ###################################### Private functions ########################################
 
