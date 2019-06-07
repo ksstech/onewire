@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-18 AM Maree/KSS Technologies (Pty) Ltd.
+ * Copyright 2014-19 AM Maree/KSS Technologies (Pty) Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -34,7 +34,7 @@
 #define	configHAL_I2C_DS2482_ADDR			0x18		// Device base address
 
 #define	owDELAY_WB							1			// 0=Yield >0=mS Delay
-// 0=NoWait 1=Yield >1=Delay(n-1)
+														// 0=NoWait 1=Yield >1=Delay(n-1)
 #define	owDELAY_ST							2			// Search Triplet
 #define	owDELAY_RST							2			// Bus Reset
 #define	owDELAY_TB							1			// Touch Bit
@@ -109,10 +109,11 @@ typedef union __attribute__((packed)) {
 	struct {
 		uint8_t		Rstat ;
 		uint8_t		Rdata ;
-		uint8_t		Rchan ;
+		uint8_t		Rchan ;								// Code read back after ChanSel
 		uint8_t		Rconf ;
 	} ;
 	uint8_t			RegX[4] ;
+	uint32_t		RegVal ;
 } ds2482_regs_t ;
 
 DUMB_STATIC_ASSERT( sizeof(ds2482_regs_t) == 4) ;
@@ -134,8 +135,9 @@ DUMB_STATIC_ASSERT( sizeof(ds2482_t) == 36) ;
 
 // #################################### Public Data structures #####################################
 
-extern uint8_t	FamilyCount[], ChannelCount[] ;
+extern uint8_t	ChannelCount[] ;
 extern ds2482_t	sDS2482 ;
+extern const	uint8_t	OWremapTable[] ;
 
 // ###################################### Private functions ########################################
 
@@ -147,6 +149,7 @@ int32_t	OWWriteByte(uint8_t sendbyte) ;
 int32_t OWWriteBytePower(int32_t sendbyte) ;
 int32_t	OWWriteByteWait(uint8_t sendbyte) ;
 void	OWBlock(uint8_t * tran_buf, int32_t tran_len) ;
+int32_t	OWReadROM(void) ;
 int32_t OWLevel(int32_t new_level) ;
 
 void	ds2482PrintROM(ow_rom_t * psOW_ROM) ;
@@ -154,12 +157,11 @@ uint8_t	ds2482Report(void) ;
 int32_t ds2482ChannelSelect(uint8_t Chan) ;
 
 int32_t	ds2482ScanChannelAll(void) ;
-int32_t	ds2482ScanFam01(void) ;
 
-float	DS2482_ReadFam10(int32_t Idx) ;
-int32_t	DS2482_ScanFam10All(ep_work_t * psEpWork) ;
+int32_t	ds2482HandleFamilies(int32_t, int32_t) ;
+int32_t	ds2482ScanChannel(uint8_t, int (*)(int32_t, int32_t), int32_t) ;
+int32_t	ds2482ScanAllChannels(uint8_t, int (*)(int32_t, int32_t)) ;
 
-int32_t	ds2482ScanAndCall(uint8_t Family, int32_t (* Handler)(int32_t)) ;
 int32_t	ds2482Diagnostics(void) ;
 int32_t	ds2482Identify(uint8_t chanI2C, uint8_t addrI2C) ;
 int32_t	ds2482Config(void) ;

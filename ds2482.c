@@ -25,8 +25,6 @@
 #include	"FreeRTOS_Support.h"
 #include	"task_events.h"
 
-#include	"ds2482/ds2482.h"
-#include	"ds2482/ds18x20.h"
 #include	"rules_engine.h"
 
 #include	"hal_i2c.h"
@@ -34,12 +32,26 @@
 #include	"x_debug.h"
 #include	"x_buffers.h"
 #include	"x_errors_events.h"
-#include	"x_systiming.h"					// timing debugging
+#include	"x_systiming.h"								// timing debugging
 #include	"x_syslog.h"
 #include	"x_formprint.h"
 
+#include	"ds2482/ds2482.h"
+#if		(configBUILD_WITH_DS1990X == 1)
+	#include	"ds2482/ds1990x.h"
+#endif
+#if		(configBUILD_WITH_DS18X20 == 1)
+	#include	"ds2482/ds18x20.h"
+#endif
+
 #if		(halHAS_PCA9555 == 1)
 	#include	"pca9555/pca9555.h"
+#endif
+
+#if		(ESP32_PLATFORM == 1)
+	#include	"esp32/rom/crc.h"						// ESP32 ROM routine
+#else
+	#include	"crc-barr.h"							// Barr group CRC
 #endif
 
 #include	<stdint.h>
@@ -50,10 +62,8 @@
 #define	debugTIMING					(debugFLAG & 0x0001)
 #define	debugBUS_CFG				(debugFLAG & 0x0002)
 #define	debugCONFIG					(debugFLAG & 0x0004)
+#define	debugCRC					(debugFLAG & 0x0008)
 
-#define	debugDSFAM01				(debugFLAG & 0x0010)
-
-#define	debugFILTER					(debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG & 0x8000)
@@ -63,7 +73,7 @@
 // DS2484 channel Number to Selection (1's complement) translation
 const	uint8_t		ds2482_N2S[sd2482CHAN_NUM] = { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 } ;
 
-// DS2482 channel Value (read/check) to Number translation
+// DS2482 channel Value(read/check)->Number xlat	0	  1		2	  3		4	  5		6	  7
 const	uint8_t		ds2482_V2N[sd2482CHAN_NUM] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 } ;
 
 // Used to fix the incorrect logical to physical 1-Wire mapping
@@ -83,16 +93,8 @@ const	uint8_t	OWremapTable[sd2482CHAN_NUM] = { 3,	2,	1,	0,	4,	5,	6,	7 } ;
  *	Duration	525nS	0nS		0nS		0nS		1244uS	8x73uS	8x73uS	1x73uS	3x73uS
  */
 
-uint8_t		FamilyCount[idxOWFAMILY_NUM] = { 0 },
-			ChannelCount[sd2482CHAN_NUM] = { 0 } ;
+uint8_t		ChannelCount[sd2482CHAN_NUM] = { 0 } ;
 ds2482_t	sDS2482		= { 0 } ;
-
-/* In order to avoid multiple successive reads of the same iButton on the same OW channel
- * we filter reads based on the value of the iButton read and time expired since the last
- * successful read. If the same ID is read on the same channel within 'x' seconds, skip it */
-ow_rom_t	LastROM[sd2482CHAN_NUM]		= { 0 } ;
-seconds_t	LastRead[sd2482CHAN_NUM]	= { 0 } ;
-int8_t		OWdelay	= 5 ;
 
 // ############################## DS2482-800 CORE support functions ################################
 
@@ -109,11 +111,11 @@ int32_t ds2482Reset(void) {
 	uint8_t	cChr = CMD_DRST ;
 	uint8_t status ;
 	int32_t iRV = halI2C_WriteRead(&sDS2482.sI2Cdev, &cChr, sizeof(cChr), &status, sizeof(status)) ;
-	if (iRV != erSUCCESS) {
-		return 0 ;
-	}
+	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
+	NE_RETURN(iRV, erSUCCESS) ;
 	sDS2482.Regs.Rstat	= status ;
 	sDS2482.RegPntr		= ds2482REG_STAT ;
+	sDS2482.CurChan		= 0 ;
 	return ((status & ~STATUS_LL) == STATUS_RST) ;		// RESET true or false...
 }
 
@@ -127,12 +129,10 @@ int32_t	ds2482SetReadPointer(uint8_t Reg) {
 	if (sDS2482.RegPntr == Reg) {
 		return erSUCCESS ;
 	}
-	uint8_t		cBuf[2] ;
-	cBuf[0] = CMD_SRP ;
-	cBuf[1] = (~Reg << 4) | Reg ;
-	if (halI2C_Write(&sDS2482.sI2Cdev, cBuf, sizeof(cBuf)) == erFAILURE) {
-		return erFAILURE ;
-	}
+	uint8_t	cBuf[2] = { CMD_SRP, (~Reg << 4) | Reg } ;
+	int32_t iRV = halI2C_Write(&sDS2482.sI2Cdev, cBuf, sizeof(cBuf)) ;
+	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
+	NE_RETURN(iRV, erSUCCESS) ;
 // update the read pointer
 	sDS2482.RegPntr = Reg ;
 	return erSUCCESS ;
@@ -153,15 +153,11 @@ int32_t ds2482WriteConfig(void) {
 //  CF configuration byte to write
 	IF_myASSERT(debugBUS_CFG, sDS2482.Regs.OWB == 0) ;				// check that bus not busy
 	uint8_t	config = sDS2482.Regs.Rconf & 0x0F ;
-	IF_myASSERT(debugPARAM, config < 0x10)
-	uint8_t	cBuf[2] ;
-	cBuf[0]	= CMD_WCFG ;
-	cBuf[1] = (~config << 4) | config ;
+	uint8_t	cBuf[2] = { CMD_WCFG , (~config << 4) | config } ;
 	uint8_t new_conf ;
-	int32_t iRetVal = halI2C_WriteRead(&sDS2482.sI2Cdev, cBuf, sizeof(cBuf), &new_conf, sizeof(new_conf)) ;
-	if (iRetVal != erSUCCESS) {
-		return 0 ;
-	}
+	int32_t iRV = halI2C_WriteRead(&sDS2482.sI2Cdev, cBuf, sizeof(cBuf), &new_conf, sizeof(new_conf)) ;
+	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
+	NE_RETURN(iRV, erSUCCESS) ;
 	// update the saved configuration
 	sDS2482.Regs.Rconf	= new_conf ;
 	sDS2482.RegPntr		= ds2482REG_CONF ;
@@ -186,14 +182,16 @@ int32_t ds2482ChannelSelect(uint8_t Chan) {
 	uint8_t	cBuf[2] = { CMD_CHSL, ds2482_N2S[Chan] } ;
 	uint8_t ChanRet ;
 	int32_t iRV = halI2C_WriteRead(&sDS2482.sI2Cdev, cBuf, sizeof(cBuf), &ChanRet, sizeof(ChanRet)) ;
-	IF_EQ_RETURN(debugRESULT, iRV, erFAILURE) ;
+	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
+	NE_RETURN(iRV, erSUCCESS) ;
 
 	sDS2482.RegPntr		= ds2482REG_CHAN ;			// update the read pointer
-	sDS2482.Regs.Rchan	= ChanRet ;					// update saved channel selected value (translated value)
+	sDS2482.Regs.Rchan	= ChanRet ;					// update channel code (read back)
 	/* value read back not same as the channel number sent so verify the return
 	 * against the code expected, but store the actual channel number if successful */
 	if (ChanRet != ds2482_V2N[Chan]) {
 		SL_ERR("Read %d != %d Expected", ChanRet, ds2482_V2N[Chan]) ;
+		IF_myASSERT(debugRESULT, 0) ;
 		return erFAILURE ;
 	}
 	sDS2482.CurChan		= Chan ;					// and the actual (normalized) channel number
@@ -202,20 +200,25 @@ int32_t ds2482ChannelSelect(uint8_t Chan) {
 
 int32_t	ds2482Write(uint8_t * pTxBuf, size_t TxSize) {
 	IF_myASSERT(debugBUS_CFG, sDS2482.Regs.OWB == 0)	;
-	return halI2C_Write(&sDS2482.sI2Cdev, pTxBuf, TxSize) ;
+	int32_t iRV = halI2C_Write(&sDS2482.sI2Cdev, pTxBuf, TxSize) ;
+	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
+	return iRV ;
 }
 
 int32_t	ds2482WaitNotBusy(int32_t Delay) {
-	int32_t	iRV ;
+	int32_t	iRV, Retry = 20 ;
 	uint8_t	Status ;
 	do {
 		vTaskDelay(Delay) ;
 		iRV = halI2C_Read(&sDS2482.sI2Cdev, &Status, sizeof(Status)) ;
-		NE_GOTO(iRV, erSUCCESS, exit) ;
-	} while (Status & STATUS_1WB) ;
+		IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
+	} while ((Status & STATUS_1WB) && --Retry) ;
+	if (Retry == 0 || (Status & STATUS_1WB)) {
+		IF_myASSERT(debugRESULT, 0) ;
+		return erFAILURE ;
+	}
 	sDS2482.Regs.Rstat	= Status ;
 	sDS2482.RegPntr		= ds2482REG_STAT ;
-exit:
 	return iRV ;
 }
 
@@ -226,15 +229,11 @@ exit:
  * @return	erSUCCESS or erFAILURE
  */
 int32_t	ds2482WriteAndWait(uint8_t * pTxBuf, size_t TxSize, size_t Delay) {
-	IF_SYSTIMER_START(debugTIMING, systimerDS2482WW) ;
-	int32_t iRV = halI2C_Write(&sDS2482.sI2Cdev, pTxBuf, TxSize) ;
-	NE_GOTO(iRV, erSUCCESS, exit) ;
-
+	int32_t iRV = ds2482Write(pTxBuf, TxSize) ;
+	NE_RETURN(iRV, erSUCCESS) ;
 	if (Delay) {
-		ds2482WaitNotBusy(Delay - 1) ;
+		iRV = ds2482WaitNotBusy(Delay - 1) ;
 	}
-exit:
-	IF_SYSTIMER_STOP(debugTIMING, systimerDS2482WW) ;
 	return iRV ;
 }
 
@@ -254,9 +253,7 @@ uint8_t ds2482SearchTriplet(uint8_t search_direction) {
 //  [] indicates from slave
 //  SS indicates byte containing search direction bit value in msbit
 	IF_myASSERT(debugPARAM, search_direction < 2) ;
-	uint8_t	cBuf[2] ;
-	cBuf[0]	= CMD_1WT ;
-	cBuf[1]	= search_direction ? 0x80 : 0x00 ;
+	uint8_t	cBuf[2] = { CMD_1WT, search_direction ? 0x80 : 0x00 } ;
 	if (ds2482WriteAndWait(cBuf, sizeof(cBuf), owDELAY_ST) == erFAILURE) {
 		ds2482Reset();
 		return 0;
@@ -276,7 +273,7 @@ uint8_t ds2482SearchTriplet(uint8_t search_direction) {
  *			 false device not detected or failure to write configuration byte
  */
 int32_t ds2482Detect(void) {
-	if (ds2482Reset() == 0) {				// reset the DS2482 ON selected address
+	if (ds2482Reset() == 0) {
 		return 0;
 	}
 	// default configuration 0xE1 (0xE? is the 1s complement of 0x?1)
@@ -359,6 +356,213 @@ uint8_t	ds2482Report(void) {
 	return 1 ;
 }
 
+// ################################## Bit/Byte Read/Write ##########################################
+
+/**
+ * Send 1 bit of communication to the 1-Wire Net and return the
+ * result 1 bit read from the 1-Wire Net.  The parameter 'sendbit'
+ * least significant bit is used and the least significant bit
+ * of the result is the return bit.
+ *
+ * 'sendbit' - the least significant bit is the bit to send
+ *
+ * Returns: 0:	0 bit read from sendbit
+ *			 1:	1 bit read from sendbit
+ */
+uint8_t OWTouchBit(uint8_t sendbit) {
+// 1-Wire bit (Case B)
+//	S AD,0 [A] 1WSB [A] BB [A] Sr AD,1 [A] [Status] A [Status] A\ P
+//										   \--------/
+//								Repeat until 1WB bit has changed to 0
+//  [] indicates from slave
+//  BB indicates byte containing bit value in msbit
+	IF_myASSERT(debugPARAM, sendbit < 2) ;
+	IF_myASSERT(debugBUS_CFG, sDS2482.Regs.OWB == 0)	;
+	uint8_t	cBuf[2] ;
+	cBuf[0]	= CMD_1WSB ;
+	cBuf[1] = sendbit ? 0x80 : 0x00 ;
+	if (ds2482WriteAndWait(cBuf, sizeof(cBuf), owDELAY_TB) == erFAILURE) {
+		return 0;
+	}
+// return bit state
+	return sDS2482.Regs.SBR ;
+}
+
+/**
+ * Send 1 bit of communication to the 1-Wire Net.
+ * The parameter 'sendbit' least significant bit is used.
+ *
+ * 'sendbit' - 1 bit to send (least significant byte)
+ */
+void	OWWriteBit(uint8_t sendbit) { OWTouchBit(sendbit); }
+
+/**
+ * Read 1 bit of communication from the 1-Wire Net and return the result
+ *
+ * Returns:  1 bit read from 1-Wire Net
+ */
+uint8_t OWReadBit(void) { return OWTouchBit(0x01) ; }
+
+/**
+ * Send 8 bits of communication to the 1-Wire Net and verify that the
+ * 8 bits read from the 1-Wire Net is the same (write operation).
+ * The parameter 'sendbyte' least significant 8 bits are used.
+ *
+ * 'sendbyte' - 8 bits to send (least significant byte)
+ * @return	erSUCCESS or erFAILURE
+ */
+int32_t	OWWriteByte(uint8_t sendbyte) {
+// 1-Wire Write Byte (Case B)
+//	S AD,0 [A] 1WWB [A] DD [A] Sr AD,1 [A] [Status] A [Status] A\ P
+//										   \--------/
+//							Repeat until 1WB bit has changed to 0
+//  [] indicates from slave
+//  DD data to write
+	uint8_t	cBuf[2] = { CMD_1WWB, sendbyte } ;
+	int32_t iRV = ds2482Write(cBuf, sizeof(cBuf)) ;
+	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
+	return iRV ;
+}
+
+int32_t	OWWriteByteWait(uint8_t sendbyte) {
+	int32_t iRV = OWWriteByte(sendbyte) ;
+	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
+	iRV = ds2482WaitNotBusy(owDELAY_WB) ;
+	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
+	return iRV ;
+}
+
+/**
+ * Send 8 bits of communication to the 1-Wire Net and verify that the
+ * 8 bits read from the 1-Wire Net is the same (write operation).
+ * The parameter 'sendbyte' least significant 8 bits are used.  After the
+ * 8 bits are sent change the level of the 1-Wire net.
+ *
+ * 'sendbyte' - 8 bits to send (least significant bit)
+ *
+ * Returns:  true: bytes written and echo was the same, strong pullup now on
+ *			  false: echo was not the same
+ */
+int32_t OWWriteBytePower(int32_t sendbyte) {
+	sDS2482.Regs.SPU = 1 ;
+	if (ds2482WriteConfig() == 0) {
+		IF_myASSERT(debugRESULT, 0) ;
+		return 0 ;
+	}
+	int32_t iRV = OWWriteByte(sendbyte);
+	IF_myASSERT(debugRESULT, iRV == erSUCCESS && sDS2482.Regs.SPU == 1) ;
+	return 1 ;
+}
+
+/**
+ * Send 1 bit of communication to the 1-Wire Net and verify that the
+ * response matches the 'applyPowerResponse' bit and apply power delivery
+ * to the 1-Wire net.  Note that some implementations may apply the power
+ * first and then turn it off if the response is incorrect.
+ *
+ * 'applyPowerResponse' - 1 bit response to check, if correct then start
+ *								power delivery
+ *
+ * Returns:  true: bit written and response correct, strong pullup now on
+ *			  false: response incorrect
+ */
+int32_t OWReadBitPower(int32_t applyPowerResponse) {
+	sDS2482.Regs.SPU = 1 ;
+	if (ds2482WriteConfig() == 0) {
+		return 0 ;
+	}
+	uint8_t rdbit = OWReadBit();
+	if (rdbit != applyPowerResponse) {					// check if response was correct
+		OWLevel(owMODE_STANDARD);						// if not, turn off strong pull-up
+		return 0 ;
+	}
+	return 1 ;
+}
+
+/**
+ * Send 8 bits of read communication to the 1-Wire Net and return the
+ * result 8 bits read from the 1-Wire Net.
+ *
+ * Returns:  8 bits read from 1-Wire Net
+ */
+int32_t	OWReadByte(void) {
+/* 1-Wire Read Bytes (Case C)
+ *	S AD,0 [A] 1WRB [A] Sr AD,1 [A] [Status] A [Status] A\
+ *										\--------/
+ *							Repeat until 1WB bit has changed to 0
+ *	Sr AD,0 [A] SRP [A] E1 [A] Sr AD,1 [A] DD A\ P
+ *
+ *  [] indicates from slave
+ *  DD data read
+ */
+	int32_t iRV = OWWriteByteWait(CMD_1WRB) ;			// send the READ command
+	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
+
+	iRV = ds2482SetReadPointer(ds2482REG_DATA) ;		// set pointer to data register
+	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
+
+	uint8_t	cRead ;
+	iRV = halI2C_Read(&sDS2482.sI2Cdev, &cRead, sizeof(cRead)) ;			// read the register
+	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
+	return cRead ;
+}
+
+/**
+ * Send 8 bits of communication to the 1-Wire Net and return the
+ * result 8 bits read from the 1-Wire Net.  The parameter 'sendbyte'
+ * least significant 8 bits are used and the least significant 8 bits
+ * of the result is the return byte.
+ *
+ * 'sendbyte' - 8 bits to send (least significant byte)
+ *
+ * Returns:  8 bits read from sendbyte
+ */
+uint8_t OWTouchByte(uint8_t sendbyte) {
+	if (sendbyte == 0xFF) {
+		return OWReadByte();
+	} else {
+		OWWriteByteWait(sendbyte);
+		return sendbyte;
+	}
+}
+
+/**
+ * The 'OWBlock' transfers a block of data to and from the
+ * 1-Wire Net. The result is returned in the same buffer.
+ *
+ * 'tran_buf' - pointer to a block of unsigned
+ *				  chars of length 'tran_len' that will be sent
+ *				  to the 1-Wire Net
+ * 'tran_len' - length in bytes to transfer
+ */
+void	OWBlock(uint8_t * tran_buf, int32_t tran_len) {
+	for (int32_t i = 0; i < tran_len; ++i) {
+		tran_buf[i] = OWTouchByte(tran_buf[i]) ;
+	}
+}
+
+/**
+ * OWReadROM() - Check PPD, send command and loop for 8byte read
+ * @brief	To be used if only a single device on a bus and the ROM ID must be read
+ * 			Probably will fail if more than 1 device on the bus
+ * @return	erFAILURE or CRC byte
+ */
+int32_t	OWReadROM(void) {
+	int32_t iRV = OWWriteByteWait(OW_CMD_READROM) ;
+	LT_GOTO(iRV, erSUCCESS, exit) ;
+
+	sDS2482.ROM.Value = 0ULL ;
+	do {
+		for (uint8_t i = 0; i < ONEWIRE_ROM_LENGTH; ++i) {
+			iRV = OWReadByte() ;							// read 8x bytes making up the ROM FAM+ID+CRC
+			LT_GOTO(iRV, erSUCCESS, exit) ;
+			sDS2482.ROM.HexChars[i] = iRV ;
+		}
+	} while (OWCheckCRC(sDS2482.ROM.HexChars, ONEWIRE_ROM_LENGTH) == 0) ;
+exit:
+	return iRV ;
+}
+
 // ################################ Generic 1-Wire LINK API's ######################################
 
 /**
@@ -370,7 +574,7 @@ uint8_t	ds2482Report(void) {
 uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
 	uint8_t shift_reg = 0 ;
 	for (int8_t i = 0; i < buflen; i++) {
-		for (int8_t j = 0; j < 8; j++) {
+		for (int8_t j = 0; j < CHAR_BIT; j++) {
 			uint8_t	data_bit = (buf[i] >> j) & 0x01 ;
 			uint8_t	sr_lsb = shift_reg & 0x01 ;
 			uint8_t	fb_bit = (data_bit ^ sr_lsb) & 0x01 ;
@@ -380,6 +584,7 @@ uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
 			}
 		}
 	}
+	IF_PRINT(debugCRC,"'%m' CRC=%x '%s'   ", buf, shift_reg, (shift_reg == 0) ? "Pass" : "Fail") ;
 	return (shift_reg == 0) ? 1 : 0 ;
 }
 
@@ -466,222 +671,18 @@ int32_t OWLevel(int32_t new_level) {
  *						device or OW_CMD_SKIPROM to select all
  */
 void	OWAddress(uint8_t nAddrMethod) {
+	int32_t iRV ;
 	if (nAddrMethod == OW_CMD_MATCHROM) {
-		OWWriteByteWait(OW_CMD_MATCHROM) ;				// address single/individual device
+		iRV = OWWriteByteWait(OW_CMD_MATCHROM) ;		// address single/individual device
+		IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
 		for (uint8_t i = 0; i < ONEWIRE_ROM_LENGTH; ++i) {
-			OWWriteByteWait(sDS2482.ROM.HexChars[i]);
+			iRV = OWWriteByteWait(sDS2482.ROM.HexChars[i]);
+			IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
 		}
 	} else {
-		OWWriteByteWait(OW_CMD_SKIPROM) ;				// address all devices
+		iRV = OWWriteByteWait(OW_CMD_SKIPROM) ;			// address all devices
+		IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
 	}
-}
-
-// ################################## Bit/Byte Read/Write ##########################################
-
-/**
- * Send 1 bit of communication to the 1-Wire Net and return the
- * result 1 bit read from the 1-Wire Net.  The parameter 'sendbit'
- * least significant bit is used and the least significant bit
- * of the result is the return bit.
- *
- * 'sendbit' - the least significant bit is the bit to send
- *
- * Returns: 0:	0 bit read from sendbit
- *			 1:	1 bit read from sendbit
- */
-uint8_t OWTouchBit(uint8_t sendbit) {
-// 1-Wire bit (Case B)
-//	S AD,0 [A] 1WSB [A] BB [A] Sr AD,1 [A] [Status] A [Status] A\ P
-//										   \--------/
-//								Repeat until 1WB bit has changed to 0
-//  [] indicates from slave
-//  BB indicates byte containing bit value in msbit
-	IF_myASSERT(debugPARAM, sendbit < 2) ;
-	IF_myASSERT(debugBUS_CFG, sDS2482.Regs.OWB == 0)	;
-	uint8_t	cBuf[2] ;
-	cBuf[0]	= CMD_1WSB ;
-	cBuf[1] = sendbit ? 0x80 : 0x00 ;
-	if (ds2482WriteAndWait(cBuf, sizeof(cBuf), owDELAY_TB) == erFAILURE) {
-		return 0;
-	}
-// return bit state
-	return sDS2482.Regs.SBR ;
-}
-
-/**
- * Send 1 bit of communication to the 1-Wire Net.
- * The parameter 'sendbit' least significant bit is used.
- *
- * 'sendbit' - 1 bit to send (least significant byte)
- */
-void	OWWriteBit(uint8_t sendbit) { OWTouchBit(sendbit); }
-
-/**
- * Read 1 bit of communication from the 1-Wire Net and return the result
- *
- * Returns:  1 bit read from 1-Wire Net
- */
-uint8_t OWReadBit(void) { return OWTouchBit(0x01) ; }
-
-/**
- * Send 8 bits of communication to the 1-Wire Net and verify that the
- * 8 bits read from the 1-Wire Net is the same (write operation).
- * The parameter 'sendbyte' least significant 8 bits are used.
- *
- * 'sendbyte' - 8 bits to send (least significant byte)
- * @return	erSUCCESS or erFAILURE
- */
-int32_t	OWWriteByte(uint8_t sendbyte) {
-// 1-Wire Write Byte (Case B)
-//	S AD,0 [A] 1WWB [A] DD [A] Sr AD,1 [A] [Status] A [Status] A\ P
-//										   \--------/
-//							Repeat until 1WB bit has changed to 0
-//  [] indicates from slave
-//  DD data to write
-	uint8_t	cBuf[2] = { CMD_1WWB, sendbyte } ;
-	int32_t iRV = ds2482Write(cBuf, sizeof(cBuf)) ;
-	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
-	return iRV ;
-}
-
-int32_t	OWWriteByteWait(uint8_t sendbyte) {
-	int32_t iRV = OWWriteByte(sendbyte) ;
-	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
-	return ds2482WaitNotBusy(owDELAY_WB) ;
-}
-
-/**
- * Send 8 bits of communication to the 1-Wire Net and verify that the
- * 8 bits read from the 1-Wire Net is the same (write operation).
- * The parameter 'sendbyte' least significant 8 bits are used.  After the
- * 8 bits are sent change the level of the 1-Wire net.
- *
- * 'sendbyte' - 8 bits to send (least significant bit)
- *
- * Returns:  true: bytes written and echo was the same, strong pullup now on
- *			  false: echo was not the same
- */
-int32_t OWWriteBytePower(int32_t sendbyte) {
-	sDS2482.Regs.SPU = 1 ;
-	if (ds2482WriteConfig() == 0) {
-		myASSERT(0) ;
-		return 0 ;
-	}
-	OWWriteByte(sendbyte);
-	IF_myASSERT(debugRESULT, sDS2482.Regs.SPU == 1) ;
-	return 1 ;
-}
-
-/**
- * Send 1 bit of communication to the 1-Wire Net and verify that the
- * response matches the 'applyPowerResponse' bit and apply power delivery
- * to the 1-Wire net.  Note that some implementations may apply the power
- * first and then turn it off if the response is incorrect.
- *
- * 'applyPowerResponse' - 1 bit response to check, if correct then start
- *								power delivery
- *
- * Returns:  true: bit written and response correct, strong pullup now on
- *			  false: response incorrect
- */
-int32_t OWReadBitPower(int32_t applyPowerResponse) {
-	sDS2482.Regs.SPU = 1 ;
-	if (ds2482WriteConfig() == 0) {
-		return 0 ;
-	}
-	uint8_t rdbit = OWReadBit();
-	if (rdbit != applyPowerResponse) {					// check if response was correct
-		OWLevel(owMODE_STANDARD);						// if not, turn off strong pull-up
-		return 0 ;
-	}
-	return 1 ;
-}
-
-/**
- * Send 8 bits of read communication to the 1-Wire Net and return the
- * result 8 bits read from the 1-Wire Net.
- *
- * Returns:  8 bits read from 1-Wire Net
- */
-int32_t	OWReadByte(void) {
-/* 1-Wire Read Bytes (Case C)
- *	S AD,0 [A] 1WRB [A] Sr AD,1 [A] [Status] A [Status] A\
- *										\--------/
- *							Repeat until 1WB bit has changed to 0
- *	Sr AD,0 [A] SRP [A] E1 [A] Sr AD,1 [A] DD A\ P
- *
- *  [] indicates from slave
- *  DD data read
- */
-	int32_t iRV = OWWriteByteWait(CMD_1WRB) ;			// send the READ command
-	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
-
-	iRV = ds2482SetReadPointer(ds2482REG_DATA) ;				// set pointer to data register
-	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
-
-	uint8_t	cTemp ;
-	iRV = halI2C_Read(&sDS2482.sI2Cdev, &cTemp, sizeof(cTemp)) ;			// read the register
-	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
-	return cTemp ;
-}
-
-/**
- * Send 8 bits of communication to the 1-Wire Net and return the
- * result 8 bits read from the 1-Wire Net.  The parameter 'sendbyte'
- * least significant 8 bits are used and the least significant 8 bits
- * of the result is the return byte.
- *
- * 'sendbyte' - 8 bits to send (least significant byte)
- *
- * Returns:  8 bits read from sendbyte
- */
-uint8_t OWTouchByte(uint8_t sendbyte) {
-	if (sendbyte == 0xFF) {
-		return OWReadByte();
-	} else {
-		OWWriteByteWait(sendbyte);
-		return sendbyte;
-	}
-}
-
-/**
- * The 'OWBlock' transfers a block of data to and from the
- * 1-Wire Net. The result is returned in the same buffer.
- *
- * 'tran_buf' - pointer to a block of unsigned
- *				  chars of length 'tran_len' that will be sent
- *				  to the 1-Wire Net
- * 'tran_len' - length in bytes to transfer
- */
-void	OWBlock(uint8_t * tran_buf, int32_t tran_len) {
-	for (int32_t i = 0; i < tran_len; ++i) {
-		tran_buf[i] = OWTouchByte(tran_buf[i]) ;
-	}
-}
-
-/**
- * OWReadROM() - Check PPD, send command and loop for 8byte read
- * @brief	To be used if only a single device on a bus and the ROM ID must be read
- * 			Probably will fail if more than 1 device on the bus
- * @return	erFAILURE or CRC byte
- */
-int32_t	OWReadROM(void) {
-	int32_t iRV = OWReset() ;							// check if 1W device is present
-	EQ_RETURN(iRV, 0) ;									// no PPD, return
-
-	sDS2482.ROM.Value = 0ULL ;
-	IF_SYSTIMER_START(debugTIMING, systimerDS2482B) ;
-	iRV = OWWriteByteWait(OW_CMD_READROM) ;
-	NE_GOTO(iRV, erSUCCESS, exit) ;
-
-	for (uint8_t i = 0; i < ONEWIRE_ROM_LENGTH; ++i) {
-		iRV = OWReadByte() ;							// read 8x bytes making up the ROM FAM+ID+CRC
-		LT_GOTO(iRV, erSUCCESS, exit) ;
-		sDS2482.ROM.HexChars[i] = iRV ;
-	}
-exit:
-	IF_SYSTIMER_STOP(debugTIMING, systimerDS2482B) ;
-	return iRV ;
 }
 
 // ############################## Search and Variations thereof ####################################
@@ -860,186 +861,76 @@ void	OWFamilySkipSetup(void) {
 // ################################# Application support functions #################################
 
 /**
- * ds2482ScanChannel() - Scan a specific device & channel for a reader
- * @param pDS24282	pointer to device structure
- * @param Chan		channel number (0->7) to scan
- * @return			true if a device found, false if not
- * 					1-Wire device ROM SN# will be in the structure
+ * ds2482HandleFamilies() - Call handler based on device family
+ * @return	return value from handler or
  */
-int32_t	ds2482ScanChannel(uint8_t Chan) {
-	IF_myASSERT(debugPARAM, Chan < sd2482CHAN_NUM) ;
-	int32_t	iRV ;
-	IF_SYSTIMER_START(debugTIMING, systimerDS2482B) ;
-	if (sDS2482.CurChan != Chan) {
-		iRV = ds2482ChannelSelect(Chan) ;
-		NE_GOTO(iRV, erSUCCESS, exit) ;
-		iRV = OWFirst() ;
-	} else {
-		iRV = OWNext() ;
+int32_t	ds2482HandleFamilies(int32_t iCount, int32_t xCount) {
+	int32_t	iRV = erFAILURE ;
+	switch (sDS2482.ROM.Family) {
+#if		(configBUILD_WITH_DS1990X == 1)
+	case OWFAMILY_01:							// DS1990A/R, 2401/11 devices
+		iRV = ds1990xHandler(iCount, xCount) ;
+		break ;
+#endif
+
+#if		(configBUILD_WITH_DS18X20 == 1)
+	case OWFAMILY_10:							// DS18S20 Thermometer
+	case OWFAMILY_28:							// DS18B20 Thermometer
+		iRV = ds18x20Handler(iCount, xCount) ;
+		break ;
+#endif
+
+	default:
+		SL_ERR("Invalid OW device FAM=%02x", sDS2482.ROM.Family) ;
 	}
-exit:
-	IF_SYSTIMER_STOP(debugTIMING, systimerDS2482B) ;
 	return iRV ;
 }
 
-int32_t	ds2482ScanChannelAll(void) {
-	IF_SYSTIMER_START(debugTIMING, systimerDS2482A) ;
-	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
-	for (uint8_t Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM; ++Chan) {
-		while (ds2482ScanChannel(Chan) == 1) {			// found a device
-			switch (sDS2482.ROM.Family) {
-			case OWFAMILY_01:							// DS1990A/R, 2401/11 devices
-				/* To avoid registering multiple reads if iButton is held in place too long we enforce a
-				 * period of 'x' seconds within which successive reads of the same tag will be ignored */
-				if ((LastROM[Chan].Value == sDS2482.ROM.Value) && (NowRead - LastRead[Chan]) <= OWdelay) {
-					IF_PRINT(debugFILTER, "SAME iButton in 5sec, Skipped...\n") ;
-					break ;
-				}
-				LastROM[Chan].Value = sDS2482.ROM.Value ;
-				LastRead[Chan] = NowRead ;
-#if		(ESP32_VARIANT == 2)
-				xTaskNotify(EventsHandle, 1UL << (OWremapTable[Chan] + se1W_FIRST), eSetBits) ;
-#elif	(ESP32_VARIANT == 3)
-				xTaskNotify(EventsHandle, 1UL << (Chan + se1W_FIRST), eSetBits) ;
-#endif
-				portYIELD() ;
-				IF_PRINT(debugFILTER, "NEW iButton Read, or >5sec passed\n") ;
-				IF_EXEC_1(debugFILTER, ds2482PrintROM, &sDS2482.ROM) ;
-				break ;
-
-			case OWFAMILY_10:							// DS18S20 Thermometer
-			case OWFAMILY_28:							// DS18B20 Thermometer
-				break ;
-
-			default:
-				SL_ERR("Invalid OW device FAM=%02x", sDS2482.ROM.Family) ;
+/**
+ * ds2482ScanChannel() - Scan preselected channel for all devices of [specified] family
+ * @brief	Channel must be preselected,
+ * @param	Family
+ * @param	Handler
+ * @return	erFAILURE if an error occurred
+ * 			erSUCCESS if no [matching] device found or no error returned
+ */
+int32_t	ds2482ScanChannel(uint8_t Family, int32_t (*Handler)(int32_t, int32_t), int32_t xCount) {
+	int32_t	iCount = 0, iRV = OWFirst() ;
+	while (iRV == 1) {
+		iRV = OWCheckCRC(sDS2482.ROM.HexChars, sizeof(ow_rom_t)) ;
+		myASSERT(iRV == 1) ;
+		if (Family == 0 || Family == sDS2482.ROM.Family) {
+			if (Handler) {
+				iRV = Handler(iCount, xCount) ;
+				LT_BREAK(iRV, erSUCCESS) ;
 			}
+			++iCount ;
+		} else {
+			OWFamilySkipSetup() ;
+//			OWTargetSetup(Family) ;
 		}
+		iRV = OWNext() ;								// try to find next device (if any)
 	}
-	IF_SYSTIMER_STOP(debugTIMING, systimerDS2482A) ;
-	return erSUCCESS ;
+	return iRV < erSUCCESS ? iRV : iCount ;
 }
 
-int32_t	ds2482ScanFam01(void) {
-	IF_SYSTIMER_START(debugTIMING, systimerDS2482A) ;
-	int32_t	iRV = erSUCCESS ;
-	xSemaphoreTake(sDS2482.Mux, portMAX_DELAY) ;
-	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
-	for (uint8_t Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM; ++Chan) {
-		iRV = ds2482ChannelSelect(Chan) ;
-		EQ_GOTO(iRV, erFAILURE, exit) ;
-
-		iRV = OWReadROM() ;
-		EQ_GOTO(iRV, erFAILURE, exit) ;
-		if (iRV == 0 || sDS2482.ROM.Value == 0ULL) {
-			continue ;
-		}
-		/* To avoid registering multiple reads if iButton is held in place too long we enforce a
-		 * period of 'x' seconds within which successive reads of the same tag will be ignored */
-		if ((LastROM[Chan].Value == sDS2482.ROM.Value) && (NowRead - LastRead[Chan]) <= OWdelay) {
-			IF_PRINT(debugDSFAM01, "SAME iButton in 5sec, Skipped...\n") ;
-			continue ;
-		}
-		LastROM[Chan].Value = sDS2482.ROM.Value ;
-		LastRead[Chan] = NowRead ;
-#if		(ESP32_VARIANT == 2)
-		xTaskNotify(EventsHandle, 1UL << (OWremapTable[Chan] + se1W_FIRST), eSetBits) ;
-#elif	(ESP32_VARIANT == 3)
-		xTaskNotify(EventsHandle, 1UL << (Chan + se1W_FIRST), eSetBits) ;
-#endif
-		portYIELD() ;
-		IF_PRINT(debugDSFAM01, "NEW iButton Read, or >5sec passed\n") ;
-		IF_EXEC_1(debugDSFAM01, ds2482PrintROM, &sDS2482.ROM) ;
-	}
-exit:
-	IF_SYSTIMER_STOP(debugTIMING, systimerDS2482A) ;
-	xSemaphoreGive(sDS2482.Mux) ;
-	return iRV ;
-}
-
-int32_t	ds2482ScanAndCall(uint8_t Family, int32_t (* Handler)(int32_t)) {
-#if		1
-	int32_t	iRV, iCount = 0 ;
+/**
+ * ds2482ScanAllChanAllFam() - scan ALL channels sequentially for [specified] family
+ * @return
+ */
+int32_t	ds2482ScanAllChannels(uint8_t Family, int (*Handler)(int32_t, int32_t)) {
+	int32_t	iRV = erSUCCESS, xCount = 0 ;
 	xSemaphoreTake(sDS2482.Mux, portMAX_DELAY) ;
 	for (uint8_t Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM; ++Chan) {
 		iRV = ds2482ChannelSelect(Chan) ;
-		NE_GOTO(iRV, erSUCCESS, exit) ;
-
-		iRV = OWFirst() ;
-		while (iRV == 1) {
-			if (sDS2482.ROM.Family == Family) {
-				if (Handler) {
-					iRV = Handler(iCount) ;				// found a device, callback
-				}
-				IF_PRINT(debugTRACK, "Cnt=%d  Ch=%d %02X/%#M/%02X  iRV=%d", iCount, Chan, sDS2482.ROM.Family, sDS2482.ROM.TagNum, sDS2482.ROM.CRC, iRV) ;
-				LT_GOTO(iRV, erSUCCESS, exit) ;			// if callback failed, return
-				++iCount ;								// callback successful, update count
-			} else {
-				OWFamilySkipSetup() ;
-			}
-			iRV = OWNext() ;							// try to find next device (if any)
-		}
-		LT_GOTO(iRV, erSUCCESS, exit) ;			// if callback failed, return
+		LT_BREAK(iRV, erSUCCESS) ;
+		iRV = ds2482ScanChannel(Family, Handler, xCount) ;
+		LT_BREAK(iRV, erSUCCESS) ;						// if callback failed, return
+		xCount += iRV ;									// update running count
 	}
-	iRV = iCount ;
-exit:
 	xSemaphoreGive(sDS2482.Mux) ;
 	IF_SL_ERR(iRV < erSUCCESS, "iRV=%d", iRV) ;
-	return iRV ;
-#elif	0
-	int32_t	iRV, iCount = 0 ;
-	xSemaphoreTake(sDS2482.Mux, portMAX_DELAY) ;
-	for (uint8_t Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM; ++Chan) {
-		iRV = ds2482ChannelSelect(Chan) ;
-		NE_GOTO(iRV, erSUCCESS, exit) ;
-
-		iRV = OWFirst() ;
-		while (iRV == 1) {
-			if (sDS2482.ROM.Family == Family) {
-				if (Handler) {
-					iRV = Handler(iCount) ;				// found a device, callback
-				}
-				IF_PRINT(debugTRACK, "Cnt=%d  Ch=%d %02X/%#M/%02X  iRV=%d", iCount, Chan, sDS2482.ROM.Family, sDS2482.ROM.TagNum, sDS2482.ROM.CRC, iRV) ;
-				LT_GOTO(iRV, erSUCCESS, exit) ;			// if callback failed, return
-				++iCount ;								// callback successful, update count
-			}
-			iRV = OWNext() ;							// try to find next device (if any)
-		}
-		EQ_GOTO(iRV, erFAILURE, exit) ;
-	}
-	iRV = iCount ;
-exit:
-	xSemaphoreGive(sDS2482.Mux) ;
-	return iRV ;
-#else
-	int32_t	iRV, iCount = 0 ;
-	xSemaphoreTake(sDS2482.Mux, portMAX_DELAY) ;
-	for (uint8_t Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM; ++Chan) {
-		iRV = ds2482ChannelSelect(Chan) ;
-		LT_GOTO(iRV, erSUCCESS, exit) ;
-
-		iRV = OWFirst() ;
-		while (iRV == 1) {
-			if (sDS2482.ROM.Family != Family) {
-				OWTargetSetup(Family) ;
-			} else {
-				if (Handler) {
-					iRV = Handler(iCount) ;					// found a device, callback
-				}
-				IF_PRINT(debugTRACK, "Cnt=%d  Ch=%d  %02X/%#M/%02X  iRV=%d", iCount, Chan, sDS2482.ROM.Family, sDS2482.ROM.TagNum, sDS2482.ROM.CRC, iRV) ;
-				LT_GOTO(iRV, erSUCCESS, exit) ;				// if callback failed, return
-				++iCount ;									// callback successful, update count
-			}
-			iRV = OWNext() ;
-		}
-		LT_GOTO(iRV, erSUCCESS, exit) ;
-	}
-	iRV = iCount ;
-exit:
-	xSemaphoreGive(sDS2482.Mux) ;
-	IF_SL_ERR(iRV < erSUCCESS, "iRV=%d", iRV) ;
-	return iRV ;
-#endif
+	return iRV < erSUCCESS ? iRV : xCount ;
 }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
@@ -1075,15 +966,19 @@ int32_t	ds2482CountDevices(void) {
 		iRV = OWFirst() ;
 		while (iRV == 1) {
 			switch (sDS2482.ROM.Family) {
+#if		(configBUILD_WITH_DS1990X == 1)
 			case OWFAMILY_01:							// DS1990A/R, 2401/11 devices
-				++FamilyCount[idxOWFAMILY_01] ;			// count ONLY for sake of reporting
+				++Family01Count ;						// count ONLY for sake of reporting
 				break ;
+#endif
+
 #if		(configBUILD_WITH_DS18X20 == 1)
 			case OWFAMILY_10:							// DS1820 & DS18S20 Thermometer
 			case OWFAMILY_28:							// DS18B20 Thermometer
-				++FamilyCount[idxOWFAM10_28] ;
+				++Fam10_28Count ;
 				break ;
 #endif
+
 			default:
 				SL_ERR("Invalid/unsupported 1W family '0x%02X' found", sDS2482.ROM.Family) ;
 			}
@@ -1094,13 +989,7 @@ int32_t	ds2482CountDevices(void) {
 		}
 		EQ_RETURN(iRV, erFAILURE) ;
 	}
-	IF_EXEC_3(debugTRACK, xI8ArrayPrint, "Family Count:", FamilyCount, idxOWFAMILY_NUM) ;
-	IF_EXEC_3(debugTRACK, xI8ArrayPrint, "Channel Count:", ChannelCount, sd2482CHAN_NUM) ;
 	IF_PRINT(debugTRACK, "DS2482: Found %d device(s)\n", iCount) ;
-	if (FamilyCount[idxOWFAMILY_01]) {
-		iCount -= FamilyCount[idxOWFAMILY_01] ;
-		FamilyCount[idxOWFAMILY_01] = 0 ;				// Reset EVENT type device count
-	}
 	return iCount ;
 }
 
@@ -1132,21 +1021,35 @@ int32_t	ds2482Config(void) {
 	IF_SYSTIMER_INIT(debugTIMING, systimerDS2482B, systimerTICKS, "DS2482B", myMS_TO_TICKS(1), myMS_TO_TICKS(20)) ;
 	IF_SYSTIMER_INIT(debugTIMING, systimerDS2482WW, systimerTICKS, "DS2482WW", myMS_TO_TICKS(1), myMS_TO_TICKS(10)) ;
 
+#if		(configBUILD_WITH_DS1990X == 1)
+	ds1990xDiscover() ;
+#endif
+
 #if		(configBUILD_WITH_DS18X20 == 1)
-	if (FamilyCount[idxOWFAM10_28]) {
-		ds18x20Discover() ;
-		IF_SYSTIMER_INIT(debugTIMING, systimerDS18X20, systimerTICKS, "DS18X20", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
-	}
+	ds18x20Discover() ;
 #endif
 	return erSUCCESS ;
 }
 
+int32_t	ds2482TestsHandler(int32_t iCount, int32_t xCount) {
+	return xprintf("#%d Ch%d %02X/%#M/%02X  ", iCount + xCount, sDS2482.CurChan, sDS2482.ROM.Family, sDS2482.ROM.TagNum, sDS2482.ROM.CRC) ;
+}
+
 void	ds2482Tests(void) {
-	xprintf("\nChecking Fam01 ") ;
-	ds2482ScanAndCall(OWFAMILY_01, NULL);
-	xprintf("\nChecking Fam28 ") ;
-	ds2482ScanAndCall(OWFAMILY_28, NULL);
-	xprintf("\nChecking Fam01 ") ;
-	ds2482ScanAndCall(OWFAMILY_01, NULL);
+	xprintf("\nChecking") ;
+#if		(configBUILD_WITH_DS1990X == 1)
+	xprintf("\nF01 ") ;
+	ds2482ScanAllChannels(OWFAMILY_01, ds2482TestsHandler);
+#endif
+
+#if		(configBUILD_WITH_DS18X20 == 1)
+	xprintf("\nF28 ") ;
+	ds2482ScanAllChannels(OWFAMILY_28, ds2482TestsHandler);
+#endif
+
+#if		(configBUILD_WITH_DS1990X == 1)
+	xprintf("\nF01 ") ;
+	ds2482ScanAllChannels(OWFAMILY_01, ds2482TestsHandler);
+#endif
 	xprintf("\n") ;
 }
