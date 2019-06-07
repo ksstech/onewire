@@ -24,6 +24,8 @@
 
 #pragma		once
 
+#include	"x_definitions.h"
+
 #include	"onewire.h"
 #include	"endpoints.h"
 
@@ -42,7 +44,7 @@ enum { ds18x20LSB, ds18x20MSB, ds18x20HI, ds18x20LO, ds18x20CONF, ds18x20RSVD, d
 // See http://www.catb.org/esr/structure-packing/
 // Also http://c0x.coding-guidelines.com/6.7.2.1.html
 
-typedef struct ds18x20_s {								// DS1820, DS18S20 & DS18B20 9[12] bit Temperature sensors
+typedef struct __attribute__((packed)) {				// DS1820, DS18S20 & DS18B20 9[12] bit Temperature sensors
 	ow_rom_t	ROM ;
 	union {												// Specific 1-Wire device type scratch pad info
 		struct fam10 { uint8_t	Tlsb, Tmsb, Thi, Tlo, Rsvd[2], Remain, Count, CRC ; } fam10 ;
@@ -53,9 +55,13 @@ typedef struct ds18x20_s {								// DS1820, DS18S20 & DS18B20 9[12] bit Tempera
 		uint8_t		Ch	: 3 ;							// Channel the device was discovered on
 		uint8_t		Idx	: 3 ;							// Endpoint index (0->7) of this specific device
 		uint8_t		Res	: 2 ;							// Resolution 0=9b 1=10b 2=11b 3=12b
+		uint8_t		spare[2] ;
 	} ;
 	x32_t		xVal ;
 } ds18x20_t ;
+
+DUMB_STATIC_ASSERT(sizeof(struct fam10) == sizeof(struct fam28)) ;
+DUMB_STATIC_ASSERT(sizeof(ds18x20_t) == 24) ;
 
 // #################################### Public Data structures #####################################
 

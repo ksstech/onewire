@@ -84,7 +84,7 @@ enum { sd2482CHAN_0, sd2482CHAN_1, sd2482CHAN_2, sd2482CHAN_3, sd2482CHAN_4, sd2
 // See http://www.catb.org/esr/structure-packing/
 // Also http://c0x.coding-guidelines.com/6.7.2.1.html
 
-typedef union {
+typedef union __attribute__((packed)) {
 	struct {
 	// STATus register
 /*LSB*/	uint8_t		OWB		: 1 ;			// 1-Wire Busy
@@ -115,7 +115,9 @@ typedef union {
 	uint8_t			RegX[4] ;
 } ds2482_regs_t ;
 
-typedef struct {										// DS2482 I2C <> 1Wire bridge
+DUMB_STATIC_ASSERT( sizeof(ds2482_regs_t) == 4) ;
+
+typedef struct __attribute__((packed)) {				// DS2482 I2C <> 1Wire bridge
 	halI2Cdev_t		sI2Cdev ;
 	ds2482_regs_t	Regs ;
 	ow_rom_t		ROM ;
@@ -127,6 +129,8 @@ typedef struct {										// DS2482 I2C <> 1Wire bridge
 	uint8_t			RegPntr			: 2 ;
 	uint8_t 		LastDeviceFlag	: 1 ;
 } ds2482_t ;
+
+DUMB_STATIC_ASSERT( sizeof(ds2482_t) == 36) ;
 
 // #################################### Public Data structures #####################################
 

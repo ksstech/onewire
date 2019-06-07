@@ -24,6 +24,8 @@
 
 #pragma		once
 
+#include	"x_definitions.h"
+
 #include	<stdint.h>
 
 // ################################## Generic 1-Wire Commands ######################################
@@ -106,6 +108,8 @@ typedef union ow_rom_u {
 		uint8_t		CRC ;
 	} ;
 } ow_rom_t ;
+
+DUMB_STATIC_ASSERT( sizeof(ow_rom_t) == ONEWIRE_ROM_LENGTH) ;
 
 // ###################################### Private functions ########################################
 
