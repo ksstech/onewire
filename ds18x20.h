@@ -33,7 +33,8 @@
 
 // ############################################# Macros ############################################
 
-#define	DS18X20_EXT_POWER					1			// use enable external power not parasitic
+#define	DS18X20_EXT_POWER					0			// use enable external power not parasitic
+#define	ds18x20TRIGGER_GLOBAL				0
 
 // ######################################## Enumerations ###########################################
 
@@ -65,6 +66,7 @@ DUMB_STATIC_ASSERT(sizeof(ds18x20_t) == 24) ;
 
 // #################################### Public Data structures #####################################
 
+extern uint8_t Fam10_28Count ;
 
 // ###################################### Private functions ########################################
 
@@ -73,4 +75,6 @@ void	ds18x20DisableExtPSU(ds18x20_t * psDS18X20) ;
 int32_t	ds18x20Discover(void)  ;
 
 float	ds18x20GetTemperature(int32_t Idx) ;
-int32_t	ds18x20ConvertAndReadAll(ep_work_t * psEpWork) ;
+struct ep_work_s ;
+int32_t	ds18x20ConvertAndReadAll(struct ep_work_s * psEpWork) ;
+int32_t	ds18x20Handler(int32_t, int32_t) ;
