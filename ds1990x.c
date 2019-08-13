@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-18 AM Maree/KSS Technologies (Pty) Ltd.
+ * Copyright 2018-19 AM Maree/KSS Technologies (Pty) Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -19,35 +19,19 @@
  */
 
 /*
- * ds2482.c
+ * ds1990x.c
  */
 
 #include	"FreeRTOS_Support.h"
 #include	"task_events.h"
 
-#include	"ds2482/ds2482.h"
-#include	"ds2482/ds1990x.h"
-
-#include	"rules_engine.h"
-
-#include	"hal_i2c.h"
-
-#include	"x_debug.h"
-#include	"x_buffers.h"
+#include	"x_printf.h"
 #include	"x_errors_events.h"
 #include	"x_systiming.h"								// timing debugging
 #include	"x_syslog.h"
-#include	"x_formprint.h"
 
-#if		(halHAS_PCA9555 == 1)
-	#include	"pca9555/pca9555.h"
-#endif
-
-#if		(ESP32_PLATFORM == 1)
-	#include	"esp32/rom/crc.h"						// ESP32 ROM routine
-#else
-	#include	"crc-barr.h"							// Barr group CRC
-#endif
+#include	"onewire/ds1990x.h"
+#include	"onewire/ds2482.h"
 
 #include	<stdint.h>
 #include	<string.h>
@@ -67,14 +51,11 @@
  * successful read. If the same ID is read on the same channel within 'x' seconds, skip it */
 ow_rom_t	LastROM[sd2482CHAN_NUM]		= { 0 } ;
 seconds_t	LastRead[sd2482CHAN_NUM]	= { 0 } ;
-uint8_t		OWdelay	= 5 ;
-
-uint8_t		Family01Count = 0 ;
+uint8_t		OWdelay	= 5, Family01Count = 0 ;
 
 // ################################# Application support functions #################################
 
-int32_t	ds1990xHandler(int32_t iCount, int32_t xCount) {
-	IF_myASSERT(debugPARAM, iCount == 0) ;		// cannot have more than 1x DS1990X reader per channel
+int32_t	ds1990xHandleRead(int32_t iCount, void * pVoid) {
 	/* To avoid registering multiple reads if iButton is held in place too long we enforce a
 	 * period of 'x' seconds within which successive reads of the same tag will be ignored */
 	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;

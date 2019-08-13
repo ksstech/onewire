@@ -24,7 +24,7 @@
 
 #pragma		once
 
-#include	"onewire.h"
+//#include	"onewire/onewire.h"
 
 #include	<stdint.h>
 
@@ -43,5 +43,5 @@ extern	uint8_t	Family01Count ;
 
 // ###################################### Private functions ########################################
 
-int32_t	ds1990xHandler(int32_t, int32_t) ;
+int32_t	ds1990xHandleRead(int32_t, void *) ;
 int32_t	ds1990xDiscover(void) ;

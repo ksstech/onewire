@@ -22,26 +22,30 @@
  * ds2482.c
  */
 
+
 #include	"FreeRTOS_Support.h"
 #include	"task_events.h"
 
 #include	"rules_engine.h"
+#include	"actuators.h"
 
-#include	"hal_i2c.h"
-
-#include	"x_debug.h"
+#include	"x_printf.h"
 #include	"x_buffers.h"
 #include	"x_errors_events.h"
 #include	"x_systiming.h"								// timing debugging
 #include	"x_syslog.h"
 #include	"x_formprint.h"
 
-#include	"ds2482/ds2482.h"
+#include	"hal_debug.h"
+#include	"hal_i2c.h"
+#include	"onewire/ds2482.h"
+
 #if		(configBUILD_WITH_DS1990X == 1)
-	#include	"ds2482/ds1990x.h"
+	#include	"onewire/ds1990x.h"
 #endif
+
 #if		(configBUILD_WITH_DS18X20 == 1)
-	#include	"ds2482/ds18x20.h"
+	#include	"onewire/ds18x20.h"
 #endif
 
 #if		(halHAS_PCA9555 == 1)
@@ -57,7 +61,7 @@
 #include	<stdint.h>
 #include	<string.h>
 
-#define	debugFLAG					0xF007
+#define	debugFLAG					0xC00F
 
 #define	debugTIMING					(debugFLAG & 0x0001)
 #define	debugBUS_CFG				(debugFLAG & 0x0002)
@@ -449,7 +453,7 @@ int32_t OWWriteBytePower(int32_t sendbyte) {
 		IF_myASSERT(debugRESULT, 0) ;
 		return 0 ;
 	}
-	int32_t iRV = OWWriteByte(sendbyte);
+	int32_t iRV = OWWriteByte(sendbyte) ;
 	IF_myASSERT(debugRESULT, iRV == erSUCCESS && sDS2482.Regs.SPU == 1) ;
 	return 1 ;
 }
@@ -584,7 +588,7 @@ uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
 			}
 		}
 	}
-	IF_PRINT(debugCRC,"'%m' CRC=%x '%s'   ", buf, shift_reg, (shift_reg == 0) ? "Pass" : "Fail") ;
+	IF_PRINT(debugCRC && shift_reg, "CRC=%x FAIL %'-+b\n", shift_reg, buflen, buf) ;
 	return (shift_reg == 0) ? 1 : 0 ;
 }
 
@@ -835,8 +839,8 @@ int32_t OWVerify(void) {
 }
 
 /**
- * Setup the search to find the device type 'family_code' on the next call
- * to OWNext() if it is present.
+ * Setup search to find the first 'family_code' device on the next call to OWNext().
+ * If no (more) devices of 'family_code' can be found return first device of next family
  */
 void	OWTargetSetup(uint8_t family_code) {
 	sDS2482.ROM.Value				= 0ULL ;			// reset all ROM fields
@@ -847,8 +851,9 @@ void	OWTargetSetup(uint8_t family_code) {
 }
 
 /**
- * Setup the search to skip the current device type on the next call
- * to OWNext().
+ * Setup the search to skip the current device family on the next call to OWNext().
+ * Can ONLY be done after a search had been performed.
+ * Will find the first device of the next family.
  */
 void	OWFamilySkipSetup(void) {
 	sDS2482.LastDiscrepancy = sDS2482.LastFamilyDiscrepancy ;	// set the Last discrepancy to last family discrepancy
@@ -864,19 +869,19 @@ void	OWFamilySkipSetup(void) {
  * ds2482HandleFamilies() - Call handler based on device family
  * @return	return value from handler or
  */
-int32_t	ds2482HandleFamilies(int32_t iCount, int32_t xCount) {
+int32_t	ds2482HandleFamilies(int32_t iCount, void * pVoid) {
 	int32_t	iRV = erFAILURE ;
 	switch (sDS2482.ROM.Family) {
 #if		(configBUILD_WITH_DS1990X == 1)
 	case OWFAMILY_01:							// DS1990A/R, 2401/11 devices
-		iRV = ds1990xHandler(iCount, xCount) ;
+		iRV = ds1990xHandleRead(iCount, pVoid) ;
 		break ;
 #endif
 
 #if		(configBUILD_WITH_DS18X20 == 1)
 	case OWFAMILY_10:							// DS18S20 Thermometer
 	case OWFAMILY_28:							// DS18B20 Thermometer
-		iRV = ds18x20Handler(iCount, xCount) ;
+		iRV = ds18x20Handler(iCount, pVoid) ;
 		break ;
 #endif
 
@@ -894,37 +899,56 @@ int32_t	ds2482HandleFamilies(int32_t iCount, int32_t xCount) {
  * @return	erFAILURE if an error occurred
  * 			erSUCCESS if no [matching] device found or no error returned
  */
-int32_t	ds2482ScanChannel(uint8_t Family, int32_t (*Handler)(int32_t, int32_t), int32_t xCount) {
-	int32_t	iCount = 0, iRV = OWFirst() ;
+int32_t	ds2482ScanChannel(uint8_t Family, int32_t (* Handler)(int32_t, void *), int32_t xCount, void * pVoid) {
+#if 0
+	int32_t	iCount = 0 ;
+	int32_t	iRV = OWFirst() ;
 	while (iRV == 1) {
 		iRV = OWCheckCRC(sDS2482.ROM.HexChars, sizeof(ow_rom_t)) ;
 		myASSERT(iRV == 1) ;
 		if (Family == 0 || Family == sDS2482.ROM.Family) {
 			if (Handler) {
-				iRV = Handler(iCount, xCount) ;
+				iRV = Handler(xCount + iCount, pVoid) ;
 				LT_BREAK(iRV, erSUCCESS) ;
 			}
 			++iCount ;
 		} else {
 			OWFamilySkipSetup() ;
-//			OWTargetSetup(Family) ;
 		}
 		iRV = OWNext() ;								// try to find next device (if any)
 	}
 	return iRV < erSUCCESS ? iRV : iCount ;
+#else
+	int32_t	iCount = 0 ;
+	OWTargetSetup(Family) ;
+	int32_t	iRV = OWSearch() ;
+	while (iRV == 1) {
+		iRV = OWCheckCRC(sDS2482.ROM.HexChars, sizeof(ow_rom_t)) ;
+		myASSERT(iRV == 1) ;
+		if (Family == 0 || Family == sDS2482.ROM.Family) {
+			if (Handler) {
+				iRV = Handler(xCount + iCount, pVoid) ;
+				LT_BREAK(iRV, erSUCCESS) ;
+			}
+			++iCount ;
+		}
+		iRV = OWNext() ;								// try to find next device (if any)
+	}
+	return iRV < erSUCCESS ? iRV : iCount ;
+#endif
 }
 
 /**
  * ds2482ScanAllChanAllFam() - scan ALL channels sequentially for [specified] family
  * @return
  */
-int32_t	ds2482ScanAllChannels(uint8_t Family, int (*Handler)(int32_t, int32_t)) {
+int32_t	ds2482ScanAllChannels(uint8_t Family, int (* Handler)(int32_t, void *), void * pVoid) {
 	int32_t	iRV = erSUCCESS, xCount = 0 ;
 	xSemaphoreTake(sDS2482.Mux, portMAX_DELAY) ;
 	for (uint8_t Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM; ++Chan) {
 		iRV = ds2482ChannelSelect(Chan) ;
 		LT_BREAK(iRV, erSUCCESS) ;
-		iRV = ds2482ScanChannel(Family, Handler, xCount) ;
+		iRV = ds2482ScanChannel(Family, Handler, xCount, pVoid) ;
 		LT_BREAK(iRV, erSUCCESS) ;						// if callback failed, return
 		xCount += iRV ;									// update running count
 	}
@@ -963,6 +987,13 @@ int32_t	ds2482CountDevices(void) {
 		int32_t iRV = ds2482ChannelSelect(Chan) ;
 		EQ_RETURN(iRV, erFAILURE) ;
 
+#if		(ds18x20PWR_SOURCE == 1)
+		xActuatorBlock(Chan) ;
+		vActuateSetLevelDIG(Chan, 1) ;
+		pca9555DIG_OUT_WriteAll() ;
+		int32_t	PwrFlag = 0 ;
+#endif
+
 		iRV = OWFirst() ;
 		while (iRV == 1) {
 			switch (sDS2482.ROM.Family) {
@@ -976,6 +1007,9 @@ int32_t	ds2482CountDevices(void) {
 			case OWFAMILY_10:							// DS1820 & DS18S20 Thermometer
 			case OWFAMILY_28:							// DS18B20 Thermometer
 				++Fam10_28Count ;
+#if		(ds18x20PWR_SOURCE == 1)
+				++PwrFlag ;								// Set flag to leave power on
+#endif
 				break ;
 #endif
 
@@ -987,6 +1021,13 @@ int32_t	ds2482CountDevices(void) {
 			IF_EXEC_1(debugTRACK, ds2482PrintROM, &sDS2482.ROM) ;
 			iRV = OWNext() ;
 		}
+#if		(ds18x20PWR_SOURCE == 1)
+		if (PwrFlag == 0) {
+			vActuateSetLevelDIG(Chan, 0) ;
+			pca9555DIG_OUT_WriteAll() ;
+			xActuatorUnBlock(Chan) ;
+		}
+#endif
 		EQ_RETURN(iRV, erFAILURE) ;
 	}
 	IF_PRINT(debugTRACK, "DS2482: Found %d device(s)\n", iCount) ;
@@ -1003,7 +1044,8 @@ int32_t	ds2482Identify(uint8_t chanI2C, uint8_t addrI2C) {
 	IF_myASSERT(debugPARAM, chanI2C < halI2C_NUM) ;
 	sDS2482.sI2Cdev.chanI2C	= chanI2C ;
 	sDS2482.sI2Cdev.addrI2C	= addrI2C ;
-	sDS2482.sI2Cdev.dlayI2C	= pdMS_TO_TICKS(750) ;
+//	sDS2482.sI2Cdev.dlayI2C	= pdMS_TO_TICKS(750) ;
+	sDS2482.sI2Cdev.dlayI2C	= pdMS_TO_TICKS(10) ;
 	if (ds2482Detect() == 0) {							// if no device found
 		sDS2482.sI2Cdev.chanI2C			= 0 ;			// reset all & return
 		sDS2482.sI2Cdev.addrI2C			= 0 ;
@@ -1011,8 +1053,6 @@ int32_t	ds2482Identify(uint8_t chanI2C, uint8_t addrI2C) {
 		return erFAILURE ;
 	}
 	sDS2482.Mux	= xSemaphoreCreateMutex() ;
-	int32_t iRV = ds2482CountDevices() ;
-	EQ_RETURN(iRV, erFAILURE) ;
 	return erSUCCESS ;
 }
 
@@ -1021,12 +1061,15 @@ int32_t	ds2482Config(void) {
 	IF_SYSTIMER_INIT(debugTIMING, systimerDS2482B, systimerTICKS, "DS2482B", myMS_TO_TICKS(1), myMS_TO_TICKS(20)) ;
 	IF_SYSTIMER_INIT(debugTIMING, systimerDS2482WW, systimerTICKS, "DS2482WW", myMS_TO_TICKS(1), myMS_TO_TICKS(10)) ;
 
+	int32_t iRV = ds2482CountDevices() ;
+	LT_RETURN(iRV, 1) ;
+
 #if		(configBUILD_WITH_DS1990X == 1)
 	ds1990xDiscover() ;
 #endif
 
 #if		(configBUILD_WITH_DS18X20 == 1)
-	ds18x20Discover() ;
+	ds18x20Discover(URI_DS18X20) ;
 #endif
 	return erSUCCESS ;
 }

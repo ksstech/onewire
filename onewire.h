@@ -28,6 +28,10 @@
 
 #include	<stdint.h>
 
+// ############################################# Macros ############################################
+
+#define ONEWIRE_ROM_LENGTH        			8
+
 // ################################## Generic 1-Wire Commands ######################################
 
 #define OW_CMD_SEARCHROM     				0xF0
@@ -36,7 +40,19 @@
 #define OW_CMD_SKIPROM       				0xCC
 #define OW_CMD_ALARMSEARCH   				0xEC
 
-// ################################## DS18X20 Function Commands ####################################
+// ################################### DS2482 1-Wire Commands ######################################
+
+#define CMD_DRST   							0xF0		// Device Reset
+#define CMD_SRP								0xE1		// Set Read Pointer
+#define CMD_WCFG   							0xD2		// Write Config
+#define CMD_CHSL   							0xC3		// Channel Select (-800)
+#define CMD_1WRS   							0xB4		// 1-Wire Reset
+#define CMD_1WWB   							0xA5		// 1-Wire Write Byte
+#define CMD_1WRB   							0x96		// 1-Wire Read Byte
+#define CMD_1WSB   							0x87		// 1-Wire Single Bit
+#define CMD_1WT								0x78		// 1-Wire Triplet
+
+// ################################## DS18X20 1-Wire Commands ######################################
 
 #define	DS18X20_CONVERT						0x44
 #define	DS18X20_COPY_SP						0x48
@@ -44,8 +60,6 @@
 #define	DS18X20_READ_PSU					0xB4
 #define	DS18X20_RECALL_EE					0xB8
 #define	DS18X20_READ_SP						0xBE
-
-#define ONEWIRE_ROM_LENGTH        			8
 
 // ##################################### iButton Family Codes #####################################
 

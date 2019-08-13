@@ -25,30 +25,21 @@
 #pragma		once
 
 #include	"hal_i2c.h"
-#include	"onewire.h"
+#include	"onewire/onewire.h"
 
 #include	<stdint.h>
 
 // ############################################# Macros ############################################
 
-#define	configHAL_I2C_DS2482_ADDR			0x18		// Device base address
+#define	ds2482ADDR_0						0x18		// Device base address
+#define	ds2482RETRIES						1
+#define	ds2482SINGLE_DEVICE					0
 
 #define	owDELAY_WB							1			// 0=Yield >0=mS Delay
 														// 0=NoWait 1=Yield >1=Delay(n-1)
 #define	owDELAY_ST							2			// Search Triplet
 #define	owDELAY_RST							2			// Bus Reset
 #define	owDELAY_TB							1			// Touch Bit
-
-// DS2482 commands
-#define CMD_DRST   							0xF0		// Device Reset
-#define CMD_SRP								0xE1		// Set Read Pointer
-#define CMD_WCFG   							0xD2		// Write Config
-#define CMD_CHSL   							0xC3		// Channel Select (-800)
-#define CMD_1WRS   							0xB4		// 1-Wire Reset
-#define CMD_1WWB   							0xA5		// 1-Wire Write Byte
-#define CMD_1WRB   							0x96		// 1-Wire Read Byte
-#define CMD_1WSB   							0x87		// 1-Wire Single Bit
-#define CMD_1WT								0x78		// 1-Wire Triplet
 
 // DS2482 config bits
 #define CONFIG_APU							0x01		// Active Pull Up
@@ -116,7 +107,7 @@ typedef union __attribute__((packed)) {
 	uint32_t		RegVal ;
 } ds2482_regs_t ;
 
-DUMB_STATIC_ASSERT( sizeof(ds2482_regs_t) == 4) ;
+DUMB_STATIC_ASSERT(sizeof(ds2482_regs_t) == 4) ;
 
 typedef struct __attribute__((packed)) {				// DS2482 I2C <> 1Wire bridge
 	halI2Cdev_t		sI2Cdev ;
@@ -131,7 +122,7 @@ typedef struct __attribute__((packed)) {				// DS2482 I2C <> 1Wire bridge
 	uint8_t 		LastDeviceFlag	: 1 ;
 } ds2482_t ;
 
-DUMB_STATIC_ASSERT( sizeof(ds2482_t) == 36) ;
+DUMB_STATIC_ASSERT(sizeof(ds2482_t) == 36) ;
 
 // #################################### Public Data structures #####################################
 
@@ -158,9 +149,9 @@ int32_t ds2482ChannelSelect(uint8_t Chan) ;
 
 int32_t	ds2482ScanChannelAll(void) ;
 
-int32_t	ds2482HandleFamilies(int32_t, int32_t) ;
-int32_t	ds2482ScanChannel(uint8_t, int (*)(int32_t, int32_t), int32_t) ;
-int32_t	ds2482ScanAllChannels(uint8_t, int (*)(int32_t, int32_t)) ;
+int32_t	ds2482HandleFamilies(int32_t, void *) ;
+int32_t	ds2482ScanChannel(uint8_t, int (*)(int32_t, void * pVoid), int32_t, void * pVoid) ;
+int32_t	ds2482ScanAllChannels(uint8_t, int (*)(int32_t, void *), void * pVoid) ;
 
 int32_t	ds2482Diagnostics(void) ;
 int32_t	ds2482Identify(uint8_t chanI2C, uint8_t addrI2C) ;

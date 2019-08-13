@@ -25,20 +25,23 @@
 #pragma		once
 
 #include	"x_definitions.h"
+#include	"x_struct_union.h"
 
-#include	"onewire.h"
-#include	"endpoints.h"
+#include	"onewire/onewire.h"
 
 #include	<stdint.h>
 
 // ############################################# Macros ############################################
 
-#define	DS18X20_EXT_POWER					0			// use enable external power not parasitic
+#define	ds18x20PWR_SOURCE					0			// 0=parasitic, 1=GPIO, 2= External
 #define	ds18x20TRIGGER_GLOBAL				0
+
+#define	ds18x20DELAY_CONVERT_PARASITIC		752
+#define	ds18x20DELAY_CONVERT_EXTERNAL		20
+#define	ds18x20DELAY_SP_COPY				11
 
 // ######################################## Enumerations ###########################################
 
-enum { ds18x20LSB, ds18x20MSB, ds18x20HI, ds18x20LO, ds18x20CONF, ds18x20RSVD, ds18x20REM, ds18x20CNT, ds18x20CRC, ds18x20NUM } ;
 
 // ######################################### Structures ############################################
 
@@ -47,10 +50,16 @@ enum { ds18x20LSB, ds18x20MSB, ds18x20HI, ds18x20LO, ds18x20CONF, ds18x20RSVD, d
 
 typedef struct __attribute__((packed)) {				// DS1820, DS18S20 & DS18B20 9[12] bit Temperature sensors
 	ow_rom_t	ROM ;
-	union {												// Specific 1-Wire device type scratch pad info
-		struct fam10 { uint8_t	Tlsb, Tmsb, Thi, Tlo, Rsvd[2], Remain, Count, CRC ; } fam10 ;
-		struct fam28 { uint8_t	Tlsb, Tmsb, Thi, Tlo, Conf, Rsvd[3], CRC ; } fam28 ;
-		uint8_t	RegX[ds18x20NUM] ;
+	union {
+		struct {
+			uint8_t		Tlsb, Tmsb, Thi, Tlo ;
+			union {
+				struct fam10 { uint8_t Rsvd[2], Remain, Count ; } fam10 ;
+				struct fam28 { uint8_t Conf, Rsvd[3] ; }  fam28 ;
+			} ;
+			uint8_t	CRC ;
+		} ;
+		uint8_t	RegX[9] ;
 	} ;
 	struct {											// Common 1-Wire endpoint enumeration info
 		uint8_t		Ch	: 3 ;							// Channel the device was discovered on
@@ -72,9 +81,10 @@ extern uint8_t Fam10_28Count ;
 
 void	ds18x20EnableExtPSU(ds18x20_t * psDS18X20) ;
 void	ds18x20DisableExtPSU(ds18x20_t * psDS18X20) ;
-int32_t	ds18x20Discover(void)  ;
+int32_t	ds18x20Discover(int32_t xUri)  ;
 
 float	ds18x20GetTemperature(int32_t Idx) ;
 struct ep_work_s ;
-int32_t	ds18x20ConvertAndReadAll(struct ep_work_s * psEpWork) ;
-int32_t	ds18x20Handler(int32_t, int32_t) ;
+int32_t	ds18x20ConvertAndReadAll(struct ep_work_s *) ;
+int32_t	ds18x20AllInOne(void) ;
+int32_t	ds18x20Handler(int32_t, void *) ;
