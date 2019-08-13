@@ -61,10 +61,10 @@ int32_t	ds18x20Discover(void)  ;
 
 void	ds18x20PrintInfo(ds18x20_t * psDS18X20) {
 	ds2482PrintROM(&psDS18X20->ROM) ;
-	xprintf("  Tlsb=%02X  Tmsb=%02X  Thi=%02X  Tlo=%02X",
-			psDS18X20->fam10.Tlsb, psDS18X20->fam10.Tmsb, psDS18X20->fam10.Thi, psDS18X20->fam10.Tlo) ;
+	PRINT("  Tlsb=%02X  Tmsb=%02X  Thi=%02X  Tlo=%02X",
+			psDS18X20->Tlsb, psDS18X20->Tmsb, psDS18X20->Thi, psDS18X20->Tlo) ;
 	if (psDS18X20->ROM.Family == OWFAMILY_28) {
-		xprintf("  Conf=%02X", psDS18X20->fam28.Conf) ;
+		PRINT("  Conf=%02X", psDS18X20->fam28.Conf) ;
 	}
 	xprintf("\n") ;
 }
