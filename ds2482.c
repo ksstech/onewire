@@ -305,14 +305,14 @@ uint8_t	ds2482ReadRegister(uint8_t Reg) {
  * ds2482PrintROM() - print the 1-Wire ROM information
  * @param psOW_ROM
  */
-void	ds2482PrintROM(ow_rom_t * psOW_ROM) { xprintf("%02X/%#M/%02X\n", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ; }
+void	ds2482PrintROM(ow_rom_t * psOW_ROM) { PRINT("%02X/%#M/%02X\n", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ; }
 
 /**
  * Display register contents
  */
 void	ds2482PrintRegisters(void) {
 	// Status
-	xprintf("STAT(0)=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
+	PRINT("STAT(0)=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
 				sDS2482.Regs.Rstat,
 				sDS2482.Regs.DIR ? '1' : '0',
 				sDS2482.Regs.TSB ? '1' : '0',
@@ -322,14 +322,14 @@ void	ds2482PrintRegisters(void) {
 				sDS2482.Regs.SD  ? '1' : '0',
 				sDS2482.Regs.PPD ? '1' : '0',
 				sDS2482.Regs.OWB ? '1' : '0') ;
-	xprintf("DATA(1)=0x%02X\n", sDS2482.Regs.Rdata) ;	// Data
+	PRINT("DATA(1)=0x%02X\n", sDS2482.Regs.Rdata) ;	// Data
 
 	int32_t Chan ;										// Channel, start by finding the matching Channel #
 	for (Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM && sDS2482.Regs.Rchan != ds2482_V2N[Chan]; ++Chan) ;
 	IF_myASSERT(debugRESULT, Chan < sd2482CHAN_NUM) ;
-	xprintf("CHAN(2)=0x%02X ==> %d\n", sDS2482.Regs.Rchan, Chan) ;
+	PRINT("CHAN(2)=0x%02X ==> %d\n", sDS2482.Regs.Rchan, Chan) ;
 
-	xprintf("CONF(3)=0x%02X  1WS=%c  SPU=%c  APU=%c\n",	// Configuration
+	PRINT("CONF(3)=0x%02X  1WS=%c  SPU=%c  APU=%c\n",	// Configuration
 			sDS2482.Regs.Rconf,
 			sDS2482.Regs.OWS	? '1' : '0',
 			sDS2482.Regs.SPU	? '1' : '0',
@@ -1031,25 +1031,25 @@ int32_t	ds2482Config(void) {
 	return erSUCCESS ;
 }
 
-int32_t	ds2482TestsHandler(int32_t iCount, int32_t xCount) {
-	return xprintf("#%d Ch%d %02X/%#M/%02X  ", iCount + xCount, sDS2482.CurChan, sDS2482.ROM.Family, sDS2482.ROM.TagNum, sDS2482.ROM.CRC) ;
+int32_t	ds2482TestsHandler(int32_t iCount, void * pVoid) {
+	return PRINT("#%d Ch%d %02X/%#M/%02X  ", iCount, sDS2482.CurChan, sDS2482.ROM.Family, sDS2482.ROM.TagNum, sDS2482.ROM.CRC) ;
 }
 
 void	ds2482Tests(void) {
-	xprintf("\nChecking") ;
+	PRINT("\nChecking") ;
 #if		(configBUILD_WITH_DS1990X == 1)
-	xprintf("\nF01 ") ;
-	ds2482ScanAllChannels(OWFAMILY_01, ds2482TestsHandler);
+	PRINT("\nF01 ") ;
+	ds2482ScanAllChannels(OWFAMILY_01, ds2482TestsHandler, NULL) ;
 #endif
 
 #if		(configBUILD_WITH_DS18X20 == 1)
-	xprintf("\nF28 ") ;
-	ds2482ScanAllChannels(OWFAMILY_28, ds2482TestsHandler);
+	PRINT("\nF28 ") ;
+	ds2482ScanAllChannels(OWFAMILY_28, ds2482TestsHandler, NULL) ;
 #endif
 
 #if		(configBUILD_WITH_DS1990X == 1)
-	xprintf("\nF01 ") ;
-	ds2482ScanAllChannels(OWFAMILY_01, ds2482TestsHandler);
+	PRINT("\nF01 ") ;
+	ds2482ScanAllChannels(OWFAMILY_01, ds2482TestsHandler, NULL) ;
 #endif
-	xprintf("\n") ;
+	PRINT("\n") ;
 }
