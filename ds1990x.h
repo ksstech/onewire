@@ -24,8 +24,6 @@
 
 #pragma		once
 
-//#include	"onewire/onewire.h"
-
 #include	<stdint.h>
 
 // ############################################# Macros ############################################
