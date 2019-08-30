@@ -23,7 +23,6 @@
  */
 
 
-#include	"FreeRTOS_Support.h"
 #include	"task_events.h"
 
 #include	"rules_engine.h"
@@ -944,7 +943,7 @@ int32_t	ds2482ScanChannel(uint8_t Family, int32_t (* Handler)(int32_t, void *), 
  */
 int32_t	ds2482ScanAllChannels(uint8_t Family, int (* Handler)(int32_t, void *), void * pVoid) {
 	int32_t	iRV = erSUCCESS, xCount = 0 ;
-	xSemaphoreTake(sDS2482.Mux, portMAX_DELAY) ;
+	xRtosSemaphoreTake(&sDS2482.Mux, portMAX_DELAY) ;
 	for (uint8_t Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM; ++Chan) {
 		iRV = ds2482ChannelSelect(Chan) ;
 		LT_BREAK(iRV, erSUCCESS) ;
@@ -952,7 +951,7 @@ int32_t	ds2482ScanAllChannels(uint8_t Family, int (* Handler)(int32_t, void *), 
 		LT_BREAK(iRV, erSUCCESS) ;						// if callback failed, return
 		xCount += iRV ;									// update running count
 	}
-	xSemaphoreGive(sDS2482.Mux) ;
+	xRtosSemaphoreGive(&sDS2482.Mux) ;
 	IF_SL_ERR(iRV < erSUCCESS, "iRV=%d", iRV) ;
 	return iRV < erSUCCESS ? iRV : xCount ;
 }
