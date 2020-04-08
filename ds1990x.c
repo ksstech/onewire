@@ -36,6 +36,8 @@
 #include	<stdint.h>
 #include	<string.h>
 
+#if		(halHAS_DS2482 == 1)
+
 #define	debugFLAG					0xC000
 
 #define	debugTIMING					(debugFLAG & 0x0001)
@@ -59,10 +61,12 @@ int32_t	ds1990xHandleRead(int32_t iCount, void * pVoid) {
 	/* To avoid registering multiple reads if iButton is held in place too long we enforce a
 	 * period of 'x' seconds within which successive reads of the same tag will be ignored */
 	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
-#if		(ESP32_VARIANT == 2)
+#if		(ESP32_VARIANT == ESP32_VAR_AC00)
 	uint8_t	Chan = OWremapTable[sDS2482.CurChan] ;
-#else
+#elif	(ESP32_VARIANT == ESP32_VAR_AC01)
 	uint8_t	Chan = sDS2482.CurChan ;
+#else
+	#warning "Should this code be included ???"
 #endif
 	if ((LastROM[Chan].Value == sDS2482.ROM.Value) && (NowRead - LastRead[Chan]) <= OWdelay) {
 		IF_PRINT(debugTRACK, "SAME iButton in 5sec, Skipped...\n") ;
@@ -86,3 +90,5 @@ int32_t	ds1990xDiscover(void) {
 	}
 	return erSUCCESS ;
 }
+
+#endif
