@@ -308,7 +308,7 @@ uint8_t	ds2482ReadRegister(uint8_t Reg) {
  * ds2482PrintROM() - print the 1-Wire ROM information
  * @param psOW_ROM
  */
-void	ds2482PrintROM(ow_rom_t * psOW_ROM) { PRINT("%02X/%#M/%02X\n", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ; }
+void	ds2482PrintROM(ow_rom_t * psOW_ROM) { PRINT("%02X/%M/%02X\n", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ; }
 
 /**
  * Display register contents
