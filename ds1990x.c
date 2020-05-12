@@ -22,21 +22,22 @@
  * ds1990x.c
  */
 
-#include	"FreeRTOS_Support.h"
+#include	"x_config.h"
+
+#if		(halHAS_DS2482 == 1) && (halHAS_DS1990X == 1)
+
+#include	"ds1990x.h"
+#include	"ds2482.h"
+
 #include	"task_events.h"
 
+#include	"x_syslog.h"
 #include	"x_printf.h"
 #include	"x_errors_events.h"
 #include	"x_systiming.h"								// timing debugging
-#include	"x_syslog.h"
-
-#include	"onewire/ds1990x.h"
-#include	"onewire/ds2482.h"
 
 #include	<stdint.h>
 #include	<string.h>
-
-#if		(halHAS_DS2482 == 1)
 
 #define	debugFLAG					0xC000
 

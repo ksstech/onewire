@@ -25,7 +25,7 @@
 #pragma		once
 
 #include	"hal_i2c.h"
-#include	"onewire/onewire.h"
+#include	"onewire.h"
 
 #include	<stdint.h>
 
@@ -61,7 +61,7 @@
 
 enum {													// Supported 1W families & devices
 	idxOWFAMILY_01,
-#if		(configBUILD_WITH_DS18X20 == 1)
+#if		(halHAS_DS18X20 == 1)
 	idxOWFAM10_28,
 #endif
 	idxOWFAMILY_NUM,

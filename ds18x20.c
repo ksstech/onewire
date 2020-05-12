@@ -22,16 +22,21 @@
  * ds18x20.c
  */
 
+#include	"x_config.h"
+
+#if		(halHAS_DS2482 == 1) && (halHAS_DS18X20 == 1)
+
+#include	"ds18x20.h"
+#include	"ds2482.h"
+#include	"endpoints.h"
+
+#include	"x_syslog.h"
 #include	"x_printf.h"
 #include	"x_errors_events.h"
 #include	"x_systiming.h"					// timing debugging
-#include	"x_syslog.h"
 #include	"x_values_convert.h"
 
 #include	"hal_debug.h"
-
-#include	"onewire/ds2482.h"
-#include	"onewire/ds18x20.h"
 
 #include	<string.h>
 
@@ -335,3 +340,5 @@ int32_t	ds18x20Handler(int32_t iCount, void * pVoid) {
 	ds2482PrintROM(&sDS2482.ROM) ;
 	return erSUCCESS ;
 }
+
+#endif

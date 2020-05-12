@@ -27,7 +27,7 @@
 #include	"x_definitions.h"
 #include	"x_struct_union.h"
 
-#include	"onewire/onewire.h"
+#include	"onewire.h"
 
 #include	<stdint.h>
 

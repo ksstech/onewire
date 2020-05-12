@@ -1,5 +1,5 @@
-set(COMPONENT_SRCS "ds2482.c")
-set(COMPONENT_ADD_INCLUDEDIRS)
-set(COMPONENT_REQUIRES)
-set(COMPONENT_PRIV_REQUIRES)
-register_component()
+idf_component_register(	SRCS ds18x20.c ds1990x.c ds2482.c 
+						INCLUDE_DIRS . 
+						REQUIRES common statistics onewire hal_esp32
+						PRIV_REQUIRES endpoints syslog printf common systiming values hal_esp32 irmacos rules actuators pca9555
+						)

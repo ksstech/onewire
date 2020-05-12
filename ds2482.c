@@ -22,7 +22,11 @@
  * ds2482.c
  */
 
+#include	"x_config.h"
 
+#if		(halHAS_DS2482 == 1)
+
+#include	"ds2482.h"
 #include	"task_events.h"
 
 #include	"rules_engine.h"
@@ -37,18 +41,17 @@
 
 #include	"hal_debug.h"
 #include	"hal_i2c.h"
-#include	"onewire/ds2482.h"
 
-#if		(configBUILD_WITH_DS1990X == 1)
-	#include	"onewire/ds1990x.h"
+#if		(halHAS_DS1990X == 1)
+	#include	"ds1990x.h"
 #endif
 
-#if		(configBUILD_WITH_DS18X20 == 1)
-	#include	"onewire/ds18x20.h"
+#if		(halHAS_DS18X20 == 1)
+	#include	"ds18x20.h"
 #endif
 
 #if		(halHAS_PCA9555 == 1)
-	#include	"pca9555/pca9555.h"
+	#include	"pca9555.h"
 #endif
 
 #if		(ESP32_PLATFORM == 1)
@@ -871,13 +874,13 @@ void	OWFamilySkipSetup(void) {
 int32_t	ds2482HandleFamilies(int32_t iCount, void * pVoid) {
 	int32_t	iRV = erFAILURE ;
 	switch (sDS2482.ROM.Family) {
-#if		(configBUILD_WITH_DS1990X == 1)
+#if		(halHAS_DS1990X == 1)
 	case OWFAMILY_01:							// DS1990A/R, 2401/11 devices
 		iRV = ds1990xHandleRead(iCount, pVoid) ;
 		break ;
 #endif
 
-#if		(configBUILD_WITH_DS18X20 == 1)
+#if		(halHAS_DS18X20 == 1)
 	case OWFAMILY_10:							// DS18S20 Thermometer
 	case OWFAMILY_28:							// DS18B20 Thermometer
 		iRV = ds18x20Handler(iCount, pVoid) ;
@@ -996,13 +999,13 @@ int32_t	ds2482CountDevices(void) {
 		iRV = OWFirst() ;
 		while (iRV == 1) {
 			switch (sDS2482.ROM.Family) {
-#if		(configBUILD_WITH_DS1990X == 1)
+#if		(halHAS_DS1990X == 1)
 			case OWFAMILY_01:							// DS1990A/R, 2401/11 devices
 				++Family01Count ;						// count ONLY for sake of reporting
 				break ;
 #endif
 
-#if		(configBUILD_WITH_DS18X20 == 1)
+#if		(halHAS_DS18X20 == 1)
 			case OWFAMILY_10:							// DS1820 & DS18S20 Thermometer
 			case OWFAMILY_28:							// DS18B20 Thermometer
 				++Fam10_28Count ;
@@ -1063,11 +1066,11 @@ int32_t	ds2482Config(void) {
 	int32_t iRV = ds2482CountDevices() ;
 	LT_RETURN(iRV, 1) ;
 
-#if		(configBUILD_WITH_DS1990X == 1)
+#if		(halHAS_DS1990X == 1)
 	ds1990xDiscover() ;
 #endif
 
-#if		(configBUILD_WITH_DS18X20 == 1)
+#if		(halHAS_DS18X20 == 1)
 	ds18x20Discover(URI_DS18X20) ;
 #endif
 	return erSUCCESS ;
@@ -1079,19 +1082,21 @@ int32_t	ds2482TestsHandler(int32_t iCount, void * pVoid) {
 
 void	ds2482Tests(void) {
 	PRINT("\nChecking") ;
-#if		(configBUILD_WITH_DS1990X == 1)
+#if		(halHAS_DS1990X == 1)
 	PRINT("\nF01 ") ;
 	ds2482ScanAllChannels(OWFAMILY_01, ds2482TestsHandler, NULL) ;
 #endif
 
-#if		(configBUILD_WITH_DS18X20 == 1)
+#if		(halHAS_DS18X20 == 1)
 	PRINT("\nF28 ") ;
 	ds2482ScanAllChannels(OWFAMILY_28, ds2482TestsHandler, NULL) ;
 #endif
 
-#if		(configBUILD_WITH_DS1990X == 1)
+#if		(halHAS_DS1990X == 1)
 	PRINT("\nF01 ") ;
 	ds2482ScanAllChannels(OWFAMILY_01, ds2482TestsHandler, NULL) ;
 #endif
 	PRINT("\n") ;
 }
+
+#endif
