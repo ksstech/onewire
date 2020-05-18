@@ -32,12 +32,12 @@
 #include	"rules_engine.h"
 #include	"actuators.h"
 
-#include	"x_printf.h"
+#include	"printfx.h"
 #include	"x_buffers.h"
 #include	"x_errors_events.h"
-#include	"x_systiming.h"								// timing debugging
-#include	"x_syslog.h"
-#include	"x_formprint.h"
+#include	"systiming.h"								// timing debugging
+#include	"syslog.h"
+#include	"formprint.h"
 
 #include	"hal_debug.h"
 #include	"hal_i2c.h"

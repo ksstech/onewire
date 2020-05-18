@@ -31,10 +31,10 @@
 
 #include	"task_events.h"
 
-#include	"x_syslog.h"
-#include	"x_printf.h"
+#include	"syslog.h"
+#include	"printfx.h"
 #include	"x_errors_events.h"
-#include	"x_systiming.h"								// timing debugging
+#include	"systiming.h"								// timing debugging
 
 #include	<stdint.h>
 #include	<string.h>
