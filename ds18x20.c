@@ -24,7 +24,7 @@
 
 #include	"x_config.h"
 
-#if		(halHAS_DS2482 == 1) && (halHAS_DS18X20 == 1)
+#if		(halHAS_DS2482_100 == 1 || halHAS_DS2482_800 == 1) && (halHAS_DS18X20 == 1)
 
 #include	"ds18x20.h"
 #include	"ds2482.h"
@@ -70,9 +70,11 @@ void	ds18x20PrintInfo(ds18x20_t * psDS18X20) {
 
 int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20) {
 	IF_myASSERT(debugPARAM, INRANGE_SRAM(psDS18X20)) ;
-	int32_t iRV = ds2482ChannelSelect(psDS18X20->Ch) ;
+	int32_t iRV ;
+#if		(halHAS_DS2482_800 == 1)
+	iRV = ds2482ChannelSelect(psDS18X20->Ch) ;
 	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
-
+#endif
 	iRV = OWReset() ;									// check if any device is there
 	IF_myASSERT(debugRESULT, iRV == 1) ;
 
@@ -147,9 +149,11 @@ int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 }
 
 int32_t	ds18x20CheckPower(uint8_t Chan) {
-	int32_t	iRV = ds2482ChannelSelect(Chan) ;
+	int32_t	iRV ;
+#if		(halHAS_DS2482_800 == 1)
+	iRV = ds2482ChannelSelect(Chan) ;
 	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
-
+#endif
 	iRV = OWWriteByte(DS18X20_READ_PSU) ;		// request to read Power Supply Type
 	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
 
@@ -185,10 +189,11 @@ void	ds18x20WaitPhase(void) {
 #if		(ds18x20PWR_SOURCE == 0)
 	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_CONVERT_PARASITIC)) ;
 	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
+#if		(halHAS_DS2482_800 == 1)
 		ds18x20_t * psTemp = psDS18X20 + Idx ;
 		int32_t	iRV = ds2482ChannelSelect(psTemp->Ch) ;
 		IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
-
+#endif
 		IF_myASSERT(debugRESULT, sDS2482.Regs.SPU == 1) ;
 		OWLevel(owMODE_STANDARD) ;
 		IF_myASSERT(debugRESULT, sDS2482.Regs.SPU == 0) ;
@@ -239,9 +244,11 @@ int32_t	ds18x20ConvertAndReadAll(ep_work_t * psEpWork) {
 float	ds18x20GetTemperature(int32_t Idx) { return psDS18X20[Idx].xVal.f32 ; }
 
 int32_t	ds18x20AllInOne(void) {
-	int32_t iRV = ds2482ChannelSelect(psDS18X20->Ch) ;
+	int32_t iRV ;
+#if		(halHAS_DS2482_800 == 1)
+	iRV = ds2482ChannelSelect(psDS18X20->Ch) ;
 	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
-
+#endif
 	iRV = OWReset() ;									// check if any device is there
 	IF_myASSERT(debugRESULT, iRV == 1) ;
 

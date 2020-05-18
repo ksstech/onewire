@@ -24,7 +24,7 @@
 
 #include	"x_config.h"
 
-#if		(halHAS_DS2482 == 1) && (halHAS_DS1990X == 1)
+#if		(halHAS_DS2482_100 == 1 || halHAS_DS2482_800 == 1) && (halHAS_DS1990X == 1)
 
 #include	"ds1990x.h"
 #include	"ds2482.h"
@@ -52,9 +52,15 @@
 /* In order to avoid multiple successive reads of the same iButton on the same OW channel
  * we filter reads based on the value of the iButton read and time expired since the last
  * successful read. If the same ID is read on the same channel within 'x' seconds, skip it */
-ow_rom_t	LastROM[sd2482CHAN_NUM]		= { 0 } ;
-seconds_t	LastRead[sd2482CHAN_NUM]	= { 0 } ;
-uint8_t		OWdelay	= 5, Family01Count = 0 ;
+#if		(halHAS_DS2482_800 == 1)
+	ow_rom_t	LastROM[ds2482NUM_CHAN]		= { 0 } ;
+	seconds_t	LastRead[ds2482NUM_CHAN]	= { 0 } ;
+#elif	(halHAS_DS2482_100 == 1 && ESP32_VARIANT == ESP32_VAR_WROVERKIT) // breakout on ESP32-WROVER-KIT or M5FIRE ?
+	ow_rom_t	LastROM		= { 0 } ;
+	seconds_t	LastRead	= 0 ;
+#endif
+uint8_t		Family01Count = 0 ;
+uint8_t		OWdelay	= ds1990READ_INTVL ;
 
 // ################################# Application support functions #################################
 
@@ -62,13 +68,12 @@ int32_t	ds1990xHandleRead(int32_t iCount, void * pVoid) {
 	/* To avoid registering multiple reads if iButton is held in place too long we enforce a
 	 * period of 'x' seconds within which successive reads of the same tag will be ignored */
 	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
-#if		(ESP32_VARIANT == ESP32_VAR_AC00)
+#if		(halHAS_DS2482_800 == 1)
+	#if		(ESP32_VARIANT == ESP32_VAR_AC00)
 	uint8_t	Chan = OWremapTable[sDS2482.CurChan] ;
-#elif	(ESP32_VARIANT == ESP32_VAR_AC01)
+	#elif	(ESP32_VARIANT == ESP32_VAR_AC01)
 	uint8_t	Chan = sDS2482.CurChan ;
-#else
-	#warning "Should this code be included ???"
-#endif
+	#endif
 	if ((LastROM[Chan].Value == sDS2482.ROM.Value) && (NowRead - LastRead[Chan]) <= OWdelay) {
 		IF_PRINT(debugTRACK, "SAME iButton in 5sec, Skipped...\n") ;
 		return erSUCCESS ;
@@ -76,6 +81,19 @@ int32_t	ds1990xHandleRead(int32_t iCount, void * pVoid) {
 	LastROM[Chan].Value = sDS2482.ROM.Value ;
 	LastRead[Chan]		= NowRead ;
 	xTaskNotify(EventsHandle, 1UL << (Chan + se1W_FIRST), eSetBits) ;
+
+#elif	(halHAS_DS2482_100 == 1 && ESP32_VARIANT == ESP32_VAR_WROVERKIT) // breakout on ESP32-WROVER-KIT or M5FIRE ?
+	if ((LastROM.Value == sDS2482.ROM.Value) && (NowRead - LastRead) <= OWdelay) {
+		IF_PRINT(debugTRACK, "SAME iButton in 5sec, Skipped...\n") ;
+		return erSUCCESS ;
+	}
+	LastROM.Value	= sDS2482.ROM.Value ;
+	LastRead		= NowRead ;
+	xTaskNotify(EventsHandle, 1UL << se1W_FIRST, eSetBits) ;
+
+#else
+	#warning "Should this code be included ???"
+#endif
 	portYIELD() ;
 	IF_PRINT(debugTRACK, "NEW iButton Read, or >5sec passed\n") ;
 	IF_EXEC_1(debugTRACK, ds2482PrintROM, &sDS2482.ROM) ;

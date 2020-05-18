@@ -24,7 +24,7 @@
 
 #include	"x_config.h"
 
-#if		(halHAS_DS2482 == 1)
+#if		(halHAS_DS2482_100 == 1 || halHAS_DS2482_800 == 1)
 
 #include	"ds2482.h"
 #include	"task_events.h"
@@ -74,17 +74,6 @@
 #define	debugPARAM					(debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG & 0x8000)
 
-// ###################################### General macros ###########################################
-
-// DS2484 channel Number to Selection (1's complement) translation
-const	uint8_t		ds2482_N2S[sd2482CHAN_NUM] = { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 } ;
-
-// DS2482 channel Value(read/check)->Number xlat	0	  1		2	  3		4	  5		6	  7
-const	uint8_t		ds2482_V2N[sd2482CHAN_NUM] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 } ;
-
-// Used to fix the incorrect logical to physical 1-Wire mapping
-const	uint8_t	OWremapTable[sd2482CHAN_NUM] = { 3,	2,	1,	0,	4,	5,	6,	7 } ;
-
 /* https://www.maximintegrated.com/en/products/ibutton/software/1wire/wirekit.cfm
  * https://www.maximintegrated.com/en/app-notes/index.mvp/id/74
  *
@@ -99,8 +88,20 @@ const	uint8_t	OWremapTable[sd2482CHAN_NUM] = { 3,	2,	1,	0,	4,	5,	6,	7 } ;
  *	Duration	525nS	0nS		0nS		0nS		1244uS	8x73uS	8x73uS	1x73uS	3x73uS
  */
 
-uint8_t		ChannelCount[sd2482CHAN_NUM] = { 0 } ;
-ds2482_t	sDS2482		= { 0 } ;
+// ###################################### General macros ###########################################
+
+#if		(halHAS_DS2482_800 == 1)
+	// DS2484 channel Number to Selection (1's complement) translation
+	const	uint8_t	ds2482_N2S[ds2482NUM_CHAN]		= { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 } ;
+
+	// DS2482 channel Value(read/check)->Number xlat	0	  1		2	  3		4	  5		6	  7
+	const	uint8_t	ds2482_V2N[ds2482NUM_CHAN]		= { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 } ;
+
+	// Used to fix the incorrect logical to physical 1-Wire mapping
+	const	uint8_t	OWremapTable[ds2482NUM_CHAN]	= { 3,	2,	1,	0,	4,	5,	6,	7 } ;
+#endif
+uint8_t	ChannelCount[ds2482NUM_CHAN] 	= { 0 } ;
+ds2482_t sDS2482		= { 0 } ;
 
 // ############################## DS2482-800 CORE support functions ################################
 
@@ -135,11 +136,12 @@ int32_t	ds2482SetReadPointer(uint8_t Reg) {
 	if (sDS2482.RegPntr == Reg) {
 		return erSUCCESS ;
 	}
+	// build the register read code from register number
 	uint8_t	cBuf[2] = { CMD_SRP, (~Reg << 4) | Reg } ;
 	int32_t iRV = halI2C_Write(&sDS2482.sI2Cdev, cBuf, sizeof(cBuf)) ;
 	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
 	NE_RETURN(iRV, erSUCCESS) ;
-// update the read pointer
+	// update the read pointer
 	sDS2482.RegPntr = Reg ;
 	return erSUCCESS ;
 }
@@ -159,6 +161,7 @@ int32_t ds2482WriteConfig(void) {
 //  CF configuration byte to write
 	IF_myASSERT(debugBUS_CFG, sDS2482.Regs.OWB == 0) ;				// check that bus not busy
 	uint8_t	config = sDS2482.Regs.Rconf & 0x0F ;
+	// calc config MSNibble based on the LSNibble value
 	uint8_t	cBuf[2] = { CMD_WCFG , (~config << 4) | config } ;
 	uint8_t new_conf ;
 	int32_t iRV = halI2C_WriteRead(&sDS2482.sI2Cdev, cBuf, sizeof(cBuf), &new_conf, sizeof(new_conf)) ;
@@ -177,13 +180,14 @@ int32_t ds2482WriteConfig(void) {
  *			erFAILURE if device not detected or failure to perform select; else
  *			whatever status returned by halI2C_WriteRead()
  */
+#if		(halHAS_DS2482_800 == 1)
 int32_t ds2482ChannelSelect(uint8_t Chan) {
 // Channel Select (Case A)
 //	S AD,0 [A] CHSL [A] CC [A] Sr AD,1 [A] [RR] A\ P
 //  [] indicates from slave
 //  CC channel value
 //  RR channel read back
-	IF_myASSERT(debugPARAM, Chan < sd2482CHAN_NUM) ;
+	IF_myASSERT(debugPARAM, Chan < ds2482NUM_CHAN) ;
 	IF_myASSERT(debugBUS_CFG, sDS2482.Regs.OWB == 0) ;// check that bus not busy
 	uint8_t	cBuf[2] = { CMD_CHSL, ds2482_N2S[Chan] } ;
 	uint8_t ChanRet ;
@@ -203,6 +207,7 @@ int32_t ds2482ChannelSelect(uint8_t Chan) {
 	sDS2482.CurChan		= Chan ;					// and the actual (normalized) channel number
 	return erSUCCESS ;
 }
+#endif
 
 int32_t	ds2482Write(uint8_t * pTxBuf, size_t TxSize) {
 	IF_myASSERT(debugBUS_CFG, sDS2482.Regs.OWB == 0)	;
@@ -329,12 +334,12 @@ void	ds2482PrintRegisters(void) {
 				sDS2482.Regs.PPD ? '1' : '0',
 				sDS2482.Regs.OWB ? '1' : '0') ;
 	PRINT("DATA(1)=0x%02X\n", sDS2482.Regs.Rdata) ;	// Data
-
+#if		(halHAS_DS2482_800 == 1)
 	int32_t Chan ;										// Channel, start by finding the matching Channel #
-	for (Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM && sDS2482.Regs.Rchan != ds2482_V2N[Chan]; ++Chan) ;
-	IF_myASSERT(debugRESULT, Chan < sd2482CHAN_NUM) ;
+	for (Chan = 0; Chan < ds2482NUM_CHAN && sDS2482.Regs.Rchan != ds2482_V2N[Chan]; ++Chan) ;
+	IF_myASSERT(debugRESULT, Chan < ds2482NUM_CHAN) ;
 	PRINT("CHAN(2)=0x%02X ==> %d\n", sDS2482.Regs.Rchan, Chan) ;
-
+#endif
 	PRINT("CONF(3)=0x%02X  1WS=%c  SPU=%c  APU=%c\n",	// Configuration
 			sDS2482.Regs.Rconf,
 			sDS2482.Regs.OWS	? '1' : '0',
@@ -947,9 +952,11 @@ int32_t	ds2482ScanChannel(uint8_t Family, int32_t (* Handler)(int32_t, void *), 
 int32_t	ds2482ScanAllChannels(uint8_t Family, int (* Handler)(int32_t, void *), void * pVoid) {
 	int32_t	iRV = erSUCCESS, xCount = 0 ;
 	xRtosSemaphoreTake(&sDS2482.Mux, portMAX_DELAY) ;
-	for (uint8_t Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM; ++Chan) {
+	for (uint8_t Chan = 0; Chan < ds2482NUM_CHAN; ++Chan) {
+#if		(halHAS_DS2482_800 == 1)
 		iRV = ds2482ChannelSelect(Chan) ;
 		LT_BREAK(iRV, erSUCCESS) ;
+#endif
 		iRV = ds2482ScanChannel(Family, Handler, xCount, pVoid) ;
 		LT_BREAK(iRV, erSUCCESS) ;						// if callback failed, return
 		xCount += iRV ;									// update running count
@@ -984,10 +991,12 @@ int32_t	ds2482Diagnostics(void) {
  * @return			number of devices found
  */
 int32_t	ds2482CountDevices(void) {
-	int32_t	iCount = 0 ;
-	for (int32_t Chan = sd2482CHAN_0; Chan < sd2482CHAN_NUM; ++Chan) {
-		int32_t iRV = ds2482ChannelSelect(Chan) ;
+	int32_t	iRV, iCount = 0 ;
+	for (int32_t Chan = 0; Chan < ds2482NUM_CHAN; ++Chan) {
+#if		(halHAS_DS2482_800 == 1)
+		iRV = ds2482ChannelSelect(Chan) ;
 		EQ_RETURN(iRV, erFAILURE) ;
+#endif
 
 #if		(ds18x20PWR_SOURCE == 1)
 		xActuatorBlock(Chan) ;

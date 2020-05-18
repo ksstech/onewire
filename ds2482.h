@@ -57,18 +57,27 @@
 #define STATUS_TSB							0x40		// Triplet Second Bit
 #define STATUS_DIR							0x80		// branch DIRection taken
 
+#if		(halHAS_DS2482_100 == 1)
+	#define	ds2482NUM_CHAN					1
+#elif	(halHAS_DS2482_800 == 1)
+	#define	ds2482NUM_CHAN					8
+#endif
+
 // ######################################## Enumerations ###########################################
 
 enum {													// Supported 1W families & devices
-	idxOWFAMILY_01,
-#if		(halHAS_DS18X20 == 1)
-	idxOWFAM10_28,
-#endif
+//	idxOWFAMILY_01,
+//	idxOWFAM10_28,
 	idxOWFAMILY_NUM,
 } ;
 
-enum { ds2482REG_STAT, ds2482REG_DATA, ds2482REG_CHAN, ds2482REG_CONF, ds2482REG_NUM } ;
-enum { sd2482CHAN_0, sd2482CHAN_1, sd2482CHAN_2, sd2482CHAN_3, sd2482CHAN_4, sd2482CHAN_5, sd2482CHAN_6, sd2482CHAN_7, sd2482CHAN_NUM } ;
+enum {
+	ds2482REG_STAT,			// valid for -10x and -800
+	ds2482REG_DATA,			// valid for -10x and -800
+	ds2482REG_CHAN,			// ONLY for the -800 but required for formula to work
+	ds2482REG_CONF,			// valid for -10x and -800
+	ds2482REG_NUM,
+} ;
 
 // ######################################### Structures ############################################
 
@@ -126,7 +135,6 @@ DUMB_STATIC_ASSERT(sizeof(ds2482_t) == 36) ;
 
 // #################################### Public Data structures #####################################
 
-extern uint8_t	ChannelCount[] ;
 extern ds2482_t	sDS2482 ;
 extern const	uint8_t	OWremapTable[] ;
 
