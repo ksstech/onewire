@@ -24,21 +24,25 @@
 
 #pragma		once
 
-#include	"x_definitions.h"
-#include	"x_struct_union.h"
-
-#include	"onewire.h"
-
-#include	<stdint.h>
+#ifdef __cplusplus
+	extern "C" {
+#endif
 
 // ############################################# Macros ############################################
 
-#define	ds18x20PWR_SOURCE					0			// 0=parasitic, 1=GPIO, 2= External
+#define	ds18x20SINGLE_DEVICE				0
 #define	ds18x20TRIGGER_GLOBAL				0
-
-#define	ds18x20DELAY_CONVERT_PARASITIC		752
-#define	ds18x20DELAY_CONVERT_EXTERNAL		20
+#define	ds18x20DELAY_CONVERT				752
 #define	ds18x20DELAY_SP_COPY				11
+
+// ################################## DS18X20 1-Wire Commands ######################################
+
+#define	DS18X20_CONVERT						0x44
+#define	DS18X20_COPY_SP						0x48
+#define	DS18X20_WRITE_SP					0x4E
+#define	DS18X20_READ_PSU					0xB4
+#define	DS18X20_RECALL_EE					0xB8
+#define	DS18X20_READ_SP						0xBE
 
 // ######################################## Enumerations ###########################################
 
@@ -48,43 +52,72 @@
 // See http://www.catb.org/esr/structure-packing/
 // Also http://c0x.coding-guidelines.com/6.7.2.1.html
 
-typedef struct __attribute__((packed)) {				// DS1820, DS18S20 & DS18B20 9[12] bit Temperature sensors
-	ow_rom_t	ROM ;
-	union {
+struct fam10 { uint8_t Rsvd[2], Remain, Count ; } __attribute__((packed)) ;
+struct fam28 { uint8_t Conf, Rsvd[3] ; } __attribute__((packed)) ;
+DUMB_STATIC_ASSERT(sizeof(struct fam10) == sizeof(struct fam28)) ;
+
+typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20 9[12] bit Temperature sensors
+	onewire_t	sOW ;									// size = 12
+	x32_t		xVal ;
+	union {												// Scratchpad
 		struct {
-			uint8_t		Tlsb, Tmsb, Thi, Tlo ;
+			uint8_t		Tlsb, Tmsb ;					// last RAM sample
+			uint8_t		Thi, Tlo ;						// Integer portion of Lo & Hi alarm thresholds
 			union {
-				struct fam10 { uint8_t Rsvd[2], Remain, Count ; } fam10 ;
-				struct fam28 { uint8_t Conf, Rsvd[3] ; }  fam28 ;
+				struct fam10 fam10 ;
+				struct fam28 fam28 ;
 			} ;
-			uint8_t	CRC ;
-		} ;
+			uint8_t	CRC ;								// calculated CRC of previous 8 bytes
+		} __attribute__((packed)) ;
 		uint8_t	RegX[9] ;
 	} ;
-	struct {											// Common 1-Wire endpoint enumeration info
-		uint8_t		Ch	: 3 ;							// Channel the device was discovered on
-		uint8_t		Idx	: 3 ;							// Endpoint index (0->7) of this specific device
-		uint8_t		Res	: 2 ;							// Resolution 0=9b 1=10b 2=11b 3=12b
-		uint8_t		spare[2] ;
-	} ;
-	x32_t		xVal ;
+	uint8_t		Idx		: 3 ;							// Endpoint index (0->7) of this specific device
+	uint8_t		Res		: 2 ;							// Resolution 0=9b 1=10b 2=11b 3=12b
+	uint8_t		Pwr		: 1 ;
+	uint8_t		SBits	: 2 ;
 } ds18x20_t ;
+DUMB_STATIC_ASSERT(sizeof(ds18x20_t) == (12+4+9+1)) ;
 
-DUMB_STATIC_ASSERT(sizeof(struct fam10) == sizeof(struct fam28)) ;
-DUMB_STATIC_ASSERT(sizeof(ds18x20_t) == 24) ;
+// ###################################### Public variables #########################################
 
-// #################################### Public Data structures #####################################
+extern	uint8_t	Fam10_28Count ;
 
-extern uint8_t Fam10_28Count ;
+// ###################################### Public functions #########################################
 
-// ###################################### Private functions ########################################
+/**
+ * ds18x20CheckPower() - Read the power supply type (parasitic or external)
+ */
+int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) ;
 
-void	ds18x20EnableExtPSU(ds18x20_t * psDS18X20) ;
-void	ds18x20DisableExtPSU(ds18x20_t * psDS18X20) ;
-int32_t	ds18x20Discover(int32_t xUri)  ;
+/**
+ * ds18x20SelectAndAddress() - Select logical bus (device, physical bus) and address/skip ROM
+ */
+int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t nAddrMethod) ;
 
 float	ds18x20GetTemperature(int32_t Idx) ;
+int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) ;
+int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) ;
+
+int32_t	ds18x20ReadScratchPad(ds18x20_t * psDS18X20, int32_t Len) ;
+int32_t	ds18x20WriteScratchPad(ds18x20_t * psDS18X20) ;
+int32_t	ds18x20CopyScratchPad(ds18x20_t * psDS18X20) ;
+
+int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) ;
+int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) ;
+
+/*
+ * ds18x20ReadConvertAll() - 1 bus at a time, all devices address & convert, then read & convert 1 at a time.
+ */
 struct ep_work_s ;
-int32_t	ds18x20ConvertAndReadAll(struct ep_work_s *) ;
-int32_t	ds18x20AllInOne(void) ;
-int32_t	ds18x20Handler(int32_t, void *) ;
+int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) ;
+int32_t	ds18x20TestCase2(void) ;
+
+int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) ;
+int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) ;
+int32_t	ds18x20SetMode (void *, struct rule_t * psRule) ;
+int32_t	ds18x20EnumerateCB(uint32_t iCount, onewire_t * psOW) ;
+int32_t	ds18x20Enumerate(int32_t xUri)  ;
+
+#ifdef __cplusplus
+	}
+#endif

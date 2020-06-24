@@ -22,330 +22,343 @@
  * ds18x20.c
  */
 
-#include	"x_config.h"
-
-#if		(halHAS_DS2482_100 == 1 || halHAS_DS2482_800 == 1) && (halHAS_DS18X20 == 1)
-
-#include	"ds18x20.h"
-#include	"ds2482.h"
+#include	"onewire_platform.h"
+#include	"ds18x20_cmds.h"
 #include	"endpoints.h"
-
+#include	"rules_engine.h"
+#include	"commands.h"
 #include	"syslog.h"
 #include	"printfx.h"
 #include	"x_errors_events.h"
 #include	"systiming.h"					// timing debugging
 #include	"x_values_convert.h"
+#include	"x_string_to_values.h"
+#include	"x_string_general.h"
 
 #include	"hal_debug.h"
 
 #include	<string.h>
 
-#define	debugFLAG					0xE002
+#define	debugFLAG					0xC007
 
 #define	debugTIMING					(debugFLAG & 0x0001)
-#define	debugDS18X20				(debugFLAG & 0x0002)
+#define	debugCONFIG					(debugFLAG & 0x0002)
+#define	debugCONVERT				(debugFLAG & 0x0004)
 
 #define	debugTRACK					(debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG & 0x8000)
 
-ds18x20_t *	psDS18X20		= NULL ;
-complex_t	sDS18X20Func	= { .read = ds18x20GetTemperature, .mode = NULL } ;
+// ##################################### Developer notes ###########################################
+/*
+	Test parasitic power
+	Test & benchmark overdrive speed
+	Implement and test ALARM scan and over/under event generation
+ */
+
+// ################################ Forward function declaration ###################################
+
+
+// ###################################### Local variables ##########################################
+
+const complex_t	sDS18X20Func	= { .get = ds18x20GetTemperature, .mode = ds18x20SetMode } ;
+ds18x20_t *	psaDS18X20	= NULL ;
 uint8_t		Fam10_28Count	= 0 ;
 
-// ############################ Forward declaration of local functions #############################
+cmnd_t saDS18Cmnd[] = {
+	{ "RDT",	CmndDS18RDT },
+	{ "RDSP",	CmndDS18RDSP },
+	{ "WRSP",	CmndDS18WRSP },
+	{ "MODE",	CmndDS18MODE },
+} ;
 
+// #################################### Local ONLY functions #######################################
 
-// ############################### ds18x20 (Family 10 & 28) support ################################
+int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) {
+	int32_t iRV = OWChannelSelect(&psDS18X20->sOW) ;
+	IF_myASSERT(debugRESULT, iRV != false) ;
 
-void	ds18x20PrintInfo(ds18x20_t * psDS18X20) {
-	ds2482PrintROM(&psDS18X20->ROM) ;
-	PRINT("  Tlsb=%02X  Tmsb=%02X  Thi=%02X  Tlo=%02X",
-			psDS18X20->Tlsb, psDS18X20->Tmsb, psDS18X20->Thi, psDS18X20->Tlo) ;
-	if (psDS18X20->ROM.Family == OWFAMILY_28) {
-		PRINT("  Conf=%02X", psDS18X20->fam28.Conf) ;
-	}
-	PRINT("\n") ;
+	OWAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) ;
+	OWWriteByte(&psDS18X20->sOW, DS18X20_READ_PSU) ;
+	iRV = OWReadBit(&psDS18X20->sOW) ;					// return status 0=parasitic 1=external
+	IF_PRINT(debugTRACK, iRV ? "External Power" : "Parasitic Power") ;
+	return iRV ;
 }
 
-int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20) {
+int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 	IF_myASSERT(debugPARAM, INRANGE_SRAM(psDS18X20)) ;
-	int32_t iRV ;
-#if		(halHAS_DS2482_800 == 1)
-	iRV = ds2482ChannelSelect(psDS18X20->Ch) ;
-	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
-#endif
-	iRV = OWReset() ;									// check if any device is there
-	IF_myASSERT(debugRESULT, iRV == 1) ;
+	int32_t iRV = OWChannelSelect(&psDS18X20->sOW) ;
+	IF_myASSERT(debugRESULT, iRV != false) ;
+
+	iRV = OWReset(&psDS18X20->sOW) ;
+	IF_myASSERT(debugRESULT, iRV != false) ;
 
 //	iRV = DS2482SetOverDrive() ;
-//	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
+//	IF_myASSERT(debugRESULT, iRV != false) ;
 
-#if 	(ds2482SINGLE_DEVICE == 0)
-	memcpy(&sDS2482.ROM, &psDS18X20->ROM, sizeof(ow_rom_t)) ;
-	OWAddress(OW_CMD_MATCHROM) ;						// select the applicable device
-#else
-	OWAddress(OW_CMD_SKIPROM) ;
-#endif
-	return 1 ;
+	OWAddress(&psDS18X20->sOW, u8AddrMethod) ;
+	return iRV ;
 }
 
-int32_t	ds18x20ReadScratchPad(ds18x20_t * psDS18X20) {
-	int32_t iRV, xCount = 0 ;
-	do {
-		iRV = ds18x20SelectAndAddress(psDS18X20) ;
-		IF_myASSERT(debugRESULT, iRV == 1) ;
+void	ds18x20WriteByteRPS(ds18x20_t * psDS18X20, uint8_t u8Byte) {
+	int32_t iRV ;
+	if (ds18x20CheckPower(psDS18X20)) {					// External power
+		OWWriteByte(&psDS18X20->sOW, u8Byte) ;
+	} else {											// Parasitic power
+		iRV = OWWriteBytePower(&psDS18X20->sOW, u8Byte) ;
+		IF_myASSERT(debugRESULT, iRV != false) ;
+	}
+}
 
-		iRV = OWWriteByteWait(DS18X20_READ_SP) ;		// request to read the scratch pad
-		IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
+// ###################################### scratchpad support #######################################
 
-		memset(psDS18X20->RegX, 0xFF, SIZEOF_MEMBER(ds18x20_t, RegX)) ;	// preset all=0xFF to read
-		OWBlock(psDS18X20->RegX, SIZEOF_MEMBER(ds18x20_t, RegX)) ;		// read the scratch pad
+int32_t	ds18x20ReadScratchPad(ds18x20_t * psDS18X20, int32_t Len) {
+	IF_myASSERT(debugPARAM, INRANGE(0, Len, SIZEOF_MEMBER(ds18x20_t, RegX), int32_t)) ;
+	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == false)
+		return false ;
+
+	OWWriteByte(&psDS18X20->sOW, DS18X20_READ_SP) ;
+	memset(psDS18X20->RegX, 0xFF, Len) ;				// 0xFF to read
+	OWBlock(&psDS18X20->sOW, psDS18X20->RegX, Len) ;
+
+	int32_t iRV ;
+	if (Len == SIZEOF_MEMBER(ds18x20_t, RegX)) {		// if full scratchpad read, check CRC
 		iRV = OWCheckCRC(psDS18X20->RegX, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
-		IF_PRINT(debugRESULT, "SP Read: %-'+b\n", SIZEOF_MEMBER(ds18x20_t, RegX), psDS18X20->RegX) ;
-		if (iRV == 0) {
-			vTaskDelay(pdMS_TO_TICKS(20)) ;
-		}
-	} while (iRV != 1 && ++xCount < ds2482RETRIES) ;
+	} else {
+		iRV = OWReset(&psDS18X20->sOW) ;				// terminate read process
+		IF_myASSERT(debugRESULT, iRV != false) ;
+	}
+	IF_PRINT(debugTRACK, "SP Read: %-'+b\n", Len, psDS18X20->RegX) ;
 	return iRV ;
 }
 
 int32_t	ds18x20WriteScratchPad(ds18x20_t * psDS18X20) {
-	int32_t iRV = ds18x20SelectAndAddress(psDS18X20) ;
-	IF_myASSERT(debugRESULT, iRV == 1) ;
-
-	iRV = OWWriteByteWait(DS18X20_WRITE_SP) ;			// request to write the scratch pad
-	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
-
-	OWBlock(&psDS18X20->Thi, psDS18X20->ROM.Family == OWFAMILY_28 ? 3 : 2) ;	// Thi, Tlo [+Conf]
-	IF_PRINT(debugDS18X20, "SP Write: %-'+b\n", psDS18X20->ROM.Family == OWFAMILY_28 ? 3 : 2, &psDS18X20->Thi) ;
-	return 1 ;
+	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == false)
+		return false ;
+	OWWriteByte(&psDS18X20->sOW, DS18X20_WRITE_SP) ;
+	OWBlock(&psDS18X20->sOW, (uint8_t *) &psDS18X20->Thi, psDS18X20->sOW.ROM.Family == OWFAMILY_28 ? 3 : 2) ;	// Thi, Tlo [+Conf]
+	return true ;
 }
 
 int32_t	ds18x20CopyScratchPad(ds18x20_t * psDS18X20) {
-	int32_t iRV = ds18x20SelectAndAddress(psDS18X20) ;
-	IF_myASSERT(debugRESULT, iRV == 1) ;
-
-#if		(ds18x20PWR_SOURCE == 0)
-	OWWriteBytePower(DS18X20_COPY_SP) ;					// request to write scratch pad to EE
-	IF_myASSERT(debugRESULT, sDS2482.Regs.SPU == 1) ;
-	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_SP_COPY)) ;	// keep SPU=1 for at least 10mS
-
-	OWLevel(owMODE_STANDARD) ;							// make SPU=0
-	IF_myASSERT(debugRESULT, sDS2482.Regs.SPU == 0) ;
-#else
-	IF_myASSERT(debugRESULT, sDS2482.Regs.SPU == 0) ;
-	OWWriteByte(DS18X20_COPY_SP) ;
-#endif
+	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == false)
+		return false ;
+	ds18x20WriteByteRPS(psDS18X20, DS18X20_COPY_SP) ;
+	IF_SYSTIMER_START(debugTIMING, systimerDS1820B) ;
+	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_SP_COPY)) ;
+	IF_SYSTIMER_STOP(debugTIMING, systimerDS1820B) ;
+	OWLevel(&psDS18X20->sOW, owMODE_STANDARD) ;
 	return 1 ;
 }
 
+// ############################### ds18x20 (Family 10 & 28) support ################################
+
+int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) {
+	ds18x20ReadScratchPad(psDS18X20, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
+	psDS18X20->Res = (psDS18X20->sOW.ROM.Family == OWFAMILY_28) ? psDS18X20->fam28.Conf >> 5 : owFAM28_RES9B ;
+	ds18x20ConvertTemperature(psDS18X20) ;
+	return true ;
+}
+
 int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
-	psDS18X20->fam28.Conf		= 0x1F ;		// 9bit resolution
-	psDS18X20->fam28.Rsvd[0]	= 0xFF ;
-	psDS18X20->fam28.Rsvd[1]	= 0x00 ;
-	psDS18X20->fam28.Rsvd[2]	= 0x10 ;
-	return erSUCCESS ;
+	psDS18X20->Thi	= 0 ;
+	psDS18X20->Tlo	= 0 ;
+	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
+		psDS18X20->fam28.Conf = 0x7F ;	// 12 bit resolution
+	int32_t iRV = ds18x20WriteScratchPad(psDS18X20) ;
+	IF_myASSERT(debugRESULT, iRV != false) ;
+
+	iRV = ds18x20CopyScratchPad(psDS18X20) ;
+	IF_myASSERT(debugRESULT, iRV != false) ;
+
+	return ds18x20Initialize(psDS18X20) ;
 }
 
-int32_t	ds18x20CheckPower(uint8_t Chan) {
-	int32_t	iRV ;
-#if		(halHAS_DS2482_800 == 1)
-	iRV = ds2482ChannelSelect(Chan) ;
-	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
-#endif
-	iRV = OWWriteByte(DS18X20_READ_PSU) ;		// request to read Power Supply Type
-	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
+int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
+	int32_t iRV = ds18x20SelectAndAddress(psDS18X20, u8AddrMethod) ;
+	IF_myASSERT(debugRESULT, iRV != false) ;
 
-	return erSUCCESS ;
-}
+	ds18x20WriteByteRPS(psDS18X20, DS18X20_CONVERT) ;
 
-/**
- * ds18x20TriggerPhase() - Trigger temp conversion on all DS18X20's
- * @param psDS18X20
- */
-void	ds18x20TriggerPhase(void) {
-	// Phase 1: trigger the conversions
-	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
-		ds18x20_t * psTemp = psDS18X20 + Idx ;
-		int32_t	iRV = ds18x20SelectAndAddress(psTemp) ;
-		IF_myASSERT(debugRESULT, iRV == 1) ;
-
-#if		(ds18x20PWR_SOURCE == 0)
-		OWWriteBytePower(DS18X20_CONVERT) ;				// Trigger temperature conversion & SPU
-		IF_myASSERT(debugRESULT, sDS2482.Regs.SPU == 1) ;
-#else
-		OWWriteByte(DS18X20_CONVERT) ;					// Trigger temperature conversion
-#endif
-	}
-}
-
-/**
- * ds18x20WaitPhase() - Wait the correct period of time for the temperature conversion to complete
- * @brief	Optionally restore to standard power level (SPU=0)
- */
-void	ds18x20WaitPhase(void) {
-	// Phase 2: wait till conversions done and possibly turn off SPU
-#if		(ds18x20PWR_SOURCE == 0)
-	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_CONVERT_PARASITIC)) ;
-	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
-#if		(halHAS_DS2482_800 == 1)
-		ds18x20_t * psTemp = psDS18X20 + Idx ;
-		int32_t	iRV = ds2482ChannelSelect(psTemp->Ch) ;
-		IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
-#endif
-		IF_myASSERT(debugRESULT, sDS2482.Regs.SPU == 1) ;
-		OWLevel(owMODE_STANDARD) ;
-		IF_myASSERT(debugRESULT, sDS2482.Regs.SPU == 0) ;
-	}
-#else
-	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_CONVERT_EXTERNAL)) ;
-	// add optimised code to loop whilst conversion is being done.....
-#endif
-}
-
-/**
- * ds18x20ReadPhase() - Select, Read SP, Convert value & store
- * @param psDS18X20
- * @return
- */
-int32_t	ds18x20ReadPhase(void) {
-	int32_t	iRV  = 0 ;
-	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
-		ds18x20_t * psTemp = psDS18X20 + Idx ;
-		ds18x20ReadScratchPad(psTemp) ;
-
-		// convert & store the temperature
-		iRV = xConvert2sComp((psTemp->Tmsb << 8) | psTemp->Tlsb, 13) ;
-		psTemp->xVal.f32 = (float) iRV / 16 ;
-		IF_PRINT(debugDS18X20, "%02X/%#M/%02X  Raw=%d  Val=%f\n",
-			psTemp->ROM.Family, psTemp->ROM.TagNum, psTemp->ROM.CRC, iRV, psTemp->xVal.f32) ;
-	}
+	TickType_t Tconv = pdMS_TO_TICKS(ds18x20DELAY_CONVERT) ;
+	// ONLY decrease delay if a specific ROM is addressed AND it is DS18B20 type
+	// If no specific ROM addressed OR the device is not DS18B20, then don't
+	if (u8AddrMethod == OW_CMD_MATCHROM && psDS18X20->sOW.ROM.Family == OWFAMILY_28)
+		Tconv /= (4 - psDS18X20->Res) ;
+	IF_SYSTIMER_START(debugTIMING, systimerDS1820A) ;
+	vTaskDelay(Tconv) ;
+	IF_SYSTIMER_STOP(debugTIMING, systimerDS1820A) ;
+	OWLevel(&psDS18X20->sOW, owMODE_STANDARD) ;
 	return iRV ;
 }
 
+int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) { return ds18x20ReadScratchPad(psDS18X20, 2) ; }
+
+int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
+	const uint8_t	u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
+	uint16_t u16Adj = psDS18X20->Tmsb << 8 | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
+	psDS18X20->xVal.f32 = (float) u16Adj / 16.0 ;
+	IF_EXEC_2(debugCONVERT, OWPlatformCB_PrintDS18, 0xC0000000 | (uint32_t) psDS18X20->Idx, psDS18X20) ;
+	IF_PRINT(debugCONVERT, "  u16A=0x%04X\n", u16Adj) ;
+	return true ;
+}
+
+float	ds18x20GetTemperature(int32_t Idx) {
+	IF_myASSERT(debugPARAM, INRANGE_SRAM(psaDS18X20)) ;
+	IF_myASSERT(debugPARAM, INRANGE(0, Idx, Fam10_28Count, uint8_t)) ;
+	return psaDS18X20[Idx].xVal.f32 ;
+}
+
+// #################################### IRMACOS support ############################################
+
+int32_t	ds18x20EnumerateCB(uint32_t uCount, onewire_t * psOW) {
+	IF_myASSERT(debugPARAM, uCount < Fam10_28Count) ;
+	ds18x20_t * psDS18X20 = &psaDS18X20[uCount] ;
+	// Save all info of the device just enumerated
+	memcpy(&psDS18X20->sOW, psOW, sizeof(onewire_t)) ;
+	psDS18X20->Idx	= uCount ;
+	ds18x20Initialize(psDS18X20) ;
+	return 1 ;											// number of devices enumerated
+}
+
+int32_t	ds18x20Enumerate(int32_t xUri) {
+	int32_t	iRV = 0 ;
+	uint8_t	DevCount = 0 ;
+	if (Fam10_28Count == 0) 	return 0 ;
+
+	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
+	IF_myASSERT(debugRESULT, INRANGE_SRAM(psaDS18X20)) ;
+
+	ep_info_t	sEpInfo ;
+	vEpGetInfoWithIndex(&sEpInfo, xUri) ;			// setup pointers to static and work tables
+	IF_myASSERT(debugRESULT, sEpInfo.pEpStatic && sEpInfo.pEpWork) ;
+
+	IF_PRINT(debugTRACK, "AutoEnum DS18X20:\n") ;
+	onewire_t	sOW ;
+	iRV = OWPlatformScanner(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
+	if (iRV > 0)		DevCount += iRV ;
+	iRV = OWPlatformScanner(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
+	if (iRV > 0)		DevCount += iRV ;
+	IF_PRINT(debugTRACK, "Fam10_28 Count=%d\n", Fam10_28Count) ;
+
+	// Do once-off initialization for work structure entries
+	sEpInfo.pEpWork->uri					= xUri ;
+	sEpInfo.pEpWork->Var.varDef.cv.pntr		= 1 ;
+	sEpInfo.pEpWork->Var.varVal.pvoid		= (void *) &sDS18X20Func ;
+	sEpInfo.pEpWork->Var.varDef.cv.varcount = iRV ;		// Update work table number of devices enumerated
+
+	if (DevCount != Fam10_28Count) {
+		SL_ERR("Only %d of %d enumerated!!!", DevCount, Fam10_28Count) ;
+		iRV = erFAILURE ;
+	} else {
+		iRV = DevCount ;
+	}
+	return iRV ;										// number of devices enumerated
+}
+
+int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) {
+	static uint8_t	PrevBus = 0xFF ;
+	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
+		ds18x20_t * psDS18X20 = &psaDS18X20[Idx] ;
+		if (psDS18X20->sOW.PhyChan != PrevBus) {
+			if (ds18x20SampleTemperature(psDS18X20, OW_CMD_SKIPROM) == false)
+				continue ;
+			PrevBus = psDS18X20->sOW.PhyChan ;
+		}
+		if (ds18x20ReadTemperature(psDS18X20))
+			ds18x20ConvertTemperature(psDS18X20) ;
+		else
+			SL_ERR("Failed to convert temperature !!!") ;
+	}
+	return erSUCCESS ;
+}
+
+int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) {
+	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, i8Res, 12, uint8_t)) {
+		uint8_t u8Res = ((i8Res - 9) << 5) | 0x1F ;
+		if (psDS18X20->fam28.Conf != u8Res) {
+			IF_PRINT(debugCONFIG, "Config Res:0x%02X -> 0x%02X (%d -> %d)\n",
+				psDS18X20->fam28.Conf, u8Res, psDS18X20->Res + 9, i8Res) ;
+			psDS18X20->fam28.Conf = u8Res ;
+			ds18x20WriteScratchPad(psDS18X20) ;
+			ds18x20CopyScratchPad(psDS18X20) ;
+			psDS18X20->Res = i8Res - 9 ;
+		}
+		return true ;
+	}
+	return false ;
+}
+
+int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) {
+	if (psDS18X20->Tlo != i8Lo || psDS18X20->Thi != i8Hi) {
+		IF_PRINT(debugCONFIG, "Config Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, i8Lo, psDS18X20->Thi, i8Hi) ;
+		psDS18X20->Tlo = i8Lo ;
+		psDS18X20->Thi = i8Hi ;
+		ds18x20WriteScratchPad(psDS18X20) ;
+		ds18x20CopyScratchPad(psDS18X20) ;
+		return true ;
+	}
+	return false ;
+}
+
+int32_t	ds18x20SetMode (void * pVoid, struct rule_t * psRule) { TRACK("Should not be here") ; return erSUCCESS ; }
+
+// ##################################### CLI functionality #########################################
+
+int32_t	CmndDS18RDT(cli_t * psCLI) {
+	ds18x20_t * psDS18X20 = psCLI->z64Var.p32[0].pvoid ;
+	ds18x20ReadTemperature(psDS18X20) ;
+	ds18x20ConvertTemperature(psDS18X20) ;
+	return erSUCCESS ;
+}
+
+int32_t	CmndDS18RDSP(cli_t * psCLI) {
+	ds18x20_t * psDS18X20 = psCLI->z64Var.p32[0].pvoid ;
+	ds18x20ReadScratchPad(psDS18X20, 9) ;
+	return erSUCCESS ;
+}
+
+int32_t	CmndDS18WRSP(cli_t * psCLI) {
+	ds18x20_t * psDS18X20 = psCLI->z64Var.p32[0].pvoid ;
+	ds18x20WriteScratchPad(psDS18X20) ;
+	return erSUCCESS ;
+}
+
 /**
- * ds18x20ConvertAndReadAll()
- * @brief	To trigger temperature conversion for FAM10 & FAM28 the same command is used.
- * @param	psEpWork
- * @return
+ * CmndDS18MODE() -
+ * @param[in]	{Thi} {Tlo} {Res}
  */
-int32_t	ds18x20ConvertAndReadAll(ep_work_t * psEpWork) {
-	if (Fam10_28Count) {
-		IF_SYSTIMER_START(debugTIMING, systimerDS18X20) ;
-		ds18x20TriggerPhase() ;
-		ds18x20WaitPhase() ;
-		ds18x20ReadPhase() ;
-		IF_SYSTIMER_STOP(debugTIMING, systimerDS18X20) ;
-	}
-	return erSUCCESS ;
-}
-
-float	ds18x20GetTemperature(int32_t Idx) { return psDS18X20[Idx].xVal.f32 ; }
-
-int32_t	ds18x20AllInOne(void) {
-	int32_t iRV ;
-#if		(halHAS_DS2482_800 == 1)
-	iRV = ds2482ChannelSelect(psDS18X20->Ch) ;
-	IF_myASSERT(debugRESULT, iRV == erSUCCESS) ;
-#endif
-	iRV = OWReset() ;									// check if any device is there
-	IF_myASSERT(debugRESULT, iRV == 1) ;
-
-	memcpy(&sDS2482.ROM, &psDS18X20->ROM, sizeof(ow_rom_t)) ;
-	OWAddress(OW_CMD_MATCHROM) ;						// select the applicable device
-
-	OWWriteByte(DS18X20_CONVERT) ;						// Trigger temperature conversion
-#if		(ds18x20PWR_SOURCE == 0)
-	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_CONVERT_PARASITIC)) ;
-#else
-	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_CONVERT_EXTERNAL)) ;
-#endif
-	iRV = OWReset() ;									// check if any device is there
-	IF_myASSERT(debugRESULT, iRV == 1) ;
-
-	OWAddress(OW_CMD_MATCHROM) ;						// select the applicable device
-
-	iRV = OWWriteByteWait(DS18X20_READ_SP) ;			// request to read the scratch pad
-	IF_myASSERT(debugRESULT, iRV > erFAILURE) ;
-
-	memset(psDS18X20->RegX, 0xFF, SIZEOF_MEMBER(ds18x20_t, RegX)) ;	// preset all=0xFF to read
-	OWBlock(psDS18X20->RegX, SIZEOF_MEMBER(ds18x20_t, RegX)) ;		// read the scratch pad
-
-	psDS18X20->xVal.f32 = (float) iRV / 16 ;
-	IF_PRINT(debugDS18X20, "%02X/%#M/%02X  Raw=%d  Val=%f\n",
-		psDS18X20->ROM.Family, psDS18X20->ROM.TagNum, psDS18X20->ROM.CRC, iRV, psDS18X20->xVal.f32) ;
-
-	return erSUCCESS ;
-}
-
-// #################################################################################################
-
-int32_t	ds18x20HandleEnumerate(int32_t iCount, void * pVoid) {
-	IF_myASSERT(debugPARAM, iCount < Fam10_28Count) ;
-	ep_info_t * psEpInfo = pVoid ;
-	ds18x20_t * psDS18Xtemp = &psDS18X20[iCount] ;
-	// Save the address info of the device just enumerated
-	memcpy(&psDS18Xtemp->ROM, &sDS2482.ROM, sizeof(ow_rom_t)) ;
-	psDS18Xtemp->Ch		= sDS2482.CurChan ;
-	psDS18Xtemp->Idx	= iCount ;
-#if 0
-	ds18x20ReadScratchPad(psDS18Xtemp) ;
-	if (sDS2482.ROM.Family == OWFAMILY_28) {
-		if ((psDS18Xtemp->fam28.Conf & 0x60) == 0x60) {
-			psDS18Xtemp->fam28.Conf &= ~0x60 ;			// change to 9-bit mode
-			ds18x20WriteScratchPad(psDS18Xtemp) ;
-			ds18x20CopyScratchPad(psDS18Xtemp) ;
-			psDS18Xtemp->Res	= owFAM28_RES9B ;		// Changed 12 -> 9 bit resolution
+int32_t	CmndDS18MODE(cli_t * psCLI) {
+	ds18x20_t * psDS18X20 = psCLI->z64Var.p32[0].pvoid ;
+	char * pTmp = pcStringParseValueRange(psCLI->pcParse, (p32_t) &psCLI->z64Var.x32[1].i8[0], vfIXX, vs08B, sepSPACE, (x32_t) -55, (x32_t) 125) ;
+	if (pTmp != pcFAILURE) {
+		pTmp = pcStringParseValueRange(psCLI->pcParse = pTmp, (p32_t) &psCLI->z64Var.x32[1].i8[1], vfIXX, vs08B, sepSPACE, (x32_t) -55, (x32_t) 125) ;
+		if (pTmp != pcFAILURE) {
+			pTmp = pcStringParseValueRange(psCLI->pcParse = pTmp, (p32_t) &psCLI->z64Var.x32[1].i8[2], vfIXX, vs08B, sepSPACE, (x32_t) 9, (x32_t) 12) ;
+			if (pTmp != pcFAILURE) {
+				psCLI->pcParse = pTmp ;
+				ds18x20SetAlarms(psDS18X20, psCLI->z64Var.x32[1].c8[0], psCLI->z64Var.x32[1].c8[1]) ;
+				ds18x20SetResolution(psDS18X20, psCLI->z64Var.x32[1].c8[2]) ;
+			}
 		}
 	}
-	psDS18Xtemp->Res	= owFAM28_RES9B ;			// default 9 bit resolution
-#else
-	psDS18Xtemp->Thi		= 0x7F ;				// 127C
-	psDS18Xtemp->Tlo		= 0xF7 ;				// -??C
-	psDS18Xtemp->fam28.Conf = 0x1F ;				// 9 bit mode
-	ds18x20WriteScratchPad(psDS18Xtemp) ;
-	ds18x20CopyScratchPad(psDS18Xtemp) ;
-	ds18x20ReadScratchPad(psDS18Xtemp) ;
-	psDS18Xtemp->Res	= owFAM28_RES9B ;			// Changed 12 -> 9 bit resolution
-#endif
-	psEpInfo->pEpWork->Var.varDef.cv.varcount++ ;		// Update work table number of devices enumerated
-	return erSUCCESS ;
+	return pTmp != pcFAILURE ? erSUCCESS : erFAILURE ;
 }
 
-int32_t	ds18x20Discover(int32_t xUri) {
-	if (Fam10_28Count) {
-		psDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
-		IF_myASSERT(debugRESULT, INRANGE_SRAM(psDS18X20)) ;
-
-		ep_info_t	sEpInfo ;
-		vEpGetInfoWithIndex(&sEpInfo, xUri) ;			// setup pointers to static and work tables
-		IF_myASSERT(debugRESULT, sEpInfo.pEpStatic && sEpInfo.pEpWork) ;
-
-		// Do once-off initialization for work structure entries
-		if (sEpInfo.pEpWork->Var.varDef.cv.varcount == 0) {
-			sEpInfo.pEpWork->Var.varDef.cv.pntr	= 1 ;
-			sEpInfo.pEpWork->Var.varVal.pvoid	= &sDS18X20Func ;
-		}
-
-		IF_PRINT(debugDS18X20, "AutoEnum DS18X20: ") ;
-		int32_t iRV = ds2482ScanAllChannels(OWFAMILY_10, ds18x20HandleEnumerate, &sEpInfo) ;
-		iRV += ds2482ScanAllChannels(OWFAMILY_28, ds18x20HandleEnumerate, &sEpInfo) ;
-		IF_PRINT(debugDS18X20, "\n") ;
-
-		IF_PRINT(debugTRACK, "Fam10_28 Count=%d\n", Fam10_28Count) ;
-		IF_SYSTIMER_INIT(debugTIMING, systimerDS18X20, systimerTICKS, "DS18X20", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
-		if (iRV != Fam10_28Count) {
-			SL_ERR("Only %d/%d enumerated!!!", iRV, Fam10_28Count) ;
-			return erFAILURE ;
+int32_t	CmndDS18(cli_t * psCLI) {
+	int32_t iRV = erFAILURE ;
+	psCLI->pasList	= saDS18Cmnd ;
+	psCLI->u8LSize	= NUM_OF_MEMBERS(saDS18Cmnd) ;
+	psCLI->pcParse	+= xStringSkipDelim(psCLI->pcParse, sepSPACE, psCLI->pcStore - psCLI->pcParse ) ;
+	int32_t	i32SC = CmndMatch(psCLI) ;
+	if (i32SC >= 0) {
+		// parse the logical channel number
+		char * pTmp = pcStringParseValueRange(psCLI->pcParse, (p32_t) &psCLI->z64Var.x32[0].u32, vfUXX, vs32B, sepSPACE, (x32_t) 0, (x32_t) ((uint32_t) Fam10_28Count - 1)) ;
+		if (pTmp != pcFAILURE) {
+			psCLI->z64Var.p32[0].pvoid = &psaDS18X20[psCLI->z64Var.x32[0].u32] ;
+			psCLI->pcParse = pTmp ;
+			iRV = psCLI->pasList[i32SC].hdlr(psCLI) ;
 		}
 	}
-	return erSUCCESS ;
+	return iRV ;
 }
-
-int32_t	ds18x20Handler(int32_t iCount, void * pVoid) {
-	ds2482PrintROM(&sDS2482.ROM) ;
-	return erSUCCESS ;
-}
-
-#endif

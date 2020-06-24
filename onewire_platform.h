@@ -19,28 +19,61 @@
  */
 
 /*
- * ds1990x.h
+ * onewire_platform.h
  */
 
 #pragma		once
 
 #include	"onewire.h"
+#include	"ds1990x.h"
+#include	"ds18x20.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // ############################################# Macros ############################################
 
-#define	ds1990READ_INTVL			5					// successive read interval, avoid duplicates
 
 // ######################################## Enumerations ###########################################
 
 
 // ######################################### Structures ############################################
 
+/* PER CHANNEL info keeping track of last device read (ROM & timestamp) on each channel
+ * Used to avoid re-reading a device (primarily DS1990X type) too regularly.
+ */
+typedef struct __attribute__((packed)) ow_chan_info_s {
+	ow_rom_t	LastROM ;
+	seconds_t	LastRead ;
+} ow_chan_info_t ;
+DUMB_STATIC_ASSERT(sizeof(ow_chan_info_t) == 12) ;
 
-// ###################################### Public variables #########################################
+typedef struct ow_flags_s {
+	uint8_t	Level 	: 2 ;
+	uint8_t	Spare	: 6 ;
+} ow_flags_t ;
 
-extern	uint8_t	Family01Count, ds1990ReadIntvl ;
+// #################################### Public Data structures #####################################
+
+extern	ow_chan_info_t * psaOW_CI ;
+extern	ow_flags_t	OWflags ;
 
 // ###################################### Public functions #########################################
 
-int32_t	OWPlatformCB_ReadDS1990X(uint32_t uCount, onewire_t * psOW) ;
-int32_t	ds1990xConfig(int32_t xUri) ;
+ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t) ;
+int32_t	OWPlatformChanLog2Phy(onewire_t *, uint8_t) ;
+int32_t	OWPlatformChanPhy2Log(onewire_t *) ;
+// Common callback handlers
+int32_t	OWPlatformCB_PrintROM(uint32_t uCount, ow_rom_t * psROM) ;
+int32_t	OWPlatformCB_Print1W(uint32_t uCount, onewire_t * psOW) ;
+int32_t	OWPlatformCB_PrintDS18(uint32_t uCount, ds18x20_t * psDS18X20) ;
+int32_t	OWPlatformCB_Count(uint32_t uCount, onewire_t * psOW) ;
+
+int32_t OWPlatformEndpoints(struct ep_work_s * psEpWork) ;
+int32_t	OWPlatformScanner(uint8_t Family, int32_t (*Handler)(uint32_t, onewire_t *), onewire_t * psOW) ;
+int32_t	OWPlatformConfig(void) ;
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-19 AM Maree/KSS Technologies (Pty) Ltd.
+ * Copyright 2020 AM Maree/KSS Technologies (Pty) Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -19,28 +19,25 @@
  */
 
 /*
- * ds1990x.h
+ * ds18x20_cmds.h
  */
 
 #pragma		once
 
-#include	"onewire.h"
+#include	"x_struct_union.h"
 
-// ############################################# Macros ############################################
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#define	ds1990READ_INTVL			5					// successive read interval, avoid duplicates
+// ####################################### Global functions ########################################
 
-// ######################################## Enumerations ###########################################
+int32_t	CmndDS18RDT(cli_t * psCLI) ;
+int32_t	CmndDS18RDSP(cli_t * psCLI) ;
+int32_t	CmndDS18WRSP(cli_t * psCLI) ;
+int32_t	CmndDS18MODE(cli_t * psCLI) ;
+int32_t CmndDS18(cli_t * psCLI) ;
 
-
-// ######################################### Structures ############################################
-
-
-// ###################################### Public variables #########################################
-
-extern	uint8_t	Family01Count, ds1990ReadIntvl ;
-
-// ###################################### Public functions #########################################
-
-int32_t	OWPlatformCB_ReadDS1990X(uint32_t uCount, onewire_t * psOW) ;
-int32_t	ds1990xConfig(int32_t xUri) ;
+#ifdef __cplusplus
+}
+#endif

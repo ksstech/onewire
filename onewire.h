@@ -24,42 +24,46 @@
 
 #pragma		once
 
-#include	"x_definitions.h"
+#include	"hal_config.h"
+#include	"FreeRTOS_Support.h"
+#include	"x_struct_union.h"
 
-#include	<stdint.h>
+#include	<stddef.h>
+#include	<stdbool.h>
+
+#include	"hal_i2c.h"
+
+#include	"ds248x.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* https://www.maximintegrated.com/en/products/ibutton/software/1wire/wirekit.cfm
+ * https://www.maximintegrated.com/en/app-notes/index.mvp/id/74
+ *
+ * ONEWIRE commands take a couple of formats resulting in a range of durations
+ * 1. Instantaneous (0uS), no 1W bus activity, only affect DS2484, optional status
+ * 2. Fast (< 1uS), no 1W bus activity, only affect DS2484,
+ * 3. Medium (1uS < ?? < 1mS)
+ * 4. Slow (> 1mS)
+ * In order to optimise system performance minimal time should be spent in a tight
+ * loop waiting for status, task should yield (delay) whenever possible.
+ *				[DRST]	[SRP]	[WCFG]	[CHSL]	1WRST	1WWB	1WRB	1WSB	1WT
+ *	Duration	525nS	0nS		0nS		0nS		1244uS	8x73uS	8x73uS	1x73uS	3x73uS
+ */
 
 // ############################################# Macros ############################################
 
-#define ONEWIRE_ROM_LENGTH        			8
+#define	owPLATFORM_MAXCHAN			9
 
 // ################################## Generic 1-Wire Commands ######################################
 
-#define OW_CMD_SEARCHROM     				0xF0
-#define OW_CMD_READROM       				0x33
-#define OW_CMD_MATCHROM      				0x55
-#define OW_CMD_SKIPROM       				0xCC
-#define OW_CMD_ALARMSEARCH   				0xEC
-
-// ################################### DS2482 1-Wire Commands ######################################
-
-#define CMD_DRST   							0xF0		// Device Reset
-#define CMD_SRP								0xE1		// Set Read Pointer
-#define CMD_WCFG   							0xD2		// Write Config
-#define CMD_CHSL   							0xC3		// Channel Select (-800)
-#define CMD_1WRS   							0xB4		// 1-Wire Reset
-#define CMD_1WWB   							0xA5		// 1-Wire Write Byte
-#define CMD_1WRB   							0x96		// 1-Wire Read Byte
-#define CMD_1WSB   							0x87		// 1-Wire Single Bit
-#define CMD_1WT								0x78		// 1-Wire Triplet
-
-// ################################## DS18X20 1-Wire Commands ######################################
-
-#define	DS18X20_CONVERT						0x44
-#define	DS18X20_COPY_SP						0x48
-#define	DS18X20_WRITE_SP					0x4E
-#define	DS18X20_READ_PSU					0xB4
-#define	DS18X20_RECALL_EE					0xB8
-#define	DS18X20_READ_SP						0xBE
+#define OW_CMD_SEARCHROM     		0xF0
+#define OW_CMD_SEARCHALARM   		0xEC
+#define OW_CMD_SKIPROM       		0xCC
+#define OW_CMD_MATCHROM      		0x55
+#define OW_CMD_READROM       		0x33
 
 // ##################################### iButton Family Codes #####################################
 
@@ -98,34 +102,67 @@
 
 // ######################################## Enumerations ###########################################
 
-enum {													// API mode bit flags
-	owMODE_STANDARD,									// for Speed & PullUp
-	owMODE_OVERDRIVE,									// Speed only
-	owMODE_STRONG,										// PullUp only
+
+enum {													// used to identify/select device specific (old?) driver
+	// Intention is to remove this and use the i2cDEV_TYPE definitions to determine the device detected.
+	owTYPE_DS248X,										// new composite multi device driver
+	owTYPE_RMTXXX,										// XXX ESP32 RMT peripheral
+	owTYPE_GPIOSW,										// XXX General GPIO software 1-Wire
+	owTYPE_MAXNUM,
 } ;
 
-enum {
-	owFAM28_RES9B,
-	owFAM28_RES10B,
-	owFAM28_RES11B,
-	owFAM28_RES12B,
-} ;
+//		Speed & PullUp		Speed only			PullUp only
+enum {	owMODE_STANDARD, 	owMODE_OVERDRIVE,	owMODE_STRONG	} ;
+enum {	owFAM28_RES9B,		owFAM28_RES10B,		owFAM28_RES11B,	owFAM28_RES12B	} ;
 
 // ######################################### Structures ############################################
 
-typedef union ow_rom_u {
-	uint64_t	Value ;
-	uint8_t		HexChars[ONEWIRE_ROM_LENGTH] ;
-	struct {
-		uint8_t		Family ;
-		uint8_t		TagNum[6] ;
-		uint8_t		CRC ;
-	} ;
-} ow_rom_t ;
+typedef	struct __attribute__((packed)) onewire_s {
+	ow_rom_t		ROM ;								// size = 1+6+1
+	uint8_t 		LastDiscrepancy ;
+	uint8_t 		LastFamilyDiscrepancy ;
+	uint8_t 		crc8 ;
+	uint8_t 		LastDeviceFlag	: 1 ;
+	uint8_t			BusType			: 2 ;				// owTYPE_XXXXXX
+	uint8_t			DevNum			: 2 ;				// index into 1W DevInfo table
+	uint8_t			PhyChan			: 3 ;
+} onewire_t ;
+DUMB_STATIC_ASSERT(sizeof(onewire_t) == 12) ;
 
-DUMB_STATIC_ASSERT( sizeof(ow_rom_t) == ONEWIRE_ROM_LENGTH) ;
+// ################################ Generic 1-Wire LINK API's ######################################
 
-// ###################################### Private functions ########################################
+int32_t OWSetSPU(onewire_t * psOW) ;
+int32_t OWReset(onewire_t * psOW) ;
+int32_t OWSpeed(onewire_t * psOW, bool speed) ;
+int32_t OWLevel(onewire_t * psOW, bool level) ;
+uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) ;
+uint8_t	OWCalcCRC8(onewire_t * psOW, uint8_t data) ;
+int32_t	OWSearchTriplet(onewire_t * psOW, uint8_t search_direction) ;
+int32_t OWChannelSelect(onewire_t * psOW) ;
 
+// ################################## Bit/Byte Read/Write ##########################################
 
-// ####################################### Global functions ########################################
+uint8_t OWTouchBit(onewire_t * psOW, uint8_t sendbit) ;
+void	OWWriteBit(onewire_t * psOW, uint8_t sendbit) ;
+uint8_t OWReadBit(onewire_t * psOW) ;
+void	OWWriteByte(onewire_t * psOW, uint8_t sendbyte) ;
+int32_t OWWriteBytePower(onewire_t * psOW, int32_t sendbyte) ;
+int32_t OWReadBitPower(onewire_t * psOW, int32_t applyPowerResponse) ;
+int32_t	OWReadByte(onewire_t * psOW) ;
+uint8_t OWTouchByte(onewire_t * psOW, uint8_t sendbyte) ;
+void	OWBlock(onewire_t * psOW, uint8_t * tran_buf, int32_t tran_len) ;
+int32_t	OWReadROM(onewire_t * psOW) ;
+void	OWAddress(onewire_t * psOW, uint8_t nAddrMethod) ;
+
+// ############################## Search and Variations thereof ####################################
+
+void	OWTargetSetup(onewire_t * psOW, uint8_t family_code) ;
+void	OWFamilySkipSetup(onewire_t * psOW) ;
+int32_t OWSearch(onewire_t * psOW, bool alarm_only) ;
+int32_t OWFirst(onewire_t * psOW, bool alarm_only) ;
+int32_t OWNext(onewire_t * psOW, bool alarm_only) ;
+int32_t OWVerify(onewire_t * psOW) ;
+
+#ifdef __cplusplus
+}
+#endif

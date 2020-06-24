@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-19 AM Maree/KSS Technologies (Pty) Ltd.
+ * Copyright 2020 AM Maree/KSS Technologies (Pty) Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -19,29 +19,29 @@
  */
 
 /*
- * ds1990x.c
+ * onewire_platform.c
  */
 
-#include	"x_config.h"
-
-#if		(halHAS_DS2482_100 == 1 || halHAS_DS2482_800 == 1) && (halHAS_DS1990X == 1)
-
-#include	"ds1990x.h"
-#include	"ds2482.h"
+#include	"onewire_platform.h"
+#include	"x_config.h"								// sTSZ
 
 #include	"task_events.h"
+#include	"endpoints.h"
 
 #include	"syslog.h"
 #include	"printfx.h"
-#include	"x_errors_events.h"
 #include	"systiming.h"								// timing debugging
 
-#include	<stdint.h>
+#include	"x_errors_events.h"
+
+#include	"hal_debug.h"
+
 #include	<string.h>
 
-#define	debugFLAG					0xC000
+#define	debugFLAG					0xE002
 
 #define	debugTIMING					(debugFLAG & 0x0001)
+#define	debugEVENTS					(debugFLAG & 0x0002)
 
 #define	debugTRACK					(debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG & 0x4000)
@@ -49,65 +49,41 @@
 
 // ###################################### General macros ###########################################
 
+
+// ################################# Platform related variables ####################################
+
 /* In order to avoid multiple successive reads of the same iButton on the same OW channel
  * we filter reads based on the value of the iButton read and time expired since the last
  * successful read. If the same ID is read on the same channel within 'x' seconds, skip it */
-#if		(halHAS_DS2482_800 == 1)
-	ow_rom_t	LastROM[ds2482NUM_CHAN]		= { 0 } ;
-	seconds_t	LastRead[ds2482NUM_CHAN]	= { 0 } ;
-#elif	(halHAS_DS2482_100 == 1 && ESP32_VARIANT == ESP32_VAR_WROVERKIT) // breakout on ESP32-WROVER-KIT or M5FIRE ?
-	ow_rom_t	LastROM		= { 0 } ;
-	seconds_t	LastRead	= 0 ;
-#endif
-uint8_t		Family01Count = 0 ;
-uint8_t		OWdelay	= ds1990READ_INTVL ;
+
+uint8_t	Family01Count 	= 0 ;
+uint8_t	ds1990ReadIntvl	= ds1990READ_INTVL ;	// XXX control from cloud
 
 // ################################# Application support functions #################################
 
-int32_t	ds1990xHandleRead(int32_t iCount, void * pVoid) {
-	/* To avoid registering multiple reads if iButton is held in place too long we enforce a
-	 * period of 'x' seconds within which successive reads of the same tag will be ignored */
+/* To avoid registering multiple reads if iButton is held in place too long we enforce a
+ * period of 'x' seconds within which successive reads of the same tag will be ignored */
+int32_t	OWPlatformCB_ReadDS1990X(uint32_t uCount, onewire_t * psOW) {
 	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
-#if		(halHAS_DS2482_800 == 1)
-	#if		(ESP32_VARIANT == ESP32_VAR_AC00)
-	uint8_t	Chan = OWremapTable[sDS2482.CurChan] ;
-	#elif	(ESP32_VARIANT == ESP32_VAR_AC01)
-	uint8_t	Chan = sDS2482.CurChan ;
-	#endif
-	if ((LastROM[Chan].Value == sDS2482.ROM.Value) && (NowRead - LastRead[Chan]) <= OWdelay) {
-		IF_PRINT(debugTRACK, "SAME iButton in 5sec, Skipped...\n") ;
+	uint8_t		LogChan = OWPlatformChanPhy2Log(psOW) ;
+	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(LogChan) ;
+	++Family01Count ;
+	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) && (NowRead - psOW_CI->LastRead) <= ds1990ReadIntvl) {
+		IF_PRINT(debugTRACK, "SAME iButton in %d sec, Skipped...\n", ds1990ReadIntvl) ;
 		return erSUCCESS ;
 	}
-	LastROM[Chan].Value = sDS2482.ROM.Value ;
-	LastRead[Chan]		= NowRead ;
-	xTaskNotify(EventsHandle, 1UL << (Chan + se1W_FIRST), eSetBits) ;
-
-#elif	(halHAS_DS2482_100 == 1 && ESP32_VARIANT == ESP32_VAR_WROVERKIT) // breakout on ESP32-WROVER-KIT or M5FIRE ?
-	if ((LastROM.Value == sDS2482.ROM.Value) && (NowRead - LastRead) <= OWdelay) {
-		IF_PRINT(debugTRACK, "SAME iButton in 5sec, Skipped...\n") ;
-		return erSUCCESS ;
-	}
-	LastROM.Value	= sDS2482.ROM.Value ;
-	LastRead		= NowRead ;
-	xTaskNotify(EventsHandle, 1UL << se1W_FIRST, eSetBits) ;
-
-#else
-	#warning "Should this code be included ???"
-#endif
+	psOW_CI->LastROM.Value	= psOW->ROM.Value ;
+	psOW_CI->LastRead		= NowRead ;
+	xTaskNotify(EventsHandle, 1UL << (LogChan + se1W_FIRST), eSetBits) ;
 	portYIELD() ;
-	IF_PRINT(debugTRACK, "NEW iButton Read, or >5sec passed\n") ;
-	IF_EXEC_1(debugTRACK, ds2482PrintROM, &sDS2482.ROM) ;
+	IF_EXEC_2(debugEVENTS, OWPlatformCB_PrintROM, 0xD0000000 | uCount, &psOW->ROM) ;
 	return erSUCCESS ;
 }
 
-// ################### Identification, Diagnostics & Configuration functions #######################
-
-int32_t	ds1990xDiscover(void) {
-	if (Family01Count) {
-		IF_PRINT(debugTRACK, "Family01 Count=%d\n", Family01Count) ;
-		IF_SYSTIMER_INIT(debugTIMING, systimerDS18X20, systimerTICKS, "DS18X20", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
-	}
+int32_t	ds1990xConfig(int32_t xUri) {
+	ep_info_t	sEpInfo ;
+	vEpGetInfoWithIndex(&sEpInfo, xUri) ;			// setup pointers to static and work tables
+	IF_myASSERT(debugRESULT, sEpInfo.pEpStatic && sEpInfo.pEpWork) ;
+	sEpInfo.pEpWork->uri	= xUri ;
 	return erSUCCESS ;
 }
-
-#endif
