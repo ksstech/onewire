@@ -23,14 +23,15 @@
  */
 
 #include	"x_config.h"								// sTSZ
-#include	"onewire_platform.h"
-#include	"task_events.h"
 #include	"endpoint_id.h"
 #include	"endpoint_struct.h"
-#include	"syslog.h"
 #include	"printfx.h"
+#include	"syslog.h"
 #include	"systiming.h"								// timing debugging
 #include	"x_errors_events.h"
+
+#include	"onewire_platform.h"
+#include	"task_events.h"
 
 #include	"hal_debug.h"
 
@@ -207,7 +208,7 @@ int32_t OWPlatformEndpoints(struct ep_work_s * psEpWork) {
 #endif
 
 #if		(halHAS_DS1990X > 0)
-	case URI_IDENT: {
+	case URI_DS1990X: {
 		onewire_t	sOW ;
 		Family01Count = 0 ;
 		iRV = OWPlatformScanner(OWFAMILY_01, OWPlatformCB_ReadDS1990X, &sOW) ;
@@ -255,7 +256,7 @@ int32_t	OWPlatformConfig(void) {
 		if (Family01Count) {
 			IF_SL_DBG(debugTRACK, "DS1990x found %d devices", Family01Count) ;
 		}
-		iRV = ds1990xConfig(URI_IDENT) ;
+		iRV = ds1990xConfig(URI_DS1990X) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1990, systimerTICKS, "DS1990", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
 #endif
 

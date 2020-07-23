@@ -93,8 +93,8 @@ int32_t OWReset(onewire_t * psOW) {
 /**
  * Set the 1-Wire Net communication speed.
  * 'new_speed' - new speed defined as
- *					 owMODE_STANDARD	0x00
- *					 owMODE_OVERDRIVE	0x01
+ *					 owSPEED_STANDARD	0
+ *					 owSPEED_OVERDRIVE	1
  *
  * Returns:  new current 1-Wire Net speed
  */
@@ -284,7 +284,7 @@ int32_t OWReadBitPower(onewire_t * psOW, int32_t applyPowerResponse) {
 		return false ;
 	uint8_t rdbit = OWReadBit(psOW);
 	if (rdbit != applyPowerResponse) {					// check if response was correct
-		OWLevel(psOW, owMODE_STANDARD);					// if not, turn off strong pull-up
+		OWLevel(psOW, owSPEED_STANDARD);					// if not, turn off strong pull-up
 		return false ;
 	}
 	return true ;

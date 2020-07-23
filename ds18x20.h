@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-19 AM Maree/KSS Technologies (Pty) Ltd.
+ * Copyright 2018-20 AM Maree/KSS Technologies (Pty) Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -98,9 +98,9 @@ float	ds18x20GetTemperature(int32_t Idx) ;
 int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) ;
 int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) ;
 
-int32_t	ds18x20ReadScratchPad(ds18x20_t * psDS18X20, int32_t Len) ;
-int32_t	ds18x20WriteScratchPad(ds18x20_t * psDS18X20) ;
-int32_t	ds18x20CopyScratchPad(ds18x20_t * psDS18X20) ;
+int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) ;
+int32_t	ds18x20WriteSP(ds18x20_t * psDS18X20) ;
+int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) ;
 
 int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) ;
 int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) ;
@@ -114,6 +114,7 @@ int32_t	ds18x20TestCase2(void) ;
 
 int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) ;
 int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) ;
+struct rule_t ;
 int32_t	ds18x20SetMode (void *, struct rule_t * psRule) ;
 int32_t	ds18x20EnumerateCB(uint32_t iCount, onewire_t * psOW) ;
 int32_t	ds18x20Enumerate(int32_t xUri)  ;

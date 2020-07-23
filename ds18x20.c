@@ -23,18 +23,18 @@
  */
 
 #include	"onewire_platform.h"
-#include	"ds18x20_cmds.h"
 #include	"endpoints.h"
-#include	"rules_engine.h"
-#include	"commands.h"
-#include	"syslog.h"
 #include	"printfx.h"
-#include	"x_errors_events.h"
+#include	"syslog.h"
 #include	"systiming.h"					// timing debugging
+#include	"x_errors_events.h"
 #include	"x_values_convert.h"
 #include	"x_string_to_values.h"
 #include	"x_string_general.h"
 
+#include	"commands.h"
+#include	"ds18x20_cmds.h"
+#include	"rules_engine.h"
 #include	"hal_debug.h"
 
 #include	<string.h>
@@ -69,6 +69,7 @@ cmnd_t saDS18Cmnd[] = {
 	{ "RDT",	CmndDS18RDT },
 	{ "RDSP",	CmndDS18RDSP },
 	{ "WRSP",	CmndDS18WRSP },
+	{ "WREE",	CmndDS18WREE },
 	{ "MODE",	CmndDS18MODE },
 } ;
 
@@ -100,23 +101,11 @@ int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 	return iRV ;
 }
 
-void	ds18x20WriteByteRPS(ds18x20_t * psDS18X20, uint8_t u8Byte) {
-	int32_t iRV ;
-	if (ds18x20CheckPower(psDS18X20)) {					// External power
-		OWWriteByte(&psDS18X20->sOW, u8Byte) ;
-	} else {											// Parasitic power
-		iRV = OWWriteBytePower(&psDS18X20->sOW, u8Byte) ;
-		IF_myASSERT(debugRESULT, iRV != false) ;
-	}
-}
-
 // ###################################### scratchpad support #######################################
 
-int32_t	ds18x20ReadScratchPad(ds18x20_t * psDS18X20, int32_t Len) {
+int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
 	IF_myASSERT(debugPARAM, INRANGE(0, Len, SIZEOF_MEMBER(ds18x20_t, RegX), int32_t)) ;
-	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == false)
-		return false ;
-
+	ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM);
 	OWWriteByte(&psDS18X20->sOW, DS18X20_READ_SP) ;
 	memset(psDS18X20->RegX, 0xFF, Len) ;				// 0xFF to read
 	OWBlock(&psDS18X20->sOW, psDS18X20->RegX, Len) ;
@@ -132,71 +121,70 @@ int32_t	ds18x20ReadScratchPad(ds18x20_t * psDS18X20, int32_t Len) {
 	return iRV ;
 }
 
-int32_t	ds18x20WriteScratchPad(ds18x20_t * psDS18X20) {
-	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == false)
-		return false ;
+int32_t	ds18x20WriteSP(ds18x20_t * psDS18X20) {
+	ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) ;
 	OWWriteByte(&psDS18X20->sOW, DS18X20_WRITE_SP) ;
 	OWBlock(&psDS18X20->sOW, (uint8_t *) &psDS18X20->Thi, psDS18X20->sOW.ROM.Family == OWFAMILY_28 ? 3 : 2) ;	// Thi, Tlo [+Conf]
 	return true ;
 }
 
-int32_t	ds18x20CopyScratchPad(ds18x20_t * psDS18X20) {
-	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == false)
-		return false ;
-	ds18x20WriteByteRPS(psDS18X20, DS18X20_COPY_SP) ;
+int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) {
+	ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) ;
+	int32_t iRV = OWWriteBytePower(&psDS18X20->sOW, DS18X20_COPY_SP) ;
+	IF_myASSERT(debugRESULT, iRV != false) ;
+
 	IF_SYSTIMER_START(debugTIMING, systimerDS1820B) ;
 	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_SP_COPY)) ;
 	IF_SYSTIMER_STOP(debugTIMING, systimerDS1820B) ;
-	OWLevel(&psDS18X20->sOW, owMODE_STANDARD) ;
+
+	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;
 	return 1 ;
 }
 
 // ############################### ds18x20 (Family 10 & 28) support ################################
 
 int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) {
-	ds18x20ReadScratchPad(psDS18X20, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
+	ds18x20ReadSP(psDS18X20, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
 	psDS18X20->Res = (psDS18X20->sOW.ROM.Family == OWFAMILY_28) ? psDS18X20->fam28.Conf >> 5 : owFAM28_RES9B ;
 	ds18x20ConvertTemperature(psDS18X20) ;
 	return true ;
 }
 
 int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
-	psDS18X20->Thi	= 0 ;
-	psDS18X20->Tlo	= 0 ;
+	psDS18X20->Thi	= 75 ;
+	psDS18X20->Tlo	= 70 ;
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
 		psDS18X20->fam28.Conf = 0x7F ;	// 12 bit resolution
-	int32_t iRV = ds18x20WriteScratchPad(psDS18X20) ;
-	IF_myASSERT(debugRESULT, iRV != false) ;
-
-	iRV = ds18x20CopyScratchPad(psDS18X20) ;
-	IF_myASSERT(debugRESULT, iRV != false) ;
-
+	ds18x20WriteSP(psDS18X20) ;
+	ds18x20WriteEE(psDS18X20) ;
 	return ds18x20Initialize(psDS18X20) ;
 }
 
 int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
-	int32_t iRV = ds18x20SelectAndAddress(psDS18X20, u8AddrMethod) ;
+	ds18x20SelectAndAddress(psDS18X20, u8AddrMethod) ;
+	int32_t iRV = OWWriteBytePower(&psDS18X20->sOW, DS18X20_CONVERT) ;
 	IF_myASSERT(debugRESULT, iRV != false) ;
-
-	ds18x20WriteByteRPS(psDS18X20, DS18X20_CONVERT) ;
 
 	TickType_t Tconv = pdMS_TO_TICKS(ds18x20DELAY_CONVERT) ;
 	// ONLY decrease delay if a specific ROM is addressed AND it is DS18B20 type
 	// If no specific ROM addressed OR the device is not DS18B20, then don't
-	if (u8AddrMethod == OW_CMD_MATCHROM && psDS18X20->sOW.ROM.Family == OWFAMILY_28)
+	if (u8AddrMethod == OW_CMD_MATCHROM && psDS18X20->sOW.ROM.Family == OWFAMILY_28) {
 		Tconv /= (4 - psDS18X20->Res) ;
+	}
+
 	IF_SYSTIMER_START(debugTIMING, systimerDS1820A) ;
 	vTaskDelay(Tconv) ;
 	IF_SYSTIMER_STOP(debugTIMING, systimerDS1820A) ;
-	OWLevel(&psDS18X20->sOW, owMODE_STANDARD) ;
-	return iRV ;
+
+	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;
+	return true ;
 }
 
-int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) { return ds18x20ReadScratchPad(psDS18X20, 2) ; }
+int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psDS18X20, 2) ; }
 
 int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const uint8_t	u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
-	uint16_t u16Adj = psDS18X20->Tmsb << 8 | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
+	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
 	psDS18X20->xVal.f32 = (float) u16Adj / 16.0 ;
 	IF_EXEC_2(debugCONVERT, OWPlatformCB_PrintDS18, 0xC0000000 | (uint32_t) psDS18X20->Idx, psDS18X20) ;
 	IF_PRINT(debugCONVERT, "  u16A=0x%04X\n", u16Adj) ;
@@ -236,9 +224,11 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	IF_PRINT(debugTRACK, "AutoEnum DS18X20:\n") ;
 	onewire_t	sOW ;
 	iRV = OWPlatformScanner(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
-	if (iRV > 0)		DevCount += iRV ;
+	if (iRV > 0)
+		DevCount += iRV ;
 	iRV = OWPlatformScanner(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
-	if (iRV > 0)		DevCount += iRV ;
+	if (iRV > 0)
+		DevCount += iRV ;
 	IF_PRINT(debugTRACK, "Fam10_28 Count=%d\n", Fam10_28Count) ;
 
 	// Do once-off initialization for work structure entries
@@ -257,32 +247,56 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 }
 
 int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) {
+#if 0
+	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
+		ds18x20_t * psDS18X20 = &psaDS18X20[Idx] ;
+		if (ds18x20SampleTemperature(psDS18X20, OW_CMD_MATCHROM) == false) {
+			SL_ERR("Sampling failed") ;
+			continue ;
+		}
+		if (ds18x20ReadTemperature(psDS18X20))
+			ds18x20ConvertTemperature(psDS18X20) ;
+		else
+			SL_ERR("Read/Convert failed") ;
+	}
+	return erSUCCESS ;
+#else
 	static uint8_t	PrevBus = 0xFF ;
 	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[Idx] ;
 		if (psDS18X20->sOW.PhyChan != PrevBus) {
-			if (ds18x20SampleTemperature(psDS18X20, OW_CMD_SKIPROM) == false)
+			if (ds18x20SampleTemperature(psDS18X20, OW_CMD_SKIPROM) == false) {
+				SL_ERR("Sampling failed") ;
 				continue ;
+			}
 			PrevBus = psDS18X20->sOW.PhyChan ;
 		}
 		if (ds18x20ReadTemperature(psDS18X20))
 			ds18x20ConvertTemperature(psDS18X20) ;
 		else
-			SL_ERR("Failed to convert temperature !!!") ;
+			SL_ERR("Read/Convert failed") ;
 	}
 	return erSUCCESS ;
+#endif
 }
 
+/*
+ SKIP +SPU +750mS		Work
+ MATCH +SPU +750mS		Work
+ SKIP +SPU +XXXms		Work
+ MATCH +SPU +XXXmS		Work
+ SKIP -SPU +XXXmS		Work
+
+ */
 int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, i8Res, 12, uint8_t)) {
 		uint8_t u8Res = ((i8Res - 9) << 5) | 0x1F ;
 		if (psDS18X20->fam28.Conf != u8Res) {
-			IF_PRINT(debugCONFIG, "Config Res:0x%02X -> 0x%02X (%d -> %d)\n",
-				psDS18X20->fam28.Conf, u8Res, psDS18X20->Res + 9, i8Res) ;
+			IF_PRINT(debugCONFIG, "Config Res:0x%02X -> 0x%02X (%d -> %d)\n", psDS18X20->fam28.Conf, u8Res, psDS18X20->Res + 9, i8Res) ;
 			psDS18X20->fam28.Conf = u8Res ;
-			ds18x20WriteScratchPad(psDS18X20) ;
-			ds18x20CopyScratchPad(psDS18X20) ;
 			psDS18X20->Res = i8Res - 9 ;
+			ds18x20WriteSP(psDS18X20) ;
+//			ds18x20WriteEE(psDS18X20) ;
 		}
 		return true ;
 	}
@@ -294,8 +308,8 @@ int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) {
 		IF_PRINT(debugCONFIG, "Config Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, i8Lo, psDS18X20->Thi, i8Hi) ;
 		psDS18X20->Tlo = i8Lo ;
 		psDS18X20->Thi = i8Hi ;
-		ds18x20WriteScratchPad(psDS18X20) ;
-		ds18x20CopyScratchPad(psDS18X20) ;
+		ds18x20WriteSP(psDS18X20) ;
+//		ds18x20WriteEE(psDS18X20) ;
 		return true ;
 	}
 	return false ;
@@ -306,21 +320,42 @@ int32_t	ds18x20SetMode (void * pVoid, struct rule_t * psRule) { TRACK("Should no
 // ##################################### CLI functionality #########################################
 
 int32_t	CmndDS18RDT(cli_t * psCLI) {
-	ds18x20_t * psDS18X20 = psCLI->z64Var.p32[0].pvoid ;
-	ds18x20ReadTemperature(psDS18X20) ;
-	ds18x20ConvertTemperature(psDS18X20) ;
+	uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
+	TRACK("eChan=%d/%d", eChan, psCLI->z64Var.x32[0].u32) ;
+	do {
+		ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
+		ds18x20SampleTemperature(psDS18X20, OW_CMD_MATCHROM) ;
+		ds18x20ReadTemperature(psDS18X20) ;
+		ds18x20ConvertTemperature(psDS18X20) ;
+		TRACK("eChan=%d/%d  ", eChan, psCLI->z64Var.x32[0].u32) ;
+	} while (++eChan < psCLI->z64Var.x32[0].u32) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18RDSP(cli_t * psCLI) {
-	ds18x20_t * psDS18X20 = psCLI->z64Var.p32[0].pvoid ;
-	ds18x20ReadScratchPad(psDS18X20, 9) ;
+	uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
+	do {
+		ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
+		ds18x20ReadSP(psDS18X20, 9) ;
+	} while (++eChan < psCLI->z64Var.x32[0].u32) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18WRSP(cli_t * psCLI) {
-	ds18x20_t * psDS18X20 = psCLI->z64Var.p32[0].pvoid ;
-	ds18x20WriteScratchPad(psDS18X20) ;
+	uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
+	do {
+		ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
+		ds18x20WriteSP(psDS18X20) ;
+	} while (++eChan < psCLI->z64Var.x32[0].u32) ;
+	return erSUCCESS ;
+}
+
+int32_t	CmndDS18WREE(cli_t * psCLI) {
+	uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
+	do {
+		ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
+		ds18x20WriteEE(psDS18X20) ;
+	} while (++eChan < psCLI->z64Var.x32[0].u32) ;
 	return erSUCCESS ;
 }
 
@@ -329,16 +364,24 @@ int32_t	CmndDS18WRSP(cli_t * psCLI) {
  * @param[in]	{Thi} {Tlo} {Res}
  */
 int32_t	CmndDS18MODE(cli_t * psCLI) {
-	ds18x20_t * psDS18X20 = psCLI->z64Var.p32[0].pvoid ;
+	TRACK() ;
 	char * pTmp = pcStringParseValueRange(psCLI->pcParse, (p32_t) &psCLI->z64Var.x32[1].i8[0], vfIXX, vs08B, sepSPACE, (x32_t) -55, (x32_t) 125) ;
 	if (pTmp != pcFAILURE) {
+		TRACK("Lo=%d", psCLI->z64Var.x32[1].i8[0]) ;
 		pTmp = pcStringParseValueRange(psCLI->pcParse = pTmp, (p32_t) &psCLI->z64Var.x32[1].i8[1], vfIXX, vs08B, sepSPACE, (x32_t) -55, (x32_t) 125) ;
 		if (pTmp != pcFAILURE) {
+			TRACK("Hi=%d", psCLI->z64Var.x32[1].i8[1]) ;
 			pTmp = pcStringParseValueRange(psCLI->pcParse = pTmp, (p32_t) &psCLI->z64Var.x32[1].i8[2], vfIXX, vs08B, sepSPACE, (x32_t) 9, (x32_t) 12) ;
 			if (pTmp != pcFAILURE) {
+				TRACK("Res=%d", psCLI->z64Var.x32[1].i8[2]) ;
 				psCLI->pcParse = pTmp ;
-				ds18x20SetAlarms(psDS18X20, psCLI->z64Var.x32[1].c8[0], psCLI->z64Var.x32[1].c8[1]) ;
-				ds18x20SetResolution(psDS18X20, psCLI->z64Var.x32[1].c8[2]) ;
+				uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
+				do {
+					TRACK("eChan=%d/%d", eChan, psCLI->z64Var.x32[0].u32) ;
+					ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
+					ds18x20SetAlarms(psDS18X20, psCLI->z64Var.x32[1].i8[0], psCLI->z64Var.x32[1].i8[1]) ;
+					ds18x20SetResolution(psDS18X20, psCLI->z64Var.x32[1].i8[2]) ;
+				} while (++eChan < psCLI->z64Var.x32[0].u32) ;
 			}
 		}
 	}
@@ -349,13 +392,13 @@ int32_t	CmndDS18(cli_t * psCLI) {
 	int32_t iRV = erFAILURE ;
 	psCLI->pasList	= saDS18Cmnd ;
 	psCLI->u8LSize	= NUM_OF_MEMBERS(saDS18Cmnd) ;
-	psCLI->pcParse	+= xStringSkipDelim(psCLI->pcParse, sepSPACE, psCLI->pcStore - psCLI->pcParse ) ;
-	int32_t	i32SC = CmndMatch(psCLI) ;
+	psCLI->pcParse	+= xStringSkipDelim(psCLI->pcParse, sepSPACE_COMMA, psCLI->pcStore - psCLI->pcParse ) ;
+	int32_t	i32SC = xCLImatch(psCLI) ;
 	if (i32SC >= 0) {
 		// parse the logical channel number
-		char * pTmp = pcStringParseValueRange(psCLI->pcParse, (p32_t) &psCLI->z64Var.x32[0].u32, vfUXX, vs32B, sepSPACE, (x32_t) 0, (x32_t) ((uint32_t) Fam10_28Count - 1)) ;
+		char * pTmp = pcStringParseValueRange(psCLI->pcParse, (p32_t) &psCLI->z64Var.x32[0].u32, vfUXX, vs32B, sepSPACE_LF, (x32_t) 0, (x32_t) ((uint32_t) Fam10_28Count)) ;
+		TRACK("Cmnd=%d  Chan=%d", i32SC, psCLI->z64Var.x32[0].u32) ;
 		if (pTmp != pcFAILURE) {
-			psCLI->z64Var.p32[0].pvoid = &psaDS18X20[psCLI->z64Var.x32[0].u32] ;
 			psCLI->pcParse = pTmp ;
 			iRV = psCLI->pasList[i32SC].hdlr(psCLI) ;
 		}

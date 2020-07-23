@@ -24,11 +24,11 @@
 
 #include	"onewire_platform.h"
 #include	"printfx.h"
-#include	"x_buffers.h"
-#include	"x_errors_events.h"
-#include	"systiming.h"								// timing debugging
 #include	"syslog.h"
+#include	"systiming.h"								// timing debugging
+#include	"x_errors_events.h"
 #include	"x_string_general.h"
+
 #include	"hal_debug.h"
 
 #include	<string.h>
@@ -56,7 +56,7 @@
 // ###################################### Local variables ##########################################
 
 const char * RegNames[ds248xREG_NUM] = {"Stat", "Data", "Chan", "Conf", "Port" } ;
-const char * StatNames[8] = { "DIR", "TSB", "SBR", "RST", "LL", "SD", "PPD", "OWB" } ;
+const char * StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
 #if		(halHAS_DS2482_800 > 0)
 	// DS2482-800 channel# check xlat	0	  1		2	  3		4	  5		6	  7
 	const uint8_t	ds248x_V2N[8] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 } ;
@@ -103,6 +103,9 @@ int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t T
 	int32_t iRV ;
 	if (Delay > 0) {
 		iRV = halI2C_Write(psDS248X->psI2C, pTxBuf, TxSize) ;
+		// During the device discovery/config phases errors are valid and indicate pre/absence
+		// of a specific device, type or submodel (DS2482-800 vs -10x). Hence selective error check
+		IF_myASSERT(debugRESULT && psDS248X->Test == 0, iRV == erSUCCESS) ;
 		if (iRV == erSUCCESS) {
 			i64TaskDelayUsec(Delay) ;
 			iRV = halI2C_Read(psDS248X->psI2C, &psDS248X->RegX[psDS248X->Rptr], 1) ;
@@ -130,8 +133,8 @@ int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t T
 void	ds248xCheckStatus(ds248x_t * psDS248X) {
 	const uint8_t DS248Xmask[4] = { 0b00000100, 0b00010110, 0b00011111, 0b11111111 } ;
 	uint8_t Mask = DS248Xmask[OWflags.Level] ;
-	char cBuffer[8 * 12] ;
 	if ((psDS248X->Rstat & Mask) != (psDS248X->StatX & Mask)) {
+		char cBuffer[8 * 12] ;
 		xBitMapDecodeChanges(psDS248X->StatX, psDS248X->Rstat, 0x000000FF, StatNames, cBuffer, sizeof(cBuffer)) ;
 		PRINT("D=%d (0x%02X) : %s\n", psDS248X->psI2C->DevIdx, psDS248X->Rstat, cBuffer) ;
 	}
@@ -338,7 +341,8 @@ int32_t	ds248xDeviceIdentify(i2c_dev_info_t * psI2C_DI) {
 	ds248x_t	sDS248X = { 0 } ;						// temporary device structure
 	psI2C_DI->Delay		= pdMS_TO_TICKS(10) ;			// default device timeout
 	sDS248X.psI2C		= psI2C_DI ;					// link to I2C device discovered
-	sDS248X.Test		= 1 ;
+	sDS248X.Test		= 1 ;							// disable I2C error messages in both
+	psI2C_DI->Test		= 1 ;							// this and halI2C modules
 	#if	(halHAS_DS2484 > 0)
 	sDS248X.psI2C->Type = i2cDEV_DS2484 ;
 	if (ds248xReset(&sDS248X) &&						// generic DS248X, check DS2484

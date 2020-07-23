@@ -22,23 +22,19 @@
  * onewire_platform.c
  */
 
-#include	"onewire_platform.h"
 #include	"x_config.h"								// sTSZ
-
+#include	"onewire_platform.h"
 #include	"task_events.h"
 #include	"endpoints.h"
-
-#include	"syslog.h"
 #include	"printfx.h"
+#include	"syslog.h"
 #include	"systiming.h"								// timing debugging
-
 #include	"x_errors_events.h"
-
 #include	"hal_debug.h"
 
 #include	<string.h>
 
-#define	debugFLAG					0xE002
+#define	debugFLAG					0xC002
 
 #define	debugTIMING					(debugFLAG & 0x0001)
 #define	debugEVENTS					(debugFLAG & 0x0002)
@@ -57,7 +53,7 @@
  * successful read. If the same ID is read on the same channel within 'x' seconds, skip it */
 
 uint8_t	Family01Count 	= 0 ;
-uint8_t	ds1990ReadIntvl	= ds1990READ_INTVL ;	// XXX control from cloud
+uint8_t	ds1990ReadIntvl	= ds1990READ_INTVL ;
 
 // ################################# Application support functions #################################
 
