@@ -490,14 +490,14 @@ int32_t ds248xOWReset(ds248x_t * psDS248X) {
 }
 
 int32_t	ds248xOWSpeed(ds248x_t * psDS248X, uint8_t new_speed) {
-	psDS248X->OWS = (new_speed == owMODE_STANDARD) ? 0 : 1 ;	// XXX swapped these around from default!!!
+	psDS248X->OWS = (new_speed == owSPEED_STANDARD) ? 0 : 1 ;	// XXX swapped these around from default!!!
 	if (ds248xWriteConfig(psDS248X) == false) 								return false ;
 	IF_myASSERT(debugRESULT, psDS248X->OWS == new_speed) ;
 	return psDS248X->OWS ;
 }
 
 int32_t ds248xOWLevel(ds248x_t * psDS248X, uint8_t new_level) {
-	if (new_level != owMODE_STANDARD)										return psDS248X->SPU ;
+	if (new_level != owPOWER_STANDARD)										return psDS248X->SPU ;
 	psDS248X->SPU = 0 ;
 	if (ds248xWriteConfig(psDS248X) == false)								return false ;
 	IF_myASSERT(debugRESULT, psDS248X->SPU == 0) ;
