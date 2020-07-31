@@ -40,16 +40,16 @@
 
 #include	<string.h>
 
-#define	debugFLAG					0xC00F
+#define	debugFLAG					0xD007
 
-#define	debugTIMING					(debugFLAG & 0x0001)
-#define	debugBUS_CFG				(debugFLAG & 0x0002)
-#define	debugCONFIG					(debugFLAG & 0x0004)
-#define	debugCRC					(debugFLAG & 0x0008)
+#define	debugBUS_CFG				(debugFLAG & 0x0001)
+#define	debugCONFIG					(debugFLAG & 0x0002)
+#define	debugCRC					(debugFLAG & 0x0004)
 
-#define	debugTRACK					(debugFLAG & 0x2000)
-#define	debugPARAM					(debugFLAG & 0x4000)
-#define	debugRESULT					(debugFLAG & 0x8000)
+#define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
+#define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
+#define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
+#define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
 /* https://www.maximintegrated.com/en/products/ibutton/software/1wire/wirekit.cfm
  * https://www.maximintegrated.com/en/app-notes/index.mvp/id/74
