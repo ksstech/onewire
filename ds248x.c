@@ -324,8 +324,10 @@ int32_t	ds248xReport(ds248x_t * psDS248X) {
  */
 int32_t ds248xReportAll(void) {
 	int32_t iRV = 0 ;
+	printfx_lock() ;
 	for (int32_t i = 0; i < ds248xCount; ++i)
 		iRV += ds248xReport(&psaDS248X[i]) ;
+	printfx_unlock() ;
 	return iRV ;
 }
 
