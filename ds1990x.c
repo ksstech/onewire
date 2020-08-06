@@ -72,7 +72,11 @@ int32_t	OWPlatformCB_ReadDS1990X(uint32_t uCount, onewire_t * psOW) {
 	psOW_CI->LastRead		= NowRead ;
 	xTaskNotify(EventsHandle, 1UL << (LogChan + se1W_FIRST), eSetBits) ;
 	portYIELD() ;
-	IF_EXEC_2(debugEVENTS, OWPlatformCB_PrintROM, 0xD0000000 | uCount, &psOW->ROM) ;
+#if		(debugEVENTS)
+	printfx_lock() ;
+	OWPlatformCB_PrintROM(0xD0000000 | uCount, &psOW->ROM) ;
+	printfx_unlock() ;
+#endif
 	return erSUCCESS ;
 }
 

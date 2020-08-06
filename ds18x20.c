@@ -186,8 +186,12 @@ int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const uint8_t	u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
 	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
 	psDS18X20->xVal.f32 = (float) u16Adj / 16.0 ;
-	IF_EXEC_2(debugCONVERT, OWPlatformCB_PrintDS18, 0xC0000000 | (uint32_t) psDS18X20->Idx, psDS18X20) ;
-	IF_PRINT(debugCONVERT, "  u16A=0x%04X\n", u16Adj) ;
+#if		(debugCONVERT)
+	printfx_lock() ;
+	OWPlatformCB_PrintDS18(0xC0000000 | (uint32_t) psDS18X20->Idx, psDS18X20) ;
+	printfx_nolock("  u16A=0x%04X\n", u16Adj) ;
+	printfx_unlock() ;
+#endif
 	return true ;
 }
 

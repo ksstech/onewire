@@ -106,28 +106,33 @@ ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t LogChan) {
  */
 int32_t	OWPlatformCB_PrintROM(uint32_t uCount, ow_rom_t * psOW_ROM) {
 	int32_t iRV = 0 ;
-	if (uCount & 0x80000000)				iRV += PRINT("%!R: ", RunTime) ;
-	if (uCount & 0x40000000)				iRV += PRINT("#%u ", uCount & 0x00FFFFFF) ;
-	iRV += PRINT("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ;
-	if (uCount & 0x10000000)				iRV += PRINT("\n") ;
+	if (uCount & 0x80000000)
+		iRV += printfx_nolock("%!R: ", RunTime) ;
+	if (uCount & 0x40000000)
+		iRV += printfx_nolock("#%u ", uCount & 0x00FFFFFF) ;
+	iRV += printfx_nolock("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ;
+	if (uCount & 0x10000000)
+		iRV += printfx_nolock("\n") ;
 	return iRV ;
 }
 
 int32_t	OWPlatformCB_Print1W(uint32_t uCount, onewire_t * psOW) {
 	int32_t iRV = OWPlatformCB_PrintROM(uCount & 0xEFFFFFFF, &psOW->ROM) ;
-	iRV += PRINT("  Log=%d  Type=%s[%d]  Phy=%d", OWPlatformChanPhy2Log(psOW), OWBusType[psOW->BusType], psOW->DevNum, psOW->PhyChan) ;
-	if (uCount & 0x10000000) 				iRV += PRINT("\n") ;
+	iRV += printfx_nolock("  Log=%d  Type=%s[%d]  Phy=%d", OWPlatformChanPhy2Log(psOW), OWBusType[psOW->BusType], psOW->DevNum, psOW->PhyChan) ;
+	if (uCount & 0x10000000)
+		iRV += printfx_nolock("\n") ;
 	return iRV ;
 }
 
 int32_t	OWPlatformCB_PrintDS18(uint32_t uCount, ds18x20_t * psDS18X20) {
 	int32_t iRV = OWPlatformCB_Print1W(uCount & 0xEFFFFFFF, &psDS18X20->sOW) ;
-	iRV += PRINT("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d",
+	iRV += printfx_nolock("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb, psDS18X20->xVal.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
-	iRV += PRINT("  Res=%d", psDS18X20->Res + 9) ;
+	iRV += printfx_nolock("  Res=%d", psDS18X20->Res + 9) ;
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
-		iRV += PRINT("  Conf=0x%02X %s", psDS18X20->fam28.Conf, psDS18X20->fam28.Conf >> 5 != psDS18X20->Res ? "ERROR" : "") ; ;
-	if (uCount & 0x10000000) 				iRV += PRINT("\n") ;
+		iRV += printfx_nolock("  Conf=0x%02X %s", psDS18X20->fam28.Conf, psDS18X20->fam28.Conf >> 5 != psDS18X20->Res ? "ERROR" : "") ; ;
+	if (uCount & 0x10000000)
+		iRV += printfx_nolock("\n") ;
 	return iRV ;
 }
 
