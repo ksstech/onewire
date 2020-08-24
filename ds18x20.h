@@ -110,7 +110,7 @@ int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) ;
  */
 struct ep_work_s ;
 int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) ;
-int32_t	ds18x20TestCase2(void) ;
+int32_t	ds18x20ScanAlarmsAll(void) ;
 
 int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) ;
 int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) ;
