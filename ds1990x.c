@@ -59,7 +59,7 @@ uint8_t	ds1990ReadIntvl	= ds1990READ_INTVL ;
 
 /* To avoid registering multiple reads if iButton is held in place too long we enforce a
  * period of 'x' seconds within which successive reads of the same tag will be ignored */
-int32_t	OWPlatformCB_ReadDS1990X(uint32_t uCount, onewire_t * psOW) {
+int32_t	OWPlatformCB_ReadDS1990X(flagmask_t sFM, onewire_t * psOW) {
 	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
 	uint8_t		LogChan = OWPlatformChanPhy2Log(psOW) ;
 	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(LogChan) ;
@@ -74,7 +74,9 @@ int32_t	OWPlatformCB_ReadDS1990X(uint32_t uCount, onewire_t * psOW) {
 	portYIELD() ;
 #if		(debugEVENTS)
 	printfx_lock() ;
-	OWPlatformCB_PrintROM(0xD0000000 | uCount, &psOW->ROM) ;
+	sFM.bRT	= 1 ;
+	sFM.bNL	= 1 ;
+	OWPlatformCB_PrintROM(sFM, &psOW->ROM) ;
 	printfx_unlock() ;
 #endif
 	return erSUCCESS ;

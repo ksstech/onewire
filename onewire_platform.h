@@ -65,13 +65,13 @@ ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t) ;
 int32_t	OWPlatformChanLog2Phy(onewire_t *, uint8_t) ;
 int32_t	OWPlatformChanPhy2Log(onewire_t *) ;
 // Common callback handlers
-int32_t	OWPlatformCB_PrintROM(uint32_t uCount, ow_rom_t * psROM) ;
-int32_t	OWPlatformCB_Print1W(uint32_t uCount, onewire_t * psOW) ;
-int32_t	OWPlatformCB_PrintDS18(uint32_t uCount, ds18x20_t * psDS18X20) ;
-int32_t	OWPlatformCB_Count(uint32_t uCount, onewire_t * psOW) ;
+int32_t	OWPlatformCB_PrintROM(flagmask_t FlagMask, ow_rom_t * psROM) ;
+int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) ;
+int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) ;
+int32_t	OWPlatformCB_Count(flagmask_t FlagMask, onewire_t *) ;
 
-int32_t OWPlatformEndpoints(struct ep_work_s * psEpWork) ;
-int32_t	OWPlatformScanner(uint8_t Family, int32_t (*Handler)(uint32_t, onewire_t *), onewire_t * psOW) ;
+int32_t OWPlatformEndpoints(struct ep_work_s *) ;
+int32_t	OWPlatformScanner(uint8_t Family, int32_t (*Handler)(flagmask_t, onewire_t *), onewire_t *) ;
 int32_t	OWPlatformConfig(void) ;
 
 #ifdef __cplusplus

@@ -116,7 +116,7 @@ int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) ;
 int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) ;
 struct rule_t ;
 int32_t	ds18x20SetMode (void *, struct rule_t * psRule) ;
-int32_t	ds18x20EnumerateCB(uint32_t iCount, onewire_t * psOW) ;
+int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) ;
 int32_t	ds18x20Enumerate(int32_t xUri)  ;
 
 #ifdef __cplusplus

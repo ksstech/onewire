@@ -203,12 +203,12 @@ float	ds18x20GetTemperature(int32_t Idx) {
 
 // #################################### IRMACOS support ############################################
 
-int32_t	ds18x20EnumerateCB(uint32_t uCount, onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, uCount < Fam10_28Count) ;
-	ds18x20_t * psDS18X20 = &psaDS18X20[uCount] ;
+int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
+	IF_myASSERT(debugPARAM, sFM.uCount < Fam10_28Count) ;
+	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount] ;
 	// Save all info of the device just enumerated
 	memcpy(&psDS18X20->sOW, psOW, sizeof(onewire_t)) ;
-	psDS18X20->Idx	= uCount ;
+	psDS18X20->Idx	= sFM.uCount ;
 	ds18x20Initialize(psDS18X20) ;
 	return 1 ;											// number of devices enumerated
 }
@@ -251,7 +251,7 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 }
 
 int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) {
-#if 0
+#if 0				// read & convert each enumerated, 1 by 1
 	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[Idx] ;
 		if (ds18x20SampleTemperature(psDS18X20, OW_CMD_MATCHROM) == false) {
@@ -264,7 +264,7 @@ int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) {
 			SL_ERR("Read/Convert failed") ;
 	}
 	return erSUCCESS ;
-#else
+#else				// read per bus, all on bus, then convert 1 by 1
 	static uint8_t	PrevBus = 0xFF ;
 	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[Idx] ;

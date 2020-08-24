@@ -39,6 +39,7 @@
 #endif
 
 #include	<string.h>
+#include	<limits.h>
 
 #define	debugFLAG					0xD007
 

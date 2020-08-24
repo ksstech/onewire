@@ -97,41 +97,38 @@ ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t LogChan) {
 
 /**
  * OWPlatformCB_PrintROM() - print the 1-Wire ROM information
- * @param	uCount - {flags}{counter}
- * 					0x80000000	Prefix RunTime
- * 					0x40000000	Prefix uCount value (excl Flag bits)
- * 					0x10000000	Postfix newline ("\n")
+ * @param	FlagCount -
  * @param	psOW_ROM - pointer to 1-Wire ROM structure
  * @return	number of characters printed
  */
-int32_t	OWPlatformCB_PrintROM(uint32_t uCount, ow_rom_t * psOW_ROM) {
+int32_t	OWPlatformCB_PrintROM(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 	int32_t iRV = 0 ;
-	if (uCount & 0x80000000)
-		iRV += printfx_nolock("%!R: ", RunTime) ;
-	if (uCount & 0x40000000)
-		iRV += printfx_nolock("#%u ", uCount & 0x00FFFFFF) ;
+	if (FlagMask.bRT)
+		iRV += printfx_nolock("%!.R: ", RunTime) ;
+	if (FlagMask.bCount)
+		iRV += printfx_nolock("#%u ", FlagMask.uCount) ;
 	iRV += printfx_nolock("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ;
-	if (uCount & 0x10000000)
+	if (FlagMask.bNL)
 		iRV += printfx_nolock("\n") ;
 	return iRV ;
 }
 
-int32_t	OWPlatformCB_Print1W(uint32_t uCount, onewire_t * psOW) {
-	int32_t iRV = OWPlatformCB_PrintROM(uCount & 0xEFFFFFFF, &psOW->ROM) ;
+int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) {
+	int32_t iRV = OWPlatformCB_PrintROM((const flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
 	iRV += printfx_nolock("  Log=%d  Type=%s[%d]  Phy=%d", OWPlatformChanPhy2Log(psOW), OWBusType[psOW->BusType], psOW->DevNum, psOW->PhyChan) ;
-	if (uCount & 0x10000000)
+	if (FlagMask.bNL)
 		iRV += printfx_nolock("\n") ;
 	return iRV ;
 }
 
-int32_t	OWPlatformCB_PrintDS18(uint32_t uCount, ds18x20_t * psDS18X20) {
-	int32_t iRV = OWPlatformCB_Print1W(uCount & 0xEFFFFFFF, &psDS18X20->sOW) ;
+int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
+	int32_t iRV = OWPlatformCB_Print1W((const flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
 	iRV += printfx_nolock("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb, psDS18X20->xVal.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
 	iRV += printfx_nolock("  Res=%d", psDS18X20->Res + 9) ;
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
 		iRV += printfx_nolock("  Conf=0x%02X %s", psDS18X20->fam28.Conf, psDS18X20->fam28.Conf >> 5 != psDS18X20->Res ? "ERROR" : "") ; ;
-	if (uCount & 0x10000000)
+	if (FlagMask.bNL)
 		iRV += printfx_nolock("\n") ;
 	return iRV ;
 }
@@ -140,7 +137,7 @@ int32_t	OWPlatformCB_PrintDS18(uint32_t uCount, ds18x20_t * psDS18X20) {
  * OWPlatformCB_Count() - Call handler based on device family
  * @return	return value from handler or
  */
-int32_t	OWPlatformCB_Count(uint32_t uCount, onewire_t * psOW) {
+int32_t	OWPlatformCB_Count(flagmask_t FlagCount, onewire_t * psOW) {
 	switch (psOW->ROM.Family) {
 #if		(halHAS_DS1990X == 1)							// DS1990A/R, 2401/11 devices
 	case OWFAMILY_01:	++Family01Count ;	return 1 ;
@@ -160,9 +157,9 @@ int32_t	OWPlatformCB_Count(uint32_t uCount, onewire_t * psOW) {
 
 /**
  * OWPlatformScanner() - scan ALL channels sequentially for [specified] family
- * @return
+ * @return	number of matching ROM's found (>= 0) or an error code (< 0)
  */
-int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(uint32_t, onewire_t *), onewire_t * psOW) {
+int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t *), onewire_t * psOW) {
 	IF_myASSERT(debugPARAM, INRANGE_FLASH(Handler)) ;
 	int32_t	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
@@ -185,7 +182,7 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(uint32_t, onewire_t *)
 		while (iRV) {
 			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
-			iRV = Handler(uCount, psOW) ;
+			iRV = Handler((flagmask_t) uCount, psOW) ;
 			if (iRV < erSUCCESS) {
 				break ;
 			}
@@ -206,20 +203,18 @@ int32_t OWPlatformEndpoints(struct ep_work_s * psEpWork) {
 	int32_t iRV = erFAILURE;
 	switch(psEpWork->uri) {
 #if		(halHAS_DS18X20 > 0)
-	case URI_DS18X20:
-		iRV = ds18x20ReadConvertAll(NULL) ;
-		break ;
+	case URI_DS18X20: iRV = ds18x20ReadConvertAll(NULL) ;	break ;
 #endif
 
 #if		(halHAS_DS1990X > 0)
-	case URI_DS1990X: {
-		onewire_t	sOW ;
+	case URI_DS1990X:
+	{	onewire_t sOW ;
 		Family01Count = 0 ;
 		iRV = OWPlatformScanner(OWFAMILY_01, OWPlatformCB_ReadDS1990X, &sOW) ;
 		break ;
-		}
+	}
 #endif
-	default:	SL_ERR("Invalid/Unsupported 1-Wire family (URI=%d)", psEpWork->uri) ;	break ;
+	default: SL_ERR("Invalid/Unsupported 1-Wire family (URI=%d)", psEpWork->uri) ; break ;
 	}
 	return iRV ;
 }
