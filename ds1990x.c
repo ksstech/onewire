@@ -76,7 +76,7 @@ int32_t	OWPlatformCB_ReadDS1990X(flagmask_t sFM, onewire_t * psOW) {
 	printfx_lock() ;
 	sFM.bRT	= 1 ;
 	sFM.bNL	= 1 ;
-	OWPlatformCB_PrintROM(sFM, &psOW->ROM) ;
+	OWPlatformCB_Print1W(sFM, psOW) ;
 	printfx_unlock() ;
 #endif
 	return erSUCCESS ;
