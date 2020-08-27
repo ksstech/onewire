@@ -1,6 +1,9 @@
 ## Dallas/Maxim 1-Wire support
 
-
+    Single driver for range of Dallas/Maxim I2C <> 1-Wire bridge devices.
+    Simultaneous support for a mix of and multiples of each bridge type.
+    Dynamically discover DS18x20 thermometers and enumerate using a handler function.
+    API to support full functionality of DS18S20 including alarm thresholds, resolution etc.
 
 
 # Devices supported:
@@ -23,7 +26,6 @@
 	DS1990x:
 		If used for 1:1 (bedroom) access control do NOT install more than 1 iButton reader per OW bus.
 		If used for N:1 (informal clock-in) access control >1 iButton readers per OW bus can be used.
-	
 	
 	General:
 		Try not to mix DS1990X devices with other types on the same OW bus	
