@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-18 AM Maree/KSS Technologies (Pty) Ltd.
+ * Copyright 2014-20 AM Maree/KSS Technologies (Pty) Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -22,7 +22,7 @@
  * onewire.c
  */
 
-#include	"x_config.h"
+#include	"hal_config.h"
 #include	"onewire_platform.h"
 
 #include	"endpoint_id.h"

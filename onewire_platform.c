@@ -22,7 +22,6 @@
  * onewire_platform.c
  */
 
-#include	"x_config.h"								// sTSZ
 #include	"endpoint_id.h"
 #include	"endpoint_struct.h"
 #include	"printfx.h"
@@ -52,7 +51,7 @@
 const char * OWBusType[] = { "DS248x", "RTM" "GPIO" } ;
 ow_chan_info_t * psaOW_CI = NULL ;					// Array of last read ROM & timestamp info
 uint8_t		OWNumChan = 0, OWNumDev = 0 ;
-ow_flags_t OWflags ;
+ow_flags_t	OWflags ;
 
 // ################################# Application support functions #################################
 
@@ -114,7 +113,7 @@ int32_t	OWPlatformCB_PrintROM(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 }
 
 int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) {
-	int32_t iRV = OWPlatformCB_PrintROM((const flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
+	int32_t iRV = OWPlatformCB_PrintROM((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
 	iRV += printfx_nolock("  Log=%d  Type=%s[%d]  Phy=%d", OWPlatformChanPhy2Log(psOW), OWBusType[psOW->BusType], psOW->DevNum, psOW->PhyChan) ;
 	if (FlagMask.bNL)
 		iRV += printfx_nolock("\n") ;
@@ -122,7 +121,7 @@ int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) {
 }
 
 int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
-	int32_t iRV = OWPlatformCB_Print1W((const flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
+	int32_t iRV = OWPlatformCB_Print1W((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
 	iRV += printfx_nolock("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb, psDS18X20->xVal.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
 	iRV += printfx_nolock("  Res=%d", psDS18X20->Res + 9) ;

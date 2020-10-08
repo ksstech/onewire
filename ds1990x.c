@@ -22,7 +22,6 @@
  * onewire_platform.c
  */
 
-#include	"x_config.h"								// sTSZ
 #include	"onewire_platform.h"
 #include	"task_events.h"
 #include	"endpoints.h"
@@ -30,6 +29,7 @@
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
 #include	"x_errors_events.h"
+
 #include	"hal_debug.h"
 
 #include	<string.h>
