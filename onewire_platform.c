@@ -48,7 +48,7 @@
 
 // ################################# Platform related variables ####################################
 
-const char * OWBusType[] = { "DS248x", "RTM" "GPIO" } ;
+const char * const OWBusType[] = { "DS248x", "RTM" "GPIO" } ;
 ow_chan_info_t * psaOW_CI = NULL ;					// Array of last read ROM & timestamp info
 uint8_t		OWNumChan = 0, OWNumDev = 0 ;
 ow_flags_t	OWflags ;
