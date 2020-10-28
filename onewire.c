@@ -32,7 +32,7 @@
 
 #include	"hal_debug.h"
 
-#if		(ESP32_PLATFORM == 1)
+#if		defined(ESP_PLATFORM)
 	#include	"esp32/rom/crc.h"					// ESP32 ROM routine
 #else
 	#include	"crc-barr.h"						// Barr group CRC
