@@ -141,11 +141,10 @@ void	ds248xCheckStatus(ds248x_t * psDS248X) {
 	psDS248X->StatX = psDS248X->Rstat ;
 }
 
-int32_t	ds248xPrintConfig(ds248x_t * psDS248X, uint8_t Reg) {
-	int32_t iRV= halI2C_DeviceReport((void *) ((uint32_t) psDS248X->I2Cnum)) ;
-	iRV += PRINT("1-W:  NumCh=%d  Cur#=%d  Rptr=%d (%s)  Reg=0x%02X\n",
+void	ds248xPrintConfig(ds248x_t * psDS248X, uint8_t Reg) {
+	halI2C_DeviceReport((void *) ((uint32_t) psDS248X->I2Cnum)) ;
+	PRINT("1-W:  NumCh=%d  Cur#=%d  Rptr=%d (%s)  Reg=0x%02X\n",
 		psDS248X->NumChan, psDS248X->CurChan, psDS248X->Rptr, RegNames[psDS248X->Rptr], Reg) ;
-	return iRV ;
 }
 
 /**
@@ -310,25 +309,21 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 /**
  * ds248xReport() - report decoded status of a specific device
  */
-int32_t	ds248xReport(ds248x_t * psDS248X) {
-	int32_t iRV = halI2C_DeviceReport((void *) psDS248X->psI2C) ;
-	for (uint32_t Reg = 0; Reg < ds248xREG_NUM; ++Reg) {
-		iRV += ds248xReportRegister(psDS248X, Reg) ;
-	}
-	iRV += printfx_nolock("\n") ;
-	return iRV ;
+void	ds248xReport(ds248x_t * psDS248X) {
+	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
+	for (uint32_t Reg = 0; Reg < ds248xREG_NUM; ++Reg)
+		ds248xReportRegister(psDS248X, Reg) ;
+	printfx_nolock("\n") ;
 }
 
 /**
  * ds248xReportAll() - report decoded status of all devices and all registers
  */
-int32_t ds248xReportAll(void) {
-	int32_t iRV = 0 ;
+void ds248xReportAll(void) {
 	printfx_lock() ;
 	for (int32_t i = 0; i < ds248xCount; ++i)
-		iRV += ds248xReport(&psaDS248X[i]) ;
+		ds248xReport(&psaDS248X[i]) ;
 	printfx_unlock() ;
-	return iRV ;
 }
 
 // ################### Identification, Diagnostics & Configuration functions #######################

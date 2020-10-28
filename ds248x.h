@@ -157,8 +157,8 @@ extern	ds248x_t *	psaDS248X	;
 // ###################################### Device debug support #####################################
 
 int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) ;
-int32_t	ds248xReport(ds248x_t * psDS248X) ;
-int32_t	ds248xReportAll(void) ;
+void	ds248xReport(ds248x_t * psDS248X) ;
+void	ds248xReportAll(void) ;
 
 // ############################### Identify, test and configure ####################################
 
@@ -202,7 +202,7 @@ int32_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
  * is either the default direction (all device have same bit) or in case of
  * a discrepancy, the 'search_direction' parameter is used.
  *
- * Returns – The DS248x status byte result from the triplet command
+ * Returns ï¿½ The DS248x status byte result from the triplet command
  */
 uint8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, uint8_t search_direction) ;
 
