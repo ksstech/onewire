@@ -52,8 +52,8 @@
 // See http://www.catb.org/esr/structure-packing/
 // Also http://c0x.coding-guidelines.com/6.7.2.1.html
 
-struct fam10 { uint8_t Rsvd[2], Remain, Count ; } __attribute__((packed)) ;
-struct fam28 { uint8_t Conf, Rsvd[3] ; } __attribute__((packed)) ;
+struct fam10 { uint8_t Res0, Res1, Remain, Count ; } __attribute__((packed)) ;
+struct fam28 { uint8_t Conf, Res1, Res2, Res3 ; } __attribute__((packed)) ;
 DUMB_STATIC_ASSERT(sizeof(struct fam10) == sizeof(struct fam28)) ;
 
 typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20 9[12] bit Temperature sensors
