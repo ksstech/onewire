@@ -36,7 +36,6 @@ int32_t	CmndDS18RDT(cli_t * psCLI) ;
 int32_t	CmndDS18RDSP(cli_t * psCLI) ;
 int32_t	CmndDS18WRSP(cli_t * psCLI) ;
 int32_t	CmndDS18WREE(cli_t * psCLI) ;
-int32_t	CmndDS18MODE(cli_t * psCLI) ;
 int32_t CmndDS18(cli_t * psCLI) ;
 
 #ifdef __cplusplus

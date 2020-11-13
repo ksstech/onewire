@@ -71,7 +71,6 @@ cmnd_t saDS18Cmnd[] = {
 	{ "RDSP",	CmndDS18RDSP },
 	{ "WRSP",	CmndDS18WRSP },
 	{ "WREE",	CmndDS18WREE },
-	{ "MODE",	CmndDS18MODE },
 } ;
 
 // #################################### Local ONLY functions #######################################
@@ -373,35 +372,6 @@ int32_t	CmndDS18WREE(cli_t * psCLI) {
 		ds18x20WriteEE(psDS18X20) ;
 	} while (++eChan < psCLI->z64Var.x32[0].u32) ;
 	return erSUCCESS ;
-}
-
-/**
- * CmndDS18MODE() -
- * @param[in]	{Thi} {Tlo} {Res}
- */
-int32_t	CmndDS18MODE(cli_t * psCLI) {
-	TRACK() ;
-	char * pTmp = pcStringParseValueRange(psCLI->pcParse, (p32_t) &psCLI->z64Var.x32[1].i8[0], vfIXX, vs08B, sepSPACE, (x32_t) -55, (x32_t) 125) ;
-	if (pTmp != pcFAILURE) {
-		TRACK("Lo=%d", psCLI->z64Var.x32[1].i8[0]) ;
-		pTmp = pcStringParseValueRange(psCLI->pcParse = pTmp, (p32_t) &psCLI->z64Var.x32[1].i8[1], vfIXX, vs08B, sepSPACE, (x32_t) -55, (x32_t) 125) ;
-		if (pTmp != pcFAILURE) {
-			TRACK("Hi=%d", psCLI->z64Var.x32[1].i8[1]) ;
-			pTmp = pcStringParseValueRange(psCLI->pcParse = pTmp, (p32_t) &psCLI->z64Var.x32[1].i8[2], vfIXX, vs08B, sepSPACE, (x32_t) 9, (x32_t) 12) ;
-			if (pTmp != pcFAILURE) {
-				TRACK("Res=%d", psCLI->z64Var.x32[1].i8[2]) ;
-				psCLI->pcParse = pTmp ;
-				uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
-				do {
-					TRACK("eChan=%d/%d", eChan, psCLI->z64Var.x32[0].u32) ;
-					ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
-					ds18x20SetAlarms(psDS18X20, psCLI->z64Var.x32[1].i8[0], psCLI->z64Var.x32[1].i8[1]) ;
-					ds18x20SetResolution(psDS18X20, psCLI->z64Var.x32[1].i8[2]) ;
-				} while (++eChan < psCLI->z64Var.x32[0].u32) ;
-			}
-		}
-	}
-	return pTmp != pcFAILURE ? erSUCCESS : erFAILURE ;
 }
 
 int32_t	CmndDS18(cli_t * psCLI) {
