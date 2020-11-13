@@ -179,7 +179,6 @@ int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
 		psDS18X20->fam28.Conf = 0x7F ;	// 12 bit resolution
 	ds18x20WriteSP(psDS18X20) ;
-	ds18x20WriteEE(psDS18X20) ;
 	return ds18x20Initialize(psDS18X20) ;
 }
 
