@@ -54,9 +54,23 @@
 
 // ##################################### Developer notes ###########################################
 /*
-	Test parasitic power
-	Test & benchmark overdrive speed
-	Implement and test ALARM scan and over/under event generation
+ *
+ * DS18x20 is a 1-wire type device and thus BUS oriented:
+ * 	multiple devices sharing a single bus.
+ * 	each device can be individually R/W addressed
+ * 	some operations eg temp sample/convert
+ * 		happens reasonably slowly (up to 750mS)
+ * 		can be triggered to execute in parallel for all devices on a bus
+ *	To optimise operation, this driver is based on the following decisions/constraints:
+ *		Tsns is specified at device type (psEWP level) for ALL /ow/ds18x20 devices
+ *		always trigger a sample+convert operation for ALL devices on a bus at same time.
+ *		maintains Tsns at a value equal to lowest Tsns specified for any one ds18x20 device
+ *		maintain a minimum Tsns of 1000mSec to be bigger than the ~750mS standard.
+ *
+ *
+ * 	Test parasitic power
+ * 	Test & benchmark overdrive speed
+ * 	Implement and test ALARM scan and over/under event generation
  */
 
 // ################################ Forward function declaration ###################################
