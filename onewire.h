@@ -125,6 +125,26 @@ typedef	struct __attribute__((packed)) onewire_s {
 } onewire_t ;
 DUMB_STATIC_ASSERT(sizeof(onewire_t) == 12) ;
 
+/* PER CHANNEL info keeping track of last device read (ROM & timestamp) on each channel
+ * Used to avoid re-reading a device (primarily DS1990X type) too regularly.
+ */
+typedef struct __attribute__((packed)) ow_chan_info_s {
+	ow_rom_t	LastROM ;
+	seconds_t	LastRead ;
+	struct {
+		uint8_t		ds18b20	: 4 ;
+		uint8_t		ds18s20	: 4 ;
+		uint8_t		ds18xxx	: 4 ;
+		uint8_t		spare	: 4 ;
+	} ;
+} ow_chan_info_t ;
+DUMB_STATIC_ASSERT(sizeof(ow_chan_info_t) == 14) ;
+
+typedef struct ow_flags_s {
+	uint8_t	Level 	: 2 ;
+	uint8_t	Spare	: 6 ;
+} ow_flags_t ;
+
 // ################################ Generic 1-Wire LINK API's ######################################
 
 int32_t OWSetSPU(onewire_t * psOW) ;

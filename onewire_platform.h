@@ -40,19 +40,6 @@ extern "C" {
 
 // ######################################### Structures ############################################
 
-/* PER CHANNEL info keeping track of last device read (ROM & timestamp) on each channel
- * Used to avoid re-reading a device (primarily DS1990X type) too regularly.
- */
-typedef struct __attribute__((packed)) ow_chan_info_s {
-	ow_rom_t	LastROM ;
-	seconds_t	LastRead ;
-} ow_chan_info_t ;
-DUMB_STATIC_ASSERT(sizeof(ow_chan_info_t) == 12) ;
-
-typedef struct ow_flags_s {
-	uint8_t	Level 	: 2 ;
-	uint8_t	Spare	: 6 ;
-} ow_flags_t ;
 
 // #################################### Public Data structures #####################################
 
