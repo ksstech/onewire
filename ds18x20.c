@@ -41,6 +41,7 @@
 #include	"hal_debug.h"
 
 #include	<string.h>
+#include	<stdint.h>
 
 #define	debugFLAG					0xD000
 
@@ -82,9 +83,6 @@ float	ds18x20GetTemperature(ep_work_t * psEWS) ;
 
 // ###################################### Local variables ##########################################
 
-const complex_t	sDS18X20Func	= { .get = ds18x20GetTemperature, .mode = ds18x20SetMode } ;
-ds18x20_t *	psaDS18X20	= NULL ;
-uint8_t		Fam10_28Count	= 0 ;
 const complex_t	sDS18X20Func = {
 	.work	= ds18x20GetWork,
 	.reset	= ds18x20SetDefault,
@@ -137,12 +135,11 @@ int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
 	OWBlock(&psDS18X20->sOW, psDS18X20->RegX, Len) ;
 
 	int32_t iRV ;
-	if (Len == SIZEOF_MEMBER(ds18x20_t, RegX)) {		// if full scratchpad read, check CRC
+	if (Len == SIZEOF_MEMBER(ds18x20_t, RegX))			// if full scratchpad read, check CRC
 		iRV = OWCheckCRC(psDS18X20->RegX, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
-	} else {
+	else
 		iRV = OWReset(&psDS18X20->sOW) ;				// terminate read process
-		IF_myASSERT(debugRESULT, iRV != false) ;
-	}
+	IF_myASSERT(debugRESULT, iRV != false) ;
 	IF_PRINT(debugTRACK, "SP Read: %-'+b\n", Len, psDS18X20->RegX) ;
 	return iRV ;
 }
