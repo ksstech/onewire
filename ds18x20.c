@@ -75,12 +75,22 @@
 
 // ################################ Forward function declaration ###################################
 
+ep_work_t * ds18x20GetWork(int32_t x) ;
+void	ds18x20SetDefault(ep_work_t * psEWP, ep_work_t *psEWS) ;
+void	ds18x20SetSense(ep_work_t * psEWP, ep_work_t * psEWS) ;
+float	ds18x20GetTemperature(ep_work_t * psEWS) ;
 
 // ###################################### Local variables ##########################################
 
 const complex_t	sDS18X20Func	= { .get = ds18x20GetTemperature, .mode = ds18x20SetMode } ;
 ds18x20_t *	psaDS18X20	= NULL ;
 uint8_t		Fam10_28Count	= 0 ;
+const complex_t	sDS18X20Func = {
+	.work	= ds18x20GetWork,
+	.reset	= ds18x20SetDefault,
+	.sense	= ds18x20SetSense,
+	.get	= ds18x20GetTemperature,
+} ;
 
 cmnd_t saDS18Cmnd[] = {
 	{ "RDT",	CmndDS18RDT },
