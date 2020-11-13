@@ -173,6 +173,67 @@ int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) {
 	return true ;
 }
 
+int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
+	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount] ;
+	memcpy(&psDS18X20->sOW, psOW, sizeof(onewire_t)) ;
+	psDS18X20->Idx	= sFM.uCount ;
+
+	ep_work_t * psEWS =&psDS18X20->sWork ;
+	memset(psEWS, 0, sizeof(ep_work_t)) ;
+	psEWS->uri	= URI_DS18X20 ;
+	psEWS->idx	= sFM.uCount ;
+	psEWS->Var.varDef.cv.vartype	= vtVALUE ;
+	psEWS->Var.varDef.cv.varsize	= vs32B ;
+	psEWS->Var.varDef.cv.varform	= vfFXX ;
+	psEWS->Var.varDef.cv.varcount	= 1 ;
+	ds18x20Initialize(psDS18X20) ;
+
+	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(OWPlatformChanPhy2Log(psOW)) ;
+	switch(psOW->ROM.Family) {
+	case OWFAMILY_10:	psOW_CI->ds18s20++ ;	break ;
+	case OWFAMILY_28:	psOW_CI->ds18b20++ ;	break ;
+	default:			psOW_CI->ds18xxx++ ;	break ;
+	}
+	return 1 ;											// number of devices enumerated
+}
+
+int32_t	ds18x20Enumerate(int32_t xUri) {
+	int32_t	iRV = 0 ;
+	uint8_t	DevCount = 0 ;
+	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
+	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
+	IF_myASSERT(debugRESULT, INRANGE_SRAM(psaDS18X20)) ;
+
+	IF_PRINT(debugTRACK, "AutoEnum DS18X20: Found=%d", Fam10_28Count) ;
+	onewire_t	sOW ;
+	iRV = OWPlatformScanner(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
+	if (iRV > 0)		DevCount += iRV ;
+
+	iRV = OWPlatformScanner(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
+	if (iRV > 0)		DevCount += iRV ;
+
+	IF_PRINT(debugTRACK, "  Enum=%d\n", DevCount) ;
+
+	// Do once-off initialization for work structure entries
+	ep_info_t	sEI ;
+	vEpGetInfoWithIndex(&sEI, xUri) ;			// setup pointers to static and work tables
+	IF_myASSERT(debugRESULT, sEI.psES && sEI.psEW) ;
+
+	sEI.psEW->uri	= xUri ;
+	sEI.psEW->Tsns	= ds18x20T_SNS_NORM ;
+	sEI.psEW->Var.varDef.cv.pntr	= 1 ;
+	sEI.psEW->Var.varDef.cv.varcount = DevCount ;	// number enumerated
+	sEI.psEW->Var.varVal.pvoid		= (void *) &sDS18X20Func ;
+
+	if (DevCount == Fam10_28Count) {
+		iRV = DevCount ;
+	} else {
+		SL_ERR("Only %d of %d enumerated!!!", DevCount, Fam10_28Count) ;
+		iRV = erFAILURE ;
+	}
+	return iRV ;										// number of devices enumerated
+}
+
 int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 	psDS18X20->Thi	= 75 ;
 	psDS18X20->Tlo	= 70 ;
@@ -225,51 +286,8 @@ float	ds18x20GetTemperature(int32_t Idx) {
 
 // #################################### IRMACOS support ############################################
 
-int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, sFM.uCount < Fam10_28Count) ;
-	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount] ;
-	// Save all info of the device just enumerated
-	memcpy(&psDS18X20->sOW, psOW, sizeof(onewire_t)) ;
-	psDS18X20->Idx	= sFM.uCount ;
-	ds18x20Initialize(psDS18X20) ;
-	return 1 ;											// number of devices enumerated
 }
 
-int32_t	ds18x20Enumerate(int32_t xUri) {
-	int32_t	iRV = 0 ;
-	uint8_t	DevCount = 0 ;
-	if (Fam10_28Count == 0) 	return 0 ;
-
-	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
-	IF_myASSERT(debugRESULT, INRANGE_SRAM(psaDS18X20)) ;
-
-	ep_info_t	sEpInfo ;
-	vEpGetInfoWithIndex(&sEpInfo, xUri) ;			// setup pointers to static and work tables
-	IF_myASSERT(debugRESULT, sEpInfo.pEpStatic && sEpInfo.pEpWork) ;
-
-	IF_PRINT(debugTRACK, "AutoEnum DS18X20:\n") ;
-	onewire_t	sOW ;
-	iRV = OWPlatformScanner(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
-	if (iRV > 0)
-		DevCount += iRV ;
-	iRV = OWPlatformScanner(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
-	if (iRV > 0)
-		DevCount += iRV ;
-	IF_PRINT(debugTRACK, "Fam10_28 Count=%d\n", Fam10_28Count) ;
-
-	// Do once-off initialization for work structure entries
-	sEpInfo.pEpWork->uri					= xUri ;
-	sEpInfo.pEpWork->Var.varDef.cv.pntr		= 1 ;
-	sEpInfo.pEpWork->Var.varVal.pvoid		= (void *) &sDS18X20Func ;
-	sEpInfo.pEpWork->Var.varDef.cv.varcount = iRV ;		// Update work table number of devices enumerated
-
-	if (DevCount != Fam10_28Count) {
-		SL_ERR("Only %d of %d enumerated!!!", DevCount, Fam10_28Count) ;
-		iRV = erFAILURE ;
-	} else {
-		iRV = DevCount ;
-	}
-	return iRV ;										// number of devices enumerated
 }
 
 int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) {
