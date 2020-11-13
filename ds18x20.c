@@ -23,6 +23,8 @@
  */
 
 #include	"onewire_platform.h"
+
+#if		(halHAS_DS18X20 > 0)
 #include	"endpoints.h"
 #include	"printfx.h"
 #include	"syslog.h"
@@ -391,3 +393,5 @@ int32_t	CmndDS18(cli_t * psCLI) {
 	}
 	return iRV ;
 }
+
+#endif
