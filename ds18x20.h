@@ -35,6 +35,10 @@
 #define	ds18x20DELAY_CONVERT				752
 #define	ds18x20DELAY_SP_COPY				11
 
+#define	ds18x20URI_NAME						"/ow/ds18x20"
+#define	ds18x20T_SNS_MIN					1000
+#define	ds18x20T_SNS_NORM					60000
+
 // ################################## DS18X20 1-Wire Commands ######################################
 
 #define	DS18X20_CONVERT						0x44
@@ -113,8 +117,8 @@ int32_t	ds18x20ScanAlarmsAll(void) ;
 
 int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) ;
 int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) ;
-struct rule_t ;
-int32_t	ds18x20SetMode (void *, struct rule_t * psRule) ;
+struct rule_s ;
+int32_t	ds18x20ConfigMode (struct rule_s * psRule) ;
 int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) ;
 int32_t	ds18x20Enumerate(int32_t xUri)  ;
 

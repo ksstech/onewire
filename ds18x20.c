@@ -288,10 +288,25 @@ float	ds18x20GetTemperature(int32_t Idx) {
 	return psaDS18X20[Idx].xVal.f32 ;
 }
 
-// #################################### IRMACOS support ############################################
-
+void	ds18x20SetDefault(ep_work_t * psEWP, ep_work_t * psEWS) {
+	IF_myASSERT(debugPARAM, psEWP->fSECsns == 0)
+	// Stop sensing on EWP level since vEpConfigReset() will handle EWx
+	psEWP->Rsns = 0 ;
 }
 
+void	ds18x20SetSense(ep_work_t * psEWP, ep_work_t * psEWS) {
+	/* Optimal 1-Wire bus operation require that all devices (of a type) are detected
+	 * (and read) in a single bus scan. BUT, for the DS18x20 the temperature conversion
+	 * time if 750mSec (per bus or device) at normal (not overdrive) bus speed.
+	 * When we get here the psEWS structure will already having been configured with the
+	 * parameters as supplied, just check & adjust for validity & new min Tsns */
+	if (psEWS->Tsns < ds18x20T_SNS_MIN)					// requested value in range?
+		psEWS->Tsns = ds18x20T_SNS_MIN ;				// no, default to minimum
+
+	if (psEWP->Tsns > psEWS->Tsns)
+		psEWP->Tsns = psEWS->Tsns ;						// set lowest of EWP/EWS
+	psEWS->Tsns = 0 ;									// discard EWS value
+	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
 }
 
 int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) {
@@ -374,7 +389,53 @@ int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) {
 	return false ;
 }
 
-int32_t	ds18x20SetMode (void * pVoid, struct rule_t * psRule) { TRACK("Should not be here") ; return erSUCCESS ; }
+enum { optINVALID = 0, optRESOLUTION, optTHRESHOLDS, optWRITE } ;
+
+int32_t	ds18x20ConfigMode (struct rule_s * psRule) {
+	ep_work_t * psEW = &table_work[psRule->actPar0[psRule->ActIdx]] ;
+	p32_t	paX32 ;
+	paX32.pi32 = (int32_t *) &psRule->para.i32[0][0] ;
+	IF_PRINT(debugCONFIG, "DS18X20 Mode p0=%d p1=%d p2=%d p3=%d\n", *paX32.pi32, *(paX32.pi32+1), *(paX32.pi32+2), *(paX32.pi32+3)) ;
+
+	int	Xcur = 0, p = 0 ;
+	int Xmax = psEW->Var.varDef.cv.varcount ;
+	if (Xmax > 1)										// multiple possible end-points?
+		Xcur = *(paX32.pi32 + p++) ;					// get # of selected end-point(s)
+	IF_PRINT(debugPARAM, "  XCur=%d/%d", Xcur, Xmax) ;
+	if (Xcur == 255)									// non-specific total count ?
+		Xcur = Xmax ;									// yes, set to actual count.
+	else if (Xcur > Xmax)
+		return erSCRIPT_INV_INDEX ;
+	if (Xcur == Xmax)
+		Xcur = 0 ; 										// range 0 -> Xmax
+	else
+		Xmax = Xcur ;									// single Xcur
+
+	int p0 = *(paX32.pi32 + p++);
+	int p1 = *(paX32.pi32 + p++);
+	int p2 = *(paX32.pi32 + p++);
+	int32_t iRV ;
+
+	do {
+		ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
+		switch (p0) {
+		case optRESOLUTION:
+			iRV = ds18x20SetResolution(psDS18X20, p1) ;
+			break ;
+		case optTHRESHOLDS:
+			iRV = ds18x20SetAlarms(psDS18X20, p1, p2) ;
+			break ;
+		case optWRITE:
+			iRV = ds18x20WriteSP(psDS18X20) ;
+			break ;
+		default:
+			iRV = erSCRIPT_INV_MODE ;
+		}
+		if (iRV < erSUCCESS)
+			break ;
+	} while (++Xcur < Xmax) ;
+	return iRV ;
+}
 
 // ##################################### CLI functionality #########################################
 
