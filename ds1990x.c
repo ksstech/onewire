@@ -85,7 +85,7 @@ int32_t	OWPlatformCB_ReadDS1990X(flagmask_t sFM, onewire_t * psOW) {
 int32_t	ds1990xConfig(int32_t xUri) {
 	ep_info_t	sEpInfo ;
 	vEpGetInfoWithIndex(&sEpInfo, xUri) ;			// setup pointers to static and work tables
-	IF_myASSERT(debugRESULT, sEpInfo.pEpStatic && sEpInfo.pEpWork) ;
-	sEpInfo.pEpWork->uri	= xUri ;
+	IF_myASSERT(debugRESULT, sEpInfo.psES && sEpInfo.psEW) ;
+	sEpInfo.psEW->uri	= xUri ;
 	return erSUCCESS ;
 }
