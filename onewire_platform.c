@@ -198,12 +198,47 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 				break ;
 			if (iRV > 0)
 				++uCount ;
-			}
 			iRV = OWNext(psOW, false) ;						// try to find next device (if any)
 		}
 		if (iRV < erSUCCESS)
 			break ;
+	}
+	IF_SL_ERR(iRV < erSUCCESS, "Handler error=%d", iRV) ;
+	return iRV < erSUCCESS ? iRV : uCount ;
+}
+
+int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewire_t *), void * pVoid, onewire_t * psOW) {
+	IF_myASSERT(debugPARAM, INRANGE_FLASH(Handler)) ;
+	int32_t	iRV = erSUCCESS ;
+	uint32_t uCount = 0 ;
+	for (uint8_t x = 0; x < OWNumChan; ++x) {
+		OWPlatformChanLog2Phy(psOW, x) ;
+		if (OWChannelSelect(psOW) == false)	{
+			IF_SL_DBG(debugTRACK, "Channel selection error") ;
+			break ;
 		}
+		if (Family) {
+			OWTargetSetup(psOW, Family) ;
+			iRV = OWSearch(psOW, false) ;
+			if (psOW->ROM.Family != Family) {
+				IF_SL_DBG(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
+				continue ;
+			}
+		} else {
+			iRV = OWFirst(psOW, false) ;
+		}
+		while (iRV) {
+			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
+			IF_myASSERT(debugRESULT, iRV == 1) ;
+			iRV = Handler((flagmask_t) uCount, pVoid, psOW) ;
+			if (iRV < erSUCCESS)
+				break ;
+			if (iRV > 0)
+				++uCount ;
+			iRV = OWNext(psOW, false) ;						// try to find next device (if any)
+		}
+		if (iRV < erSUCCESS)
+			break ;
 	}
 	IF_SL_ERR(iRV < erSUCCESS, "Handler error=%d", iRV) ;
 	return iRV < erSUCCESS ? iRV : uCount ;

@@ -58,8 +58,10 @@ int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) ;
 int32_t	OWPlatformCB_PrintChan(flagmask_t FlagMask, ow_chan_info_t * psCI) ;
 int32_t	OWPlatformCB_Count(flagmask_t FlagMask, onewire_t *) ;
 
-int32_t OWPlatformEndpoints(struct ep_work_s *) ;
-int32_t	OWPlatformScanner(uint8_t Family, int32_t (*Handler)(flagmask_t, onewire_t *), onewire_t *) ;
+int32_t	OWPlatformEndpoints(struct ep_work_s *) ;
+int32_t	OWPlatformScan(uint8_t, int32_t (*)(flagmask_t, void *, onewire_t *), void *, onewire_t *) ;
+int32_t	OWPlatformScanner(uint8_t, int32_t (*)(flagmask_t, onewire_t *), onewire_t *) ;
+
 int32_t	OWPlatformConfig(void) ;
 void	OWPlatformReportAll(void) ;
 
