@@ -97,7 +97,6 @@ int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) ;
  */
 int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t nAddrMethod) ;
 
-float	ds18x20GetTemperature(int32_t Idx) ;
 int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) ;
 int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) ;
 
@@ -105,7 +104,6 @@ int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) ;
 int32_t	ds18x20WriteSP(ds18x20_t * psDS18X20) ;
 int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) ;
 
-int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) ;
 int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) ;
 void	ds18x20ReportAll(void) ;
 
