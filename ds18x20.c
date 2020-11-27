@@ -379,42 +379,27 @@ int32_t	ds18x20SetMode (void * pVoid, struct rule_t * psRule) { TRACK("Should no
 // ##################################### CLI functionality #########################################
 
 int32_t	CmndDS18RDT(cli_t * psCLI) {
-	uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
-	TRACK("eChan=%d/%d", eChan, psCLI->z64Var.x32[0].u32) ;
 	do {
-		ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
+		ds18x20_t * psDS18X20 = &psaDS18X20[psCLI->z64Var.x64.u8[0]++] ;
 		ds18x20SampleTemperature(psDS18X20, OW_CMD_MATCHROM) ;
 		ds18x20ReadTemperature(psDS18X20) ;
 		ds18x20ConvertTemperature(psDS18X20) ;
-		TRACK("eChan=%d/%d  ", eChan, psCLI->z64Var.x32[0].u32) ;
-	} while (++eChan < psCLI->z64Var.x32[0].u32) ;
+	} while (psCLI->z64Var.x64.u8[0] < psCLI->z64Var.x64.u8[1]) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18RDSP(cli_t * psCLI) {
-	uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
-	do {
-		ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
-		ds18x20ReadSP(psDS18X20, 9) ;
-	} while (++eChan < psCLI->z64Var.x32[0].u32) ;
+	do ds18x20ReadSP(&psaDS18X20[psCLI->z64Var.x64.u8[0]++], 9) ; while (psCLI->z64Var.x64.u8[0] < psCLI->z64Var.x64.u8[1]) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18WRSP(cli_t * psCLI) {
-	uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
-	do {
-		ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
-		ds18x20WriteSP(psDS18X20) ;
-	} while (++eChan < psCLI->z64Var.x32[0].u32) ;
+	do ds18x20WriteSP(&psaDS18X20[psCLI->z64Var.x64.u8[0]++]) ; while (psCLI->z64Var.x64.u8[0] < psCLI->z64Var.x64.u8[1]) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18WREE(cli_t * psCLI) {
-	uint32_t eChan = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
-	do {
-		ds18x20_t * psDS18X20 = &psaDS18X20[eChan] ;
-		ds18x20WriteEE(psDS18X20) ;
-	} while (++eChan < psCLI->z64Var.x32[0].u32) ;
+	do ds18x20WriteEE(&psaDS18X20[psCLI->z64Var.x64.u8[0]++]) ; while(psCLI->z64Var.x64.u8[0] < psCLI->z64Var.x64.u8[1]) ;
 	return erSUCCESS ;
 }
 
@@ -430,6 +415,8 @@ int32_t	CmndDS18(cli_t * psCLI) {
 		TRACK("Cmnd=%d  Chan=%d", i32SC, psCLI->z64Var.x32[0].u32) ;
 		if (pTmp != pcFAILURE) {
 			psCLI->pcParse = pTmp ;
+			psCLI->z64Var.x64.u8[0] = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
+			psCLI->z64Var.x64.u8[1] = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? psCLI->z64Var.x32[0].u32 : psCLI->z64Var.x64.u8[0] ;
 			iRV = psCLI->pasList[i32SC].hdlr(psCLI) ;
 		}
 	}
