@@ -99,17 +99,12 @@ extern "C" {
 // ######################################## Enumerations ###########################################
 
 
-enum {													// used to identify/select device specific (old?) driver
-	// Intention is to remove this and use the i2cDEV_TYPE definitions to determine the device detected.
-	owTYPE_DS248X,										// new composite multi device driver
-	owTYPE_RMTXXX,										// ESP32 RMT peripheral
-	owTYPE_GPIOSW,										// General GPIO software 1-Wire
-	owTYPE_MAXNUM,
-} ;
-
-enum {	owSPEED_STANDARD, 	owSPEED_ODRIVE	} ;
-enum {	owPOWER_STANDARD, 	owPOWER_STRONG	} ;
-enum {	owFAM28_RES9B,		owFAM28_RES10B,		owFAM28_RES11B,	owFAM28_RES12B	} ;
+// Intention is to remove this and use the i2cDEV_TYPE definitions to determine the device detected.
+//		DS248x			ESP32 RMT    GPIO Software
+enum { owTYPE_DS248X, owTYPE_RMTXXX, owTYPE_GPIOSW,	owTYPE_MAXNUM } ;
+enum { owSPEED_STANDARD, owSPEED_ODRIVE	} ;
+enum { owPOWER_STANDARD, owPOWER_STRONG	} ;
+enum { owFAM28_RES9B, owFAM28_RES10B, owFAM28_RES11B, owFAM28_RES12B } ;
 
 // ######################################### Structures ############################################
 
