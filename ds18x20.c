@@ -97,6 +97,9 @@ cmnd_t saDS18Cmnd[] = {
 	{ "WREE",	CmndDS18WREE },
 } ;
 
+ds18x20_t *	psaDS18X20	= NULL ;
+uint8_t		Fam10_28Count	= 0 ;
+
 // #################################### Local ONLY functions #######################################
 
 int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) {
