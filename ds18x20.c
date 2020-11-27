@@ -234,6 +234,9 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	return iRV ;										// number of devices enumerated
 }
 
+/**
+ * ds18x20ResetConfig - reset device to default via SP, not written to EE
+ */
 int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 	psDS18X20->Thi	= 75 ;
 	psDS18X20->Tlo	= 70 ;
@@ -246,7 +249,8 @@ int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 	ds18x20SelectAndAddress(psDS18X20, u8AddrMethod) ;
 	int32_t iRV = OWWriteBytePower(&psDS18X20->sOW, DS18X20_CONVERT) ;
-	IF_myASSERT(debugRESULT, iRV != false) ;
+	if (iRV == false)
+		return iRV ;
 
 	TickType_t Tconv = pdMS_TO_TICKS(ds18x20DELAY_CONVERT) ;
 	/* ONLY decrease delay if:
@@ -256,8 +260,6 @@ int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 	if ((u8AddrMethod == OW_CMD_SKIPROM && psOW_CI->ds18s20 == 0 && psOW_CI->ds18xxx == 0) ||
 		(u8AddrMethod == OW_CMD_MATCHROM && psDS18X20->sOW.ROM.Family == OWFAMILY_28))
 		Tconv /= (4 - psDS18X20->Res) ;
-	}
-
 	IF_SYSTIMER_START(debugTIMING, systimerDS1820A) ;
 	vTaskDelay(Tconv) ;
 	IF_SYSTIMER_STOP(debugTIMING, systimerDS1820A) ;
@@ -272,6 +274,8 @@ void	ds18x20ReportAll(void) {
 		OWPlatformCB_PrintDS18(makeMASKFLAG(0,1,0,0,0,1,1,1,1,1,1,1,i), psDS18X20) ;
 	}
 }
+
+// #################################### IRMACOS support ############################################
 
 int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psDS18X20, 2) ; }
 
