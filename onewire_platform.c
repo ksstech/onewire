@@ -132,6 +132,18 @@ int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	return iRV ;
 }
 
+int32_t OWPlatformCB_PrintChan(flagmask_t FlagMask, ow_chan_info_t * psCI) {
+	int32_t iRV = printfx_nolock("OW ch=%d  ", FlagMask.uCount) ;
+	if (psCI->LastRead)
+		iRV += printfx_nolock("%r  ", FlagMask.uCount, psCI->LastRead) ;
+	if (psCI->LastROM.Family)
+		iRV += OWPlatformCB_PrintROM((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
+	iRV += printfx_nolock("  DS18B=%d  DS18S=%d  DS18X=%d", psCI->ds18b20, psCI->ds18s20, psCI->ds18xxx) ;
+	if (FlagMask.bNL)
+		iRV += printfx_nolock("\n") ;
+	return iRV ;
+}
+
 /**
  * OWPlatformCB_Count() - Call handler based on device family
  * @return	return value from handler or
@@ -268,4 +280,15 @@ int32_t	OWPlatformConfig(void) {
 #endif
 	}
 	return OWNumDev ;
+}
+
+void	OWPlatformReportAll(void) {
+	for (int x = 0; x < OWNumChan; ++x)
+		OWPlatformCB_PrintChan(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,x), &psaOW_CI[x]) ;
+#if 	(halHAS_DS248X > 0)
+	ds248xReportAll() ;
+#endif
+#if 	(halHAS_DS18X20 > 0)
+	ds18x20ReportAll() ;
+#endif
 }

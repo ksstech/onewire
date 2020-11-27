@@ -55,11 +55,13 @@ int32_t	OWPlatformChanPhy2Log(onewire_t *) ;
 int32_t	OWPlatformCB_PrintROM(flagmask_t FlagMask, ow_rom_t * psROM) ;
 int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) ;
 int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) ;
+int32_t	OWPlatformCB_PrintChan(flagmask_t FlagMask, ow_chan_info_t * psCI) ;
 int32_t	OWPlatformCB_Count(flagmask_t FlagMask, onewire_t *) ;
 
 int32_t OWPlatformEndpoints(struct ep_work_s *) ;
 int32_t	OWPlatformScanner(uint8_t Family, int32_t (*Handler)(flagmask_t, onewire_t *), onewire_t *) ;
 int32_t	OWPlatformConfig(void) ;
+void	OWPlatformReportAll(void) ;
 
 #ifdef __cplusplus
 }
