@@ -319,26 +319,18 @@ void	ds18x20SetSense(ep_work_t * psEWP, ep_work_t * psEWS) {
 	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
 }
 
-int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) {
 float	ds18x20GetTemperature(ep_work_t * psEWS) { return psEWS->Var.varVal.x32.f32 ; }
 
+int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEWP) {
+	for (int i = 0; i < Fam10_28Count; ++i) {
+		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
 #if 0				// read & convert each enumerated, 1 by 1
-	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
-		ds18x20_t * psDS18X20 = &psaDS18X20[Idx] ;
 		if (ds18x20SampleTemperature(psDS18X20, OW_CMD_MATCHROM) == false) {
 			SL_ERR("Sampling failed") ;
 			continue ;
 		}
-		if (ds18x20ReadTemperature(psDS18X20))
-			ds18x20ConvertTemperature(psDS18X20) ;
-		else
-			SL_ERR("Read/Convert failed") ;
-	}
-	return erSUCCESS ;
 #else				// read per bus, all on bus, then convert 1 by 1
-	static uint8_t	PrevBus = 0xFF ;
-	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
-		ds18x20_t * psDS18X20 = &psaDS18X20[Idx] ;
+		static uint8_t	PrevBus = 0xFF ;
 		if (psDS18X20->sOW.PhyChan != PrevBus) {
 			if (ds18x20SampleTemperature(psDS18X20, OW_CMD_SKIPROM) == false) {
 				SL_ERR("Sampling failed") ;
@@ -346,13 +338,13 @@ float	ds18x20GetTemperature(ep_work_t * psEWS) { return psEWS->Var.varVal.x32.f3
 			}
 			PrevBus = psDS18X20->sOW.PhyChan ;
 		}
+#endif
 		if (ds18x20ReadTemperature(psDS18X20))
 			ds18x20ConvertTemperature(psDS18X20) ;
 		else
 			SL_ERR("Read/Convert failed") ;
 	}
 	return erSUCCESS ;
-#endif
 }
 
 int32_t	ds18x20Alarm(flagmask_t sFM, onewire_t * psOW) {
