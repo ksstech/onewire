@@ -266,6 +266,13 @@ int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 	return true ;
 }
 
+void	ds18x20ReportAll(void) {
+	for (int i = 0; i < Fam10_28Count; ++i) {
+		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
+		OWPlatformCB_PrintDS18(makeMASKFLAG(0,1,0,0,0,1,1,1,1,1,1,1,i), psDS18X20) ;
+	}
+}
+
 int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psDS18X20, 2) ; }
 
 int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
@@ -275,7 +282,7 @@ int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 
 #if		(debugCONVERT)
  	printfx_lock() ;
-	OWPlatformCB_PrintDS18(makeMASKFLAG(1,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
+	OWPlatformCB_PrintDS18(makeMASKFLAG(1,0,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
 	printfx_nolock("  u16A=0x%04X\n", u16Adj) ;
 	printfx_unlock() ;
 #endif

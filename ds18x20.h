@@ -107,6 +107,7 @@ int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) ;
 
 int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) ;
 int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) ;
+void	ds18x20ReportAll(void) ;
 
 /*
  * ds18x20ReadConvertAll() - 1 bus at a time, all devices address & convert, then read & convert 1 at a time.
