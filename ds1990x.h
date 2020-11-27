@@ -31,6 +31,7 @@ extern "C" {
 // ############################################# Macros ############################################
 
 #define	ds1990READ_INTVL			5					// successive read interval, avoid duplicates
+#define	ds1990xT_SNS_NORM			1000
 
 // ######################################## Enumerations ###########################################
 
