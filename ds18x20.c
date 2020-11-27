@@ -249,9 +249,12 @@ int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 	IF_myASSERT(debugRESULT, iRV != false) ;
 
 	TickType_t Tconv = pdMS_TO_TICKS(ds18x20DELAY_CONVERT) ;
-	// ONLY decrease delay if a specific ROM is addressed AND it is DS18B20 type
-	// If no specific ROM addressed OR the device is not DS18B20, then don't
-	if (u8AddrMethod == OW_CMD_MATCHROM && psDS18X20->sOW.ROM.Family == OWFAMILY_28) {
+	/* ONLY decrease delay if:
+	 * 	specific ROM is addressed AND and it is DS18B20 ; OR
+	 * 	ROM match skipped AND only DS18B20 devices on the bus */
+	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(OWPlatformChanPhy2Log(&psDS18X20->sOW)) ;
+	if ((u8AddrMethod == OW_CMD_SKIPROM && psOW_CI->ds18s20 == 0 && psOW_CI->ds18xxx == 0) ||
+		(u8AddrMethod == OW_CMD_MATCHROM && psDS18X20->sOW.ROM.Family == OWFAMILY_28))
 		Tconv /= (4 - psDS18X20->Res) ;
 	}
 
