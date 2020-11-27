@@ -371,16 +371,16 @@ int32_t	ds248xDeviceIdentify(i2c_dev_info_t * psI2C_DI) {
 }
 
 int32_t	ds248xDriverConfig(i2c_dev_info_t * psI2C_DI) {
-	if (psaDS248X == NULL) {
+	if (psaDS248X == NULL) {							// 1st time here...
+		IF_myASSERT(debugPARAM, psI2C_DI->DevIdx == 0) ;
+		psaDS248X = malloc(ds248xCount * sizeof(ds248x_t)) ;
+		memset(psaDS248X, 0, ds248xCount * sizeof(ds248x_t)) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS248xA, systimerCLOCKS, "DS248xA", myUS_TO_CLOCKS(100), myUS_TO_CLOCKS(1000)) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS248xB, systimerCLOCKS, "DS248xB", myUS_TO_CLOCKS(200), myUS_TO_CLOCKS(2000)) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS248xC, systimerCLOCKS, "DS248xC", myUS_TO_CLOCKS(10), myUS_TO_CLOCKS(100)) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS248xD, systimerCLOCKS, "DS248xD", myUS_TO_CLOCKS(300), myUS_TO_CLOCKS(3000)) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS248xE, systimerCLOCKS, "DS248xE", myUS_TO_CLOCKS(300), myUS_TO_CLOCKS(3000)) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS248xF, systimerCLOCKS, "DS248xF", myUS_TO_CLOCKS(300), myUS_TO_CLOCKS(3000)) ;
-		psaDS248X = malloc(ds248xCount * sizeof(ds248x_t)) ;
-		memset(psaDS248X, 0, ds248xCount * sizeof(ds248x_t)) ;
-		IF_myASSERT(debugPARAM, psI2C_DI->DevIdx == 0) ;
 	}
 	psI2C_DI->Delay		= pdMS_TO_TICKS(10) ;			// default device timeout
 	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx] ;
