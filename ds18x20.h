@@ -58,7 +58,6 @@ DUMB_STATIC_ASSERT(sizeof(struct fam10) == sizeof(struct fam28)) ;
 
 typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20 9[12] bit Temperature sensors
 	onewire_t	sOW ;									// size = 12
-	x32_t		xVal ;
 	union {												// Scratchpad
 		struct {
 			uint8_t		Tlsb, Tmsb ;					// last RAM sample
@@ -75,8 +74,8 @@ typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20
 	uint8_t		Res		: 2 ;							// Resolution 0=9b 1=10b 2=11b 3=12b
 	uint8_t		Pwr		: 1 ;
 	uint8_t		SBits	: 2 ;
+	ep_work_t	sWork ;
 } ds18x20_t ;
-DUMB_STATIC_ASSERT(sizeof(ds18x20_t) == (12+4+9+1)) ;
 
 // ###################################### Public variables #########################################
 

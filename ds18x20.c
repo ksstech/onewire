@@ -271,7 +271,8 @@ int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psD
 int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const uint8_t	u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
 	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
-	psDS18X20->xVal.f32 = (float) u16Adj / 16.0 ;
+	psDS18X20->sWork.Var.varVal.x32.f32 = (float) u16Adj / 16.0 ;
+
 #if		(debugCONVERT)
  	printfx_lock() ;
 	OWPlatformCB_PrintDS18(makeMASKFLAG(1,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;

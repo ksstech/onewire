@@ -123,7 +123,7 @@ int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) {
 int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	int32_t iRV = OWPlatformCB_Print1W((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
 	iRV += printfx_nolock("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d",
-		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb, psDS18X20->xVal.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
+		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb, psDS18X20->sWork.Var.varVal.x32.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
 	iRV += printfx_nolock("  Res=%d", psDS18X20->Res + 9) ;
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
 		iRV += printfx_nolock("  Conf=0x%02X %s", psDS18X20->fam28.Conf, psDS18X20->fam28.Conf >> 5 != psDS18X20->Res ? "ERROR" : "") ; ;
