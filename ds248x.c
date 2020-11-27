@@ -134,9 +134,9 @@ void	ds248xCheckStatus(ds248x_t * psDS248X) {
 	const uint8_t DS248Xmask[4] = { 0b00000100, 0b00010110, 0b00011111, 0b11111111 } ;
 	uint8_t Mask = DS248Xmask[OWflags.Level] ;
 	if ((psDS248X->Rstat & Mask) != (psDS248X->StatX & Mask)) {
-		char cBuffer[8 * 12] ;
-		xBitMapDecodeChanges(psDS248X->StatX, psDS248X->Rstat, 0x000000FF, StatNames, cBuffer, sizeof(cBuffer)) ;
-		PRINT("D=%d (0x%02X) : %s\n", psDS248X->psI2C->DevIdx, psDS248X->Rstat, cBuffer) ;
+		char * pcBuf = pcBitMapDecodeChanges(psDS248X->StatX, psDS248X->Rstat, 0x000000FF, StatNames) ;
+		PRINT("D=%d (0x%02X) : %s\n", psDS248X->psI2C->DevIdx, psDS248X->Rstat, pcBuf) ;
+		free(pcBuf) ;
 	}
 	psDS248X->StatX = psDS248X->Rstat ;
 }
