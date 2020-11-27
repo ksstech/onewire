@@ -293,10 +293,6 @@ int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	return true ;
 }
 
-float	ds18x20GetTemperature(int32_t Idx) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psaDS18X20)) ;
-	IF_myASSERT(debugPARAM, INRANGE(0, Idx, Fam10_28Count, uint8_t)) ;
-	return psaDS18X20[Idx].xVal.f32 ;
 ep_work_t * ds18x20GetWork(int32_t x) {
 	IF_myASSERT(debugPARAM, INRANGE_SRAM(psaDS18X20) && x < Fam10_28Count) ;
 	return &psaDS18X20[x].sWork ;
@@ -324,6 +320,8 @@ void	ds18x20SetSense(ep_work_t * psEWP, ep_work_t * psEWS) {
 }
 
 int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) {
+float	ds18x20GetTemperature(ep_work_t * psEWS) { return psEWS->Var.varVal.x32.f32 ; }
+
 #if 0				// read & convert each enumerated, 1 by 1
 	for (int32_t Idx = 0; Idx < Fam10_28Count; ++Idx) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[Idx] ;
