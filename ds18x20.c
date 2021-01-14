@@ -408,7 +408,7 @@ int32_t	ds18x20ConfigMode (struct rule_s * psRule) {
 	int Xmax = psEW->Var.varDef.cv.varcount ;
 	if (Xmax > 1)										// multiple possible end-points?
 		Xcur = *(paX32.pi32 + p++) ;					// get # of selected end-point(s)
-	IF_PRINT(debugPARAM, "  XCur=%d/%d", Xcur, Xmax) ;
+	IF_PRINT(debugCONFIG, "  XCur=%d/%d\n", Xcur, Xmax) ;
 	if (Xcur == 255)									// non-specific total count ?
 		Xcur = Xmax ;									// yes, set to actual count.
 	else if (Xcur > Xmax)
