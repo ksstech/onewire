@@ -448,26 +448,26 @@ int32_t	ds18x20ConfigMode (struct rule_s * psRule) {
 
 int32_t	CmndDS18RDT(cli_t * psCLI) {
 	do {
-		ds18x20_t * psDS18X20 = &psaDS18X20[psCLI->z64Var.x64.u8[0]++] ;
+		ds18x20_t * psDS18X20 = &psaDS18X20[psCLI->z64Var.x64.x8[0].u8++] ;
 		ds18x20SampleTemperature(psDS18X20, OW_CMD_MATCHROM) ;
 		ds18x20ReadTemperature(psDS18X20) ;
 		ds18x20ConvertTemperature(psDS18X20) ;
-	} while (psCLI->z64Var.x64.u8[0] < psCLI->z64Var.x64.u8[1]) ;
+	} while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18RDSP(cli_t * psCLI) {
-	do ds18x20ReadSP(&psaDS18X20[psCLI->z64Var.x64.u8[0]++], 9) ; while (psCLI->z64Var.x64.u8[0] < psCLI->z64Var.x64.u8[1]) ;
+	do ds18x20ReadSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++], 9) ; while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18WRSP(cli_t * psCLI) {
-	do ds18x20WriteSP(&psaDS18X20[psCLI->z64Var.x64.u8[0]++]) ; while (psCLI->z64Var.x64.u8[0] < psCLI->z64Var.x64.u8[1]) ;
+	do ds18x20WriteSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ; while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18WREE(cli_t * psCLI) {
-	do ds18x20WriteEE(&psaDS18X20[psCLI->z64Var.x64.u8[0]++]) ; while(psCLI->z64Var.x64.u8[0] < psCLI->z64Var.x64.u8[1]) ;
+	do ds18x20WriteEE(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ; while(psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
 	return erSUCCESS ;
 }
 
@@ -483,8 +483,8 @@ int32_t	CmndDS18(cli_t * psCLI) {
 		TRACK("Cmnd=%d  Chan=%d", i32SC, psCLI->z64Var.x32[0].u32) ;
 		if (pTmp != pcFAILURE) {
 			psCLI->pcParse = pTmp ;
-			psCLI->z64Var.x64.u8[0] = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
-			psCLI->z64Var.x64.u8[1] = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? psCLI->z64Var.x32[0].u32 : psCLI->z64Var.x64.u8[0] ;
+			psCLI->z64Var.x64.x8[0].u8 = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
+			psCLI->z64Var.x64.x8[1].u8 = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? psCLI->z64Var.x32[0].u32 : psCLI->z64Var.x64.x8[0].u8 ;
 			iRV = psCLI->pasList[i32SC].hdlr(psCLI) ;
 		}
 	}
