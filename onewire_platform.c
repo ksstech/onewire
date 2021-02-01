@@ -62,7 +62,7 @@ ow_flags_t	OWflags ;
  * 	3.	GPIO	depending on config
  */
 int32_t	OWPlatformChanLog2Phy(onewire_t * psOW, uint8_t Chan) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (Chan < OWNumChan)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (Chan < OWNumChan)) ;
 	memset(psOW, 0, sizeof(onewire_t)) ;
 #if		(halHAS_DS248X > 0)
 	for (int32_t i = 0; i < ds248xCount; ++i) {
@@ -82,13 +82,13 @@ int32_t	OWPlatformChanLog2Phy(onewire_t * psOW, uint8_t Chan) {
 }
 
 int32_t	OWPlatformChanPhy2Log(onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psaDS248X) && INRANGE_SRAM(psOW)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS248X) && halCONFIG_inSRAM(psOW)) ;
 	ds248x_t * psDS248X = &psaDS248X[psOW->DevNum] ;
 	return (psDS248X->Lo + psOW->PhyChan) ;
 }
 
 ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t LogChan) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psaOW_CI) && LogChan < OWNumChan) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaOW_CI) && LogChan < OWNumChan) ;
 	return &psaOW_CI[LogChan] ;
 }
 
@@ -171,7 +171,7 @@ int32_t	OWPlatformCB_Count(flagmask_t FlagCount, onewire_t * psOW) {
  * @return	number of matching ROM's found (>= 0) or an error code (< 0)
  */
 int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t *), onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, INRANGE_FLASH(Handler)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int32_t	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
 	for (uint8_t OWBus = 0; OWBus < OWNumChan; ++OWBus) {
@@ -208,7 +208,7 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 }
 
 int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewire_t *), void * pVoid, onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, INRANGE_FLASH(Handler)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int32_t	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
 	for (uint8_t x = 0; x < OWNumChan; ++x) {

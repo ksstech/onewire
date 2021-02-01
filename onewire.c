@@ -69,7 +69,7 @@
 // ################################ Generic 1-Wire LINK API's ######################################
 
 int32_t	OWSetSPU(onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
 	switch (psOW->BusType) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWSetSPU(&psaDS248X[psOW->DevNum]) ;
@@ -85,7 +85,7 @@ int32_t	OWSetSPU(onewire_t * psOW) {
  *			 false(0): no presence pulses detected
  */
 int32_t OWReset(onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
 	switch (psOW->BusType) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWReset(&psaDS248X[psOW->DevNum]) ;
@@ -103,7 +103,7 @@ int32_t OWReset(onewire_t * psOW) {
  * Returns:  new current 1-Wire Net speed
  */
 int32_t OWSpeed(onewire_t * psOW, bool speed) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
 	switch (psOW->BusType) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWSpeed(&psaDS248X[psOW->DevNum], speed) ;
@@ -120,7 +120,7 @@ int32_t OWSpeed(onewire_t * psOW, bool speed) {
  * Returns:  current 1-Wire Net level
  */
 int32_t OWLevel(onewire_t * psOW, bool level) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
 	switch (psOW->BusType) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWLevel(&psaDS248X[psOW->DevNum], level) ;
@@ -172,7 +172,7 @@ uint8_t	OWCalcCRC8(onewire_t * psOW, uint8_t data) {
  * OWSearchTriplet() -
  */
 int32_t	OWSearchTriplet(onewire_t * psOW, uint8_t search_direction) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
 	switch (psOW->BusType) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], search_direction) ;
@@ -185,7 +185,7 @@ int32_t	OWSearchTriplet(onewire_t * psOW, uint8_t search_direction) {
  * OWChannelSelect() -
  */
 int32_t OWChannelSelect(onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
 	switch (psOW->BusType) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:	return ds248xOWChannelSelect(&psaDS248X[psOW->DevNum], psOW->PhyChan) ;
@@ -208,7 +208,7 @@ int32_t OWChannelSelect(onewire_t * psOW) {
  *			 1:	1 bit read from sendbit
  */
 uint8_t OWTouchBit(onewire_t * psOW, uint8_t sendbit) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
 	switch (psOW->BusType) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWTouchBit(&psaDS248X[psOW->DevNum], sendbit) ;
@@ -241,7 +241,7 @@ uint8_t OWReadBit(onewire_t * psOW) { return OWTouchBit(psOW, true) ; }
  * @return	erSUCCESS or erFAILURE
  */
 void	OWWriteByte(onewire_t * psOW, uint8_t sendbyte) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
 	switch (psOW->BusType) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:
@@ -301,7 +301,7 @@ int32_t OWReadBitPower(onewire_t * psOW, int32_t applyPowerResponse) {
  * Returns:  8 bits read from 1-Wire Net
  */
 int32_t	OWReadByte(onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
 	switch (psOW->BusType) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWReadByte(&psaDS248X[psOW->DevNum]) ;

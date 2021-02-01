@@ -114,7 +114,7 @@ int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) {
 }
 
 int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psDS18X20)) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psDS18X20)) ;
 	int32_t iRV = OWChannelSelect(&psDS18X20->sOW) ;
 	IF_myASSERT(debugRESULT, iRV != false) ;
 
@@ -205,7 +205,7 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	uint8_t	DevCount = 0 ;
 	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
 	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
-	IF_myASSERT(debugRESULT, INRANGE_SRAM(psaDS18X20)) ;
+	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psaDS18X20)) ;
 
 	IF_PRINT(debugTRACK, "AutoEnum DS18X20: Found=%d", Fam10_28Count) ;
 	onewire_t	sOW ;
@@ -297,7 +297,7 @@ int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 }
 
 ep_work_t * ds18x20GetWork(int32_t x) {
-	IF_myASSERT(debugPARAM, INRANGE_SRAM(psaDS18X20) && x < Fam10_28Count) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS18X20) && x < Fam10_28Count) ;
 	return &psaDS18X20[x].sWork ;
 }
 
