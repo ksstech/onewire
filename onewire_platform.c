@@ -177,14 +177,14 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 	for (uint8_t OWBus = 0; OWBus < OWNumChan; ++OWBus) {
 		OWPlatformChanLog2Phy(psOW, OWBus) ;
 		if (OWChannelSelect(psOW) == false)	{
-			IF_SL_DBG(debugTRACK, "Channel selection error") ;
+			IF_SL_INFO(debugTRACK, "Channel selection error") ;
 			break ;
 		}
 		if (Family) {
 			OWTargetSetup(psOW, Family) ;
 			iRV = OWSearch(psOW, false) ;
 			if (psOW->ROM.Family != Family) {
-				IF_SL_DBG(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
+				IF_SL_INFO(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
 				continue ;
 			}
 		} else {
@@ -214,14 +214,14 @@ int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewi
 	for (uint8_t x = 0; x < OWNumChan; ++x) {
 		OWPlatformChanLog2Phy(psOW, x) ;
 		if (OWChannelSelect(psOW) == false)	{
-			IF_SL_DBG(debugTRACK, "Channel selection error") ;
+			IF_SL_INFO(debugTRACK, "Channel selection error") ;
 			break ;
 		}
 		if (Family) {
 			OWTargetSetup(psOW, Family) ;
 			iRV = OWSearch(psOW, false) ;
 			if (psOW->ROM.Family != Family) {
-				IF_SL_DBG(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
+				IF_SL_INFO(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
 				continue ;
 			}
 		} else {
@@ -298,13 +298,13 @@ int32_t	OWPlatformConfig(void) {
 			OWNumDev += iRV ;
 
 #if		(halHAS_DS1990X > 0)
-		IF_SL_DBG(debugTRACK && Family01Count, "DS1990x found %d devices", Family01Count) ;
+		IF_SL_INFO(debugTRACK && Family01Count, "DS1990x found %d devices", Family01Count) ;
 		iRV = ds1990xConfig(URI_DS1990X) ;				// cannot enumerate, simple config
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1990, systimerTICKS, "DS1990", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
 #endif
 
 #if		(halHAS_DS18X20 > 0)
-		IF_SL_DBG(debugTRACK && Fam10_28Count, "DS18x20 found %d devices", Fam10_28Count) ;
+		IF_SL_INFO(debugTRACK && Fam10_28Count, "DS18x20 found %d devices", Fam10_28Count) ;
 		if (Fam10_28Count)
 			iRV = ds18x20Enumerate(URI_DS18X20) ;		// enumerate & config individually
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1820A, systimerTICKS, "DS1820A", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
