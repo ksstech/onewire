@@ -30,8 +30,6 @@
 #include	"syslog.h"
 #include	"x_errors_events.h"
 
-#include	"hal_debug.h"
-
 #if		defined(ESP_PLATFORM)
 	#include	"esp32/rom/crc.h"					// ESP32 ROM routine
 #else

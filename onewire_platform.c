@@ -31,8 +31,7 @@
 
 #include	"onewire_platform.h"
 #include	"task_events.h"
-
-#include	"hal_debug.h"
+#include	"hal_timer.h"
 
 #include	<string.h>
 

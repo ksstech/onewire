@@ -38,8 +38,6 @@
 #include	"ds18x20_cmds.h"
 #include	"rules_engine.h"
 
-#include	"hal_debug.h"
-
 #include	<string.h>
 #include	<stdint.h>
 

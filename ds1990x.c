@@ -29,8 +29,7 @@
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
 #include	"x_errors_events.h"
-
-#include	"hal_debug.h"
+#include	"global_vars.h"
 
 #include	<string.h>
 

@@ -26,10 +26,9 @@
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
+#include	"hal_timer.h"
 #include	"x_errors_events.h"
 #include	"x_string_general.h"
-
-#include	"hal_debug.h"
 
 #include	<string.h>
 
