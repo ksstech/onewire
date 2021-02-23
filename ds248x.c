@@ -232,7 +232,7 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 	case ds248xREG_STAT:
 		if (ds248xReadRegister(psDS248X, Reg) == false)
 			return false ;
-		iRV += printfx_nolock("STAT(0)=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
+		iRV += printfx("STAT(0)=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
 				psDS248X->Rstat,
 				psDS248X->DIR ? '1' : '0',
 				psDS248X->TSB ? '1' : '0',
@@ -244,7 +244,7 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 				psDS248X->OWB ? '1' : '0') ;
 		break ;
 	case ds248xREG_DATA:
-		iRV += printfx_nolock("DATA(1)=0x%02X (Last read)\n", psDS248X->Rdata) ;
+		iRV += printfx("DATA(1)=0x%02X (Last read)\n", psDS248X->Rdata) ;
 		break ;
 	case ds248xREG_CHAN:
 #if		(halHAS_DS2482_800 > 0)
@@ -255,14 +255,14 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 		{	int32_t Chan ;										// Channel, start by finding the matching Channel #
 			for (Chan = 0; (Chan < psDS248X->NumChan) && (psDS248X->Rchan != ds248x_V2N[Chan]); ++Chan) ;
 			IF_myASSERT(debugRESULT, Chan < psDS248X->NumChan && psDS248X->Rchan == ds248x_V2N[Chan]) ;
-			iRV = printfx_nolock("CHAN(2)=0x%02X  Rchan=0x%02X  Chan=%d  Xlat=0x%02X\n", psDS248X->CHAN, psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
+			iRV = printfx("CHAN(2)=0x%02X  Rchan=0x%02X  Chan=%d  Xlat=0x%02X\n", psDS248X->CHAN, psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
 		}
 #endif
 		break ;
 	case ds248xREG_CONF:
 		if (ds248xReadRegister(psDS248X, Reg) == false)
 			return false ;
-		iRV += printfx_nolock("CONF(3)=0x%02X  1WS=%c  SPU=%c  PDN=%c  APU=%c\n",
+		iRV += printfx("CONF(3)=0x%02X  1WS=%c  SPU=%c  PDN=%c  APU=%c\n",
 				psDS248X->Rconf,
 				psDS248X->OWS	? '1' : '0',
 				psDS248X->SPU	? '1' : '0',
@@ -276,28 +276,28 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 		// PAR = 0b000 ~ tRSTL
 		if (ds248xReadRegister(psDS248X, Reg) == false)
 			return false ;
-		iRV += printfx_nolock("PADJ(4a)=0x%02X  PAR=0  OD=%c  tRSTL=%d uS\n",
+		iRV += printfx("PADJ(4a)=0x%02X  PAR=0  OD=%c  tRSTL=%d uS\n",
 				psDS248X->Rpadj, psDS248X->OD ? '1' : '0',
 				Trstl[psDS248X->VAL] * (psDS248X->OD ? 1 : 10)) ;
 		// PAR = 0b001 ~ tMSP
 		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx_nolock("PADJ(4b)=0x%02X  PAR=1  OD=%c  tMSP=",
+		iRV += printfx("PADJ(4b)=0x%02X  PAR=1  OD=%c  tMSP=",
 				psDS248X->Rpadj, psDS248X->OD	? '1' : '0') ;
-		iRV += printfx_nolock(psDS248X->OD ? "%d uS\n" : "%.1f uS\n",
+		iRV += printfx(psDS248X->OD ? "%d uS\n" : "%.1f uS\n",
 				psDS248X->OD ? (float) Tmsp1[psDS248X->VAL] / 10.0 : Tmsp0[psDS248X->VAL]) ;
 		// PAR = 0b010 ~ tWOL
 		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx_nolock("PADJ(4c)=0x%02X  PAR=2  OD=%c  tWOL=",
+		iRV += printfx("PADJ(4c)=0x%02X  PAR=2  OD=%c  tWOL=",
 				psDS248X->Rpadj, psDS248X->OD	? '1' : '0') ;
-		iRV += printfx_nolock(psDS248X->OD ? "%d uS\n" : "%.1f uS\n",
+		iRV += printfx(psDS248X->OD ? "%d uS\n" : "%.1f uS\n",
 				psDS248X->OD ? (float) Twol1[psDS248X->VAL] / 10.0 : Twol0[psDS248X->VAL]) ;
 		// PAR = 0b011 ~ tREC0
 		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx_nolock("PADJ(4d)=0x%02X  PAR=3  OD=%c  tREC0=%.2f uS\n",
+		iRV += printfx("PADJ(4d)=0x%02X  PAR=3  OD=%c  tREC0=%.2f uS\n",
 				psDS248X->Rpadj, psDS248X->OD	? '1' : '0', (float) Trec0[psDS248X->VAL] / 100.0) ;
 		// PAR = 0b100 ~ rWPU
 		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx_nolock("PADJ(4e)=0x%02X  PAR=4  OD=%c  rWPU=%f ohm\n",
+		iRV += printfx("PADJ(4e)=0x%02X  PAR=4  OD=%c  rWPU=%f ohm\n",
 				psDS248X->Rpadj, psDS248X->OD	? '1' : '0', (float) Rwpu[psDS248X->VAL]) ;
 #endif
 		break ;
@@ -312,17 +312,15 @@ void	ds248xReport(ds248x_t * psDS248X) {
 	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
 	for (uint32_t Reg = 0; Reg < ds248xREG_NUM; ++Reg)
 		ds248xReportRegister(psDS248X, Reg) ;
-	printfx_nolock("\n") ;
+	printfx("\n") ;
 }
 
 /**
  * ds248xReportAll() - report decoded status of all devices and all registers
  */
 void ds248xReportAll(void) {
-	printfx_lock() ;
 	for (int32_t i = 0; i < ds248xCount; ++i)
 		ds248xReport(&psaDS248X[i]) ;
-	printfx_unlock() ;
 }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
