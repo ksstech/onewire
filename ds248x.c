@@ -231,7 +231,7 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 	switch (Reg) {
 	case ds248xREG_STAT:
 		if (ds248xReadRegister(psDS248X, Reg) == false)
-			return false ;
+			return 0 ;
 		iRV += printfx("STAT(0)=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
 				psDS248X->Rstat,
 				psDS248X->DIR ? '1' : '0',
@@ -261,7 +261,7 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 		break ;
 	case ds248xREG_CONF:
 		if (ds248xReadRegister(psDS248X, Reg) == false)
-			return false ;
+			return 0 ;
 		iRV += printfx("CONF(3)=0x%02X  1WS=%c  SPU=%c  PDN=%c  APU=%c\n",
 				psDS248X->Rconf,
 				psDS248X->OWS	? '1' : '0',
@@ -272,10 +272,10 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 	case ds248xREG_PADJ:
 #if		(halHAS_DS2484 > 0)
 		if (psDS248X->psI2C->Type != i2cDEV_DS2484)
-			return false ;
+			return 0 ;
 		// PAR = 0b000 ~ tRSTL
 		if (ds248xReadRegister(psDS248X, Reg) == false)
-			return false ;
+			return 0 ;
 		iRV += printfx("PADJ(4a)=0x%02X  PAR=0  OD=%c  tRSTL=%d uS\n",
 				psDS248X->Rpadj, psDS248X->OD ? '1' : '0',
 				Trstl[psDS248X->VAL] * (psDS248X->OD ? 1 : 10)) ;
