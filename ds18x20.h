@@ -35,7 +35,6 @@
 #define	ds18x20DELAY_CONVERT				752
 #define	ds18x20DELAY_SP_COPY				11
 
-#define	ds18x20URI_NAME						"/ow/ds18x20"
 #define	ds18x20T_SNS_MIN					1000
 #define	ds18x20T_SNS_NORM					60000
 

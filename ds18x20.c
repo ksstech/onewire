@@ -149,7 +149,7 @@ int32_t	ds18x20WriteSP(ds18x20_t * psDS18X20) {
 	ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) ;
 	OWWriteByte(&psDS18X20->sOW, DS18X20_WRITE_SP) ;
 	OWBlock(&psDS18X20->sOW, (uint8_t *) &psDS18X20->Thi, psDS18X20->sOW.ROM.Family == OWFAMILY_28 ? 3 : 2) ;	// Thi, Tlo [+Conf]
-	return true ;
+	return 1 ;
 }
 
 int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) {
@@ -377,10 +377,10 @@ int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) {
 			psDS18X20->fam28.Conf = u8Res ;
 			psDS18X20->Res = i8Res - 9 ;
 			ds18x20WriteSP(psDS18X20) ;
+			return 1 ;
 		}
-		return true ;
 	}
-	return false ;
+	return 0 ;
 }
 
 int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) {
@@ -389,9 +389,9 @@ int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) {
 		psDS18X20->Tlo = i8Lo ;
 		psDS18X20->Thi = i8Hi ;
 		ds18x20WriteSP(psDS18X20) ;
-		return true ;
+		return 1 ;
 	}
-	return false ;
+	return 0 ;
 }
 
 enum { optINVALID = 0, optRESOLUTION, optTHRESHOLDS, optWRITE } ;
@@ -419,25 +419,26 @@ int32_t	ds18x20ConfigMode (struct rule_s * psRule) {
 	int p0 = *(paX32.pi32 + p++);
 	int p1 = *(paX32.pi32 + p++);
 	int p2 = *(paX32.pi32 + p++);
-	int32_t iRV ;
+	int32_t iRV = erSUCCESS ;
 
 	do {
 		ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
 		switch (p0) {
 		case optRESOLUTION:
-			iRV = ds18x20SetResolution(psDS18X20, p1) ;
+			ds18x20SetResolution(psDS18X20, p1) ;
 			break ;
 		case optTHRESHOLDS:
-			iRV = ds18x20SetAlarms(psDS18X20, p1, p2) ;
+			ds18x20SetAlarms(psDS18X20, p1, p2) ;
 			break ;
 		case optWRITE:
-			iRV = ds18x20WriteSP(psDS18X20) ;
+			ds18x20WriteSP(psDS18X20) ;
 			break ;
 		default:
 			iRV = erSCRIPT_INV_MODE ;
 		}
-		if (iRV < erSUCCESS)
+		if (iRV < erSUCCESS) {
 			break ;
+		}
 	} while (++Xcur < Xmax) ;
 	return iRV ;
 }
