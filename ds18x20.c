@@ -220,10 +220,10 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	vEpGetInfoWithIndex(&sEI, xUri) ;			// setup pointers to static and work tables
 	IF_myASSERT(debugRESULT, sEI.psES && sEI.psEW) ;
 
-	sEI.psEW->uri	= xUri ;
-	sEI.psEW->Tsns	= ds18x20T_SNS_NORM ;
+	sEI.psEW->uri					= xUri ;
+	sEI.psEW->Tsns					= ds18x20T_SNS_NORM ;
 	sEI.psEW->Var.varDef.cv.pntr	= 1 ;
-	sEI.psEW->Var.varDef.cv.varcount = DevCount ;	// number enumerated
+	sEI.psEW->Var.varDef.cv.varcount= DevCount ;		// number enumerated
 	sEI.psEW->Var.varVal.pvoid		= (void *) &sDS18X20Func ;
 
 	if (DevCount == Fam10_28Count) {
@@ -461,7 +461,8 @@ int32_t	CmndDS18RDSP(cli_t * psCLI) {
 }
 
 int32_t	CmndDS18WRSP(cli_t * psCLI) {
-	do ds18x20WriteSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ; while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
+	do ds18x20WriteSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ;
+	while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
 	return erSUCCESS ;
 }
 
