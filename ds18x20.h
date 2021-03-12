@@ -77,7 +77,7 @@ typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20
 	uint8_t		Res		: 2 ;							// Resolution 0=9b 1=10b 2=11b 3=12b
 	uint8_t		Pwr		: 1 ;
 	uint8_t		SBits	: 2 ;
-	ep_work_t	sWork ;
+	ep_work_t	sEWx ;
 } ds18x20_t ;
 
 // ###################################### Public variables #########################################
