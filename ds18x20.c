@@ -193,8 +193,6 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	IF_PRINT(debugTRACK, "AutoEnum DS18X20: Found=%d", Fam10_28Count) ;
 	onewire_t	sOW ;
 	iRV = OWPlatformScanner(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
-	if (iRV > 0)		DevCount += iRV ;
-
 	if (iRV > 0) {
 		DevCount += iRV ;
 	}
@@ -207,10 +205,9 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	// Do once-off initialization for work structure entries
 	ep_info_t	sEI ;
 	vEpGetInfoWithIndex(&sEI, xUri) ;			// setup pointers to static and work tables
-	IF_myASSERT(debugRESULT, sEI.psES && sEI.psEW) ;
+	IF_myASSERT(debugRESULT, halCONFIG_inFLASH(sEI.psES) && halCONFIG_inSRAM(sEI.psEW)) ;
 
 	sEI.psEW->uri					= xUri ;
-	sEI.psEW->Tsns					= ds18x20T_SNS_NORM ;
 	sEI.psEW->Var.varDef.cv.pntr	= 1 ;
 	sEI.psEW->Var.varDef.cv.varcount= DevCount ;		// number enumerated
 	sEI.psEW->Var.varVal.pvoid		= (void *) &sDS18X20Func ;
