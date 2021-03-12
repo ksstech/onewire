@@ -1,21 +1,5 @@
 /*
- * Copyright 2018-20 AM Maree/KSS Technologies (Pty) Ltd.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
- * and associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
+ * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 /*
@@ -24,7 +8,6 @@
 
 #include	"onewire_platform.h"
 
-#if		(halHAS_DS18X20 > 0)
 #include	"endpoints.h"
 #include	"printfx.h"
 #include	"syslog.h"
@@ -79,7 +62,7 @@ void	ds18x20SetDefault(ep_work_t * psEWP, ep_work_t *psEWS) ;
 void	ds18x20SetSense(ep_work_t * psEWP, ep_work_t * psEWS) ;
 float	ds18x20GetTemperature(ep_work_t * psEWS) ;
 
-// ###################################### Local variables ##########################################
+// ######################################### Constants #############################################
 
 const complex_t	sDS18X20Func = {
 	.work	= ds18x20GetWork,
@@ -95,6 +78,8 @@ cmnd_t saDS18Cmnd[] = {
 	{ "WREE",	CmndDS18WREE },
 } ;
 
+// ###################################### Local variables ##########################################
+
 ds18x20_t *	psaDS18X20	= NULL ;
 uint8_t		Fam10_28Count	= 0 ;
 
@@ -102,7 +87,7 @@ uint8_t		Fam10_28Count	= 0 ;
 
 int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) {
 	int32_t iRV = OWChannelSelect(&psDS18X20->sOW) ;
-	IF_myASSERT(debugRESULT, iRV != false) ;
+	IF_myASSERT(debugRESULT, iRV != 0) ;
 
 	OWAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) ;
 	OWWriteByte(&psDS18X20->sOW, DS18X20_READ_PSU) ;
@@ -114,10 +99,10 @@ int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) {
 int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psDS18X20)) ;
 	int32_t iRV = OWChannelSelect(&psDS18X20->sOW) ;
-	IF_myASSERT(debugRESULT, iRV != false) ;
+	IF_myASSERT(debugRESULT, iRV != 0) ;
 
 	iRV = OWReset(&psDS18X20->sOW) ;
-	IF_myASSERT(debugRESULT, iRV != false) ;
+	IF_myASSERT(debugRESULT, iRV != 0) ;
 
 //	iRV = DS2482SetOverDrive() ;
 //	IF_myASSERT(debugRESULT, iRV != false) ;
@@ -140,7 +125,7 @@ int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
 		iRV = OWCheckCRC(psDS18X20->RegX, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
 	else
 		iRV = OWReset(&psDS18X20->sOW) ;				// terminate read process
-	IF_myASSERT(debugRESULT, iRV != false) ;
+	IF_myASSERT(debugRESULT, iRV != 0) ;
 	IF_PRINT(debugTRACK, "SP Read: %-'+b\n", Len, psDS18X20->RegX) ;
 	return iRV ;
 }
@@ -155,7 +140,7 @@ int32_t	ds18x20WriteSP(ds18x20_t * psDS18X20) {
 int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) {
 	ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) ;
 	int32_t iRV = OWWriteBytePower(&psDS18X20->sOW, DS18X20_COPY_SP) ;
-	IF_myASSERT(debugRESULT, iRV != false) ;
+	IF_myASSERT(debugRESULT, iRV != 0) ;
 
 	IF_SYSTIMER_START(debugTIMING, systimerDS1820B) ;
 	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_SP_COPY)) ;
@@ -171,7 +156,7 @@ int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) {
 	ds18x20ReadSP(psDS18X20, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
 	psDS18X20->Res = (psDS18X20->sOW.ROM.Family == OWFAMILY_28) ? psDS18X20->fam28.Conf >> 5 : owFAM28_RES9B ;
 	ds18x20ConvertTemperature(psDS18X20) ;
-	return true ;
+	return 1 ;
 }
 
 int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
@@ -179,14 +164,14 @@ int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
 	memcpy(&psDS18X20->sOW, psOW, sizeof(onewire_t)) ;
 	psDS18X20->Idx	= sFM.uCount ;
 
-	ep_work_t * psEWS =&psDS18X20->sWork ;
-	memset(psEWS, 0, sizeof(ep_work_t)) ;
-	psEWS->uri	= URI_DS18X20 ;
-	psEWS->idx	= sFM.uCount ;
-	psEWS->Var.varDef.cv.vartype	= vtVALUE ;
-	psEWS->Var.varDef.cv.varsize	= vs32B ;
-	psEWS->Var.varDef.cv.varform	= vfFXX ;
-	psEWS->Var.varDef.cv.varcount	= 1 ;
+	ep_work_t * psEWx = &psDS18X20->sEWx ;
+	memset(psEWx, 0, sizeof(ep_work_t)) ;
+	psEWx->uri						= URI_DS18X20 ;
+	psEWx->idx						= sFM.uCount ;
+	psEWx->Var.varDef.cv.vartype	= vtVALUE ;
+	psEWx->Var.varDef.cv.varsize	= vs32B ;
+	psEWx->Var.varDef.cv.varform	= vfFXX ;
+	psEWx->Var.varDef.cv.varcount	= 1 ;
 	ds18x20Initialize(psDS18X20) ;
 
 	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(OWPlatformChanPhy2Log(psOW)) ;
@@ -210,9 +195,13 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	iRV = OWPlatformScanner(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
 	if (iRV > 0)		DevCount += iRV ;
 
+	if (iRV > 0) {
+		DevCount += iRV ;
+	}
 	iRV = OWPlatformScanner(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
-	if (iRV > 0)		DevCount += iRV ;
-
+	if (iRV > 0) {
+		DevCount += iRV ;
+	}
 	IF_PRINT(debugTRACK, "  Enum=%d\n", DevCount) ;
 
 	// Do once-off initialization for work structure entries
@@ -490,5 +479,3 @@ int32_t	CmndDS18(cli_t * psCLI) {
 	}
 	return iRV ;
 }
-
-#endif
