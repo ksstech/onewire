@@ -35,9 +35,8 @@
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
 // ##################################### Developer notes ###########################################
-/*
- *
- * DS18x20 is a 1-wire type device and thus BUS oriented:
+
+/* DS18x20 is a 1-wire type device and thus BUS oriented:
  * 	multiple devices sharing a single bus.
  * 	each device can be individually R/W addressed
  * 	some operations eg temp sample/convert
@@ -48,19 +47,22 @@
  *		always trigger a sample+convert operation for ALL devices on a bus at same time.
  *		maintains Tsns at a value equal to lowest Tsns specified for any one ds18x20 device
  *		maintain a minimum Tsns of 1000mSec to be bigger than the ~750mS standard.
- *
- *
  * 	Test parasitic power
  * 	Test & benchmark overdrive speed
  * 	Implement and test ALARM scan and over/under event generation
  */
 
+
+#ifndef URI_DS18X20
+	#define	URI_DS18X20 URI_UNKNOWN	// dummy value to facilitate compile if EndPoint not used.
+#endif
+
 // ################################ Forward function declaration ###################################
 
-ep_work_t * ds18x20GetWork(int32_t x) ;
-void	ds18x20SetDefault(ep_work_t * psEWP, ep_work_t *psEWS) ;
-void	ds18x20SetSense(ep_work_t * psEWP, ep_work_t * psEWS) ;
-float	ds18x20GetTemperature(ep_work_t * psEWS) ;
+epw_t * ds18x20GetWork(int32_t x) ;
+void	ds18x20SetDefault(epw_t * psEWP, epw_t *psEWS) ;
+void	ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) ;
+float	ds18x20GetTemperature(epw_t * psEWS) ;
 
 // ######################################### Constants #############################################
 
@@ -164,8 +166,8 @@ int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
 	memcpy(&psDS18X20->sOW, psOW, sizeof(onewire_t)) ;
 	psDS18X20->Idx	= sFM.uCount ;
 
-	ep_work_t * psEWx = &psDS18X20->sEWx ;
-	memset(psEWx, 0, sizeof(ep_work_t)) ;
+	epw_t * psEWx = &psDS18X20->sEWx ;
+	memset(psEWx, 0, sizeof(epw_t)) ;
 	psEWx->uri						= URI_DS18X20 ;
 	psEWx->idx						= sFM.uCount ;
 	psEWx->Var.varDef.cv.vartype	= vtVALUE ;
@@ -203,14 +205,14 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	IF_PRINT(debugTRACK, "  Enum=%d\n", DevCount) ;
 
 	// Do once-off initialization for work structure entries
-	ep_info_t	sEI ;
+	epi_t	sEI ;
 	vEpGetInfoWithIndex(&sEI, xUri) ;			// setup pointers to static and work tables
 	IF_myASSERT(debugRESULT, halCONFIG_inFLASH(sEI.psES) && halCONFIG_inSRAM(sEI.psEW)) ;
 
 	sEI.psEW->uri					= xUri ;
 	sEI.psEW->Var.varDef.cv.pntr	= 1 ;
 	sEI.psEW->Var.varDef.cv.varcount= DevCount ;		// number enumerated
-	sEI.psEW->Var.varVal.pvoid		= (void *) &sDS18X20Func ;
+	sEI.psEW->Var.varVal.px.pv	= (void *) &sDS18X20Func ;
 
 	if (DevCount == Fam10_28Count) {
 		iRV = DevCount ;
@@ -280,18 +282,18 @@ int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	return true ;
 }
 
-ep_work_t * ds18x20GetWork(int32_t x) {
+epw_t * ds18x20GetWork(int32_t x) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS18X20) && x < Fam10_28Count) ;
 	return &psaDS18X20[x].sEWx ;
 }
 
-void	ds18x20SetDefault(ep_work_t * psEWP, ep_work_t * psEWS) {
+void	ds18x20SetDefault(epw_t * psEWP, epw_t * psEWS) {
 	IF_myASSERT(debugPARAM, psEWP->fSECsns == 0)
 	// Stop sensing on EWP level since vEpConfigReset() will handle EWx
 	psEWP->Rsns = 0 ;
 }
 
-void	ds18x20SetSense(ep_work_t * psEWP, ep_work_t * psEWS) {
+void	ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 	/* Optimal 1-Wire bus operation require that all devices (of a type) are detected
 	 * (and read) in a single bus scan. BUT, for the DS18x20 the temperature conversion
 	 * time if 750mSec (per bus or device) at normal (not overdrive) bus speed.
@@ -306,9 +308,9 @@ void	ds18x20SetSense(ep_work_t * psEWP, ep_work_t * psEWS) {
 	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
 }
 
-float	ds18x20GetTemperature(ep_work_t * psEWS) { return psEWS->Var.varVal.x32.f32 ; }
+float	ds18x20GetTemperature(epw_t * psEWS) { return psEWS->Var.varVal.x32.f32 ; }
 
-int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEWP) {
+int32_t	ds18x20ReadConvertAll(struct epw_t * psEWP) {
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
 #if 0				// read & convert each enumerated, 1 by 1
@@ -382,9 +384,9 @@ int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) {
 
 enum { optINVALID = 0, optRESOLUTION, optTHRESHOLDS, optWRITE } ;
 
-int32_t	ds18x20ConfigMode (struct rule_s * psRule) {
-	ep_work_t * psEW = &table_work[psRule->actPar0[psRule->ActIdx]] ;
-	p32_t	paX32 ;
+int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
+	epw_t * psEW = &table_work[psRule->actPar0[psRule->ActIdx]] ;
+	px_t	paX32 ;
 	paX32.pi32 = (int32_t *) &psRule->para.i32[0][0] ;
 	IF_PRINT(debugCONFIG, "DS18X20 Mode p0=%d p1=%d p2=%d p3=%d\n", *paX32.pi32, *(paX32.pi32+1), *(paX32.pi32+2), *(paX32.pi32+3)) ;
 
@@ -465,12 +467,12 @@ int32_t	CmndDS18(cli_t * psCLI) {
 	int32_t	i32SC = xCLImatch(psCLI) ;
 	if (i32SC >= 0) {
 		// parse the logical channel number
-		char * pTmp = pcStringParseValueRange(psCLI->pcParse, (p32_t) &psCLI->z64Var.x32[0].u32, vfUXX, vs32B, sepSPACE_LF, (x32_t) 0, (x32_t) ((uint32_t) Fam10_28Count)) ;
-		TRACK("Cmnd=%d  Chan=%d", i32SC, psCLI->z64Var.x32[0].u32) ;
+		char * pTmp = pcStringParseValueRange(psCLI->pcParse, (px_t) &psCLI->z64Var.x64.x32[0].u32, vfUXX, vs32B, sepSPACE_LF, (x32_t) 0, (x32_t) ((uint32_t) Fam10_28Count)) ;
+		TRACK("Cmnd=%d  Chan=%d", i32SC, psCLI->z64Var.x64.x32[0].u32) ;
 		if (pTmp != pcFAILURE) {
 			psCLI->pcParse = pTmp ;
-			psCLI->z64Var.x64.x8[0].u8 = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x32[0].u32 ;
-			psCLI->z64Var.x64.x8[1].u8 = (psCLI->z64Var.x32[0].u32 == Fam10_28Count) ? psCLI->z64Var.x32[0].u32 : psCLI->z64Var.x64.x8[0].u8 ;
+			psCLI->z64Var.x64.x8[0].u8 = (psCLI->z64Var.x64.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x64.x32[0].u32 ;
+			psCLI->z64Var.x64.x8[1].u8 = (psCLI->z64Var.x64.x32[0].u32 == Fam10_28Count) ? psCLI->z64Var.x64.x32[0].u32 : psCLI->z64Var.x64.x8[0].u8 ;
 			iRV = psCLI->pasList[i32SC].hdlr(psCLI) ;
 		}
 	}

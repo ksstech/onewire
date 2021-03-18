@@ -1,21 +1,5 @@
 /*
- * Copyright 2018-20 AM Maree/KSS Technologies (Pty) Ltd.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
- * and associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
+ * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 /*
@@ -23,6 +7,8 @@
  */
 
 #pragma		once
+
+#include	"endpoint_struct.h"
 
 #ifdef __cplusplus
 	extern "C" {
@@ -77,7 +63,7 @@ typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20
 	uint8_t		Res		: 2 ;							// Resolution 0=9b 1=10b 2=11b 3=12b
 	uint8_t		Pwr		: 1 ;
 	uint8_t		SBits	: 2 ;
-	ep_work_t	sEWx ;
+	epw_t	sEWx ;
 } ds18x20_t ;
 
 // ###################################### Public variables #########################################
@@ -109,14 +95,14 @@ void	ds18x20ReportAll(void) ;
 /*
  * ds18x20ReadConvertAll() - 1 bus at a time, all devices address & convert, then read & convert 1 at a time.
  */
-struct ep_work_s ;
-int32_t	ds18x20ReadConvertAll(struct ep_work_s * psEpWork) ;
+struct epw_t ;
+int32_t	ds18x20ReadConvertAll(struct epw_t * psEpWork) ;
 int32_t	ds18x20ScanAlarmsAll(void) ;
 
 int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) ;
 int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) ;
-struct rule_s ;
-int32_t	ds18x20ConfigMode (struct rule_s * psRule) ;
+struct rule_t ;
+int32_t	ds18x20ConfigMode (struct rule_t * psRule) ;
 int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) ;
 int32_t	ds18x20Enumerate(int32_t xUri)  ;
 

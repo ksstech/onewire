@@ -6,8 +6,8 @@
  * onewire_platform.c
  */
 
-#include	"endpoint_id.h"
 #include	"endpoint_struct.h"
+#include	"endpoint_id.h"
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
@@ -226,7 +226,7 @@ int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewi
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
-int32_t OWPlatformEndpoints(struct ep_work_s * psEW) {
+int32_t OWPlatformEndpoints(struct epw_t * psEW) {
 	int32_t iRV = erFAILURE;
 #if		(halHAS_DS1990X > 0)
 	onewire_t sOW ;
