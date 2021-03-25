@@ -66,8 +66,10 @@ int32_t ds248xReset(ds248x_t * psDS248X) ;
 // ################################ Local ONLY utility functions ###################################
 
 int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
+	xRtosSemaphoreTake(&psDS248X->psI2C->mux,portMAX_DELAY) ;
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
 	int32_t iRV = halI2C_Read(psDS248X->psI2C, &psDS248X->RegX[psDS248X->Rptr], 1) ;
+	xRtosSemaphoreGive(&psDS248X->psI2C->mux) ;
 	// During the device discovery/config phases errors are valid and indicate pre/absence
 	// of a specific device, type or submodel (DS2482-800 vs -10x). Hence selective error check
 	IF_myASSERT(debugRESULT && psDS248X->Test == 0, iRV == erSUCCESS) ;
@@ -81,8 +83,19 @@ int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
 }
 
 int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t Delay) {
+	xRtosSemaphoreTake(&psDS248X->psI2C->mux,portMAX_DELAY) ;
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
 	int32_t iRV ;
+#if 1
+	iRV = halI2C_Write(psDS248X->psI2C, pTxBuf, TxSize) ;
+	IF_myASSERT(debugRESULT && psDS248X->Test == 0, iRV == erSUCCESS) ;
+	if (iRV == erSUCCESS) {
+		if (Delay) {
+			i64TaskDelayUsec(Delay) ;
+		}
+		iRV = halI2C_Read(psDS248X->psI2C, &psDS248X->RegX[psDS248X->Rptr], 1) ;
+	}
+#else
 	if (Delay > 0) {
 		iRV = halI2C_Write(psDS248X->psI2C, pTxBuf, TxSize) ;
 		// During the device discovery/config phases errors are valid and indicate pre/absence
@@ -95,6 +108,7 @@ int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t T
 	} else {
 		iRV = halI2C_WriteRead(psDS248X->psI2C, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr], 1) ;
 	}
+#endif
 	// During the device discovery/config phases errors are valid and indicate pre/absence
 	// of a specific device, type or submodel (DS2482-800 vs -10x). Hence selective error check
 	IF_myASSERT(debugRESULT && psDS248X->Test == 0, iRV == erSUCCESS) ;
@@ -102,14 +116,16 @@ int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t T
 		if (psDS248X->Rptr == ds248xREG_STAT) {
 			ds248xCheckStatus(psDS248X) ;
 			if (psDS248X->OWB) {
-				IF_myASSERT(debugRESULT, 0) ;
+				ds248xReport(psDS248X) ;
+//				IF_myASSERT(debugRESULT, 0) ;
 				ds248xReset(psDS248X) ;
 				iRV = 0 ;
 			}
 		}
 		iRV = 1 ;
 	}
-	return false ;
+	xRtosSemaphoreGive(&psDS248X->psI2C->mux) ;
+	return iRV ;
 }
 
 void	ds248xCheckStatus(ds248x_t * psDS248X) {
@@ -371,11 +387,13 @@ int32_t	ds248xDriverConfig(i2c_dev_info_t * psI2C_DI) {
 			psDS248X->NumChan = 1 ;
 			break ;
 #endif
+
 #if		(halHAS_DS2482_800 > 0)
 		case i2cDEV_DS2482_800:
 			psDS248X->NumChan = 8 ;
 			break ;
 #endif
+
 #if		(halHAS_DS2484 > 0)
 		case i2cDEV_DS2484:
 			psDS248X->NumChan = 1 ;
@@ -442,7 +460,7 @@ int32_t ds248xOWReset(ds248x_t * psDS248X) {
 //									\--------/
 //						Repeat until 1WB bit has changed to 0
 //  [] indicates from slave
-	IF_myASSERT(debugBUS_CFG, psDS248X->SPU == 0) ;
+	// No SPU == 0 checking, will be reset by itself...
 	uint8_t	cChr = ds248xCMD_1WRS ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	IF_SYSTIMER_START(debugTIMING, systimerDS248xB) ;
