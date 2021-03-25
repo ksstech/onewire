@@ -72,11 +72,9 @@ int32_t	OWPlatformCB_ReadDS1990X(flagmask_t sFM, onewire_t * psOW) {
 	xTaskNotify(EventsHandle, 1UL << (LogChan + se1W_FIRST), eSetBits) ;
 	portYIELD() ;
 #if		(debugEVENTS)
-	printfx_lock() ;
 	sFM.bRT	= 1 ;
 	sFM.bNL	= 1 ;
 	OWPlatformCB_Print1W(sFM, psOW) ;
-	printfx_unlock() ;
 #endif
 	return erSUCCESS ;
 }

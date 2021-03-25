@@ -141,7 +141,7 @@ void	ds248xCheckStatus(ds248x_t * psDS248X) {
 
 void	ds248xPrintConfig(ds248x_t * psDS248X, uint8_t Reg) {
 	halI2C_DeviceReport((void *) ((uint32_t) psDS248X->I2Cnum)) ;
-	PRINT("1-W:  NumCh=%d  Cur#=%d  Rptr=%d (%s)  Reg=0x%02X\n",
+	printfx("1-W:  NumCh=%d  Cur#=%d  Rptr=%d (%s)  Reg=0x%02X\n",
 		psDS248X->NumChan, psDS248X->CurChan, psDS248X->Rptr, RegNames[psDS248X->Rptr], Reg) ;
 }
 
@@ -209,8 +209,8 @@ int32_t	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 	if ((Reg == ds248xREG_CHAN && psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
 		(Reg == ds248xREG_PADJ && psDS248X->psI2C->Type != i2cDEV_DS2484)) {
 		ds248xPrintConfig(psDS248X, Reg) ;
-		PRINT("Invalid register combination!!!\n") ;
 		return false ;
+		printfx("Invalid register combination!!!\n") ;
 	}
 	psDS248X->Rptr	= Reg ;
 	uint8_t	cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg } ;

@@ -85,44 +85,44 @@ ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t LogChan) {
 int32_t	OWPlatformCB_PrintROM(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 	int32_t iRV = 0 ;
 	if (FlagMask.bRT)
-		iRV += printfx_nolock("%!.R: ", RunTime) ;
 	if (FlagMask.bCount)
-		iRV += printfx_nolock("#%u ", FlagMask.uCount) ;
-	iRV += printfx_nolock("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ;
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\n") ;
+		iRV += printfx("%!.R: ", RunTime) ;
+		iRV += printfx("#%u ", FlagMask.uCount) ;
+	iRV += printfx("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ;
+		iRV += printfx("\n") ;
 	return iRV ;
 }
 
 int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) {
 	int32_t iRV = OWPlatformCB_PrintROM((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
-	iRV += printfx_nolock("  Log=%d  Type=%s[%d]  Phy=%d", OWPlatformChanPhy2Log(psOW), OWBusType[psOW->BusType], psOW->DevNum, psOW->PhyChan) ;
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\n") ;
+	iRV += printfx("  Log=%d  Type=%s[%d]  Phy=%d", OWPlatformChanPhy2Log(psOW), OWBusType[psOW->BusType], psOW->DevNum, psOW->PhyChan) ;
+		iRV += printfx("\n") ;
 	return iRV ;
 }
 
 int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	int32_t iRV = OWPlatformCB_Print1W((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
-	iRV += printfx_nolock("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d",
+	iRV += printfx("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb, psDS18X20->sEWx.Var.varVal.x32.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
-	iRV += printfx_nolock("  Res=%d", psDS18X20->Res + 9) ;
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
-		iRV += printfx_nolock("  Conf=0x%02X %s", psDS18X20->fam28.Conf, psDS18X20->fam28.Conf >> 5 != psDS18X20->Res ? "ERROR" : "") ; ;
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\n") ;
+	iRV += printfx("  Res=%d", psDS18X20->Res + 9) ;
+		iRV += printfx("  Conf=0x%02X %s", psDS18X20->fam28.Conf, psDS18X20->fam28.Conf >> 5 != psDS18X20->Res ? "ERROR" : "") ; ;
+		iRV += printfx("\n") ;
 	return iRV ;
 }
 
 int32_t OWPlatformCB_PrintChan(flagmask_t FlagMask, ow_chan_info_t * psCI) {
-	int32_t iRV = printfx_nolock("OW ch=%d  ", FlagMask.uCount) ;
 	if (psCI->LastRead)
-		iRV += printfx_nolock("%r  ", FlagMask.uCount, psCI->LastRead) ;
 	if (psCI->LastROM.Family)
+	int32_t iRV = printfx("OW ch=%d  ", FlagMask.uCount) ;
+		iRV += printfx("%r  ", FlagMask.uCount, psCI->LastRead) ;
 		iRV += OWPlatformCB_PrintROM((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
-	iRV += printfx_nolock("  DS18B=%d  DS18S=%d  DS18X=%d", psCI->ds18b20, psCI->ds18s20, psCI->ds18xxx) ;
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\n") ;
+	iRV += printfx("  DS18B=%d  DS18S=%d  DS18X=%d", psCI->ds18b20, psCI->ds18s20, psCI->ds18xxx) ;
+		iRV += printfx("\n") ;
 	return iRV ;
 }
 
@@ -159,14 +159,14 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 	for (uint8_t OWBus = 0; OWBus < OWNumChan; ++OWBus) {
 		OWPlatformChanLog2Phy(psOW, OWBus) ;
 		if (OWChannelSelect(psOW) == false)	{
-			IF_SL_INFO(debugTRACK, "Channel selection error") ;
+			IF_TRACK(debugTRACK, "Channel selection error") ;
 			break ;
 		}
 		if (Family) {
 			OWTargetSetup(psOW, Family) ;
 			iRV = OWSearch(psOW, false) ;
 			if (psOW->ROM.Family != Family) {
-				IF_SL_INFO(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
+				IF_TRACK(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
 				continue ;
 			}
 		} else {

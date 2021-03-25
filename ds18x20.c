@@ -128,7 +128,7 @@ int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
 	else
 		iRV = OWReset(&psDS18X20->sOW) ;				// terminate read process
 	IF_myASSERT(debugRESULT, iRV != 0) ;
-	IF_PRINT(debugTRACK, "SP Read: %-'+b\n", Len, psDS18X20->RegX) ;
+	IF_PRINT(debugREAD, "SP Read: %-'+b\n", Len, psDS18X20->RegX) ;
 	return iRV ;
 }
 
@@ -202,7 +202,7 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	if (iRV > 0) {
 		DevCount += iRV ;
 	}
-	IF_PRINT(debugTRACK, "  Enum=%d\n", DevCount) ;
+	IF_PRINT(debugREAD, "  Enum=%d\n", DevCount) ;
 
 	// Do once-off initialization for work structure entries
 	epi_t	sEI ;
@@ -274,10 +274,8 @@ int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	psDS18X20->sEWx.Var.varVal.x32.f32 = (float) u16Adj / 16.0 ;
 
 #if		(debugCONVERT)
- 	printfx_lock() ;
 	OWPlatformCB_PrintDS18(makeMASKFLAG(1,0,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
-	printfx_nolock("  u16A=0x%04X\n", u16Adj) ;
-	printfx_unlock() ;
+	printfx("  u16A=0x%04X\n", u16Adj) ;
 #endif
 	return true ;
 }
