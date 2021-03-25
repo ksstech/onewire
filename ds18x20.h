@@ -41,22 +41,22 @@
 // See http://www.catb.org/esr/structure-packing/
 // Also http://c0x.coding-guidelines.com/6.7.2.1.html
 
-struct fam10 { uint8_t Res0, Res1, Remain, Count ; } __attribute__((packed)) ;
-struct fam28 { uint8_t Conf, Res1, Res2, Res3 ; } __attribute__((packed)) ;
-DUMB_STATIC_ASSERT(sizeof(struct fam10) == sizeof(struct fam28)) ;
+typedef	struct __attribute__((packed)) fam10 { uint8_t Res0, Res1, Remain, Count ; } fam10 ;
+typedef	struct __attribute__((packed)) fam28 { uint8_t Conf, Res1, Res2, Res3 ; } fam28 ;
+DUMB_STATIC_ASSERT(sizeof(fam10) == sizeof(fam28)) ;
 
 typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20 9[12] bit Temperature sensors
 	onewire_t	sOW ;									// size = 12
 	union {												// Scratchpad
-		struct {
-			uint8_t		Tlsb, Tmsb ;					// last RAM sample
-			uint8_t		Thi, Tlo ;						// Integer portion of Lo & Hi alarm thresholds
+		struct __attribute__((packed)) {
+			uint8_t	Tlsb, Tmsb ;						// last RAM sample
+			uint8_t	Thi, Tlo ;							// Integer portion of Lo & Hi alarm thresholds
 			union {
-				struct fam10 fam10 ;
-				struct fam28 fam28 ;
+				fam10 fam10 ;
+				fam28 fam28 ;
 			} ;
 			uint8_t	CRC ;								// calculated CRC of previous 8 bytes
-		} __attribute__((packed)) ;
+		} ;
 		uint8_t	RegX[9] ;
 	} ;
 	uint8_t	Idx		: 3 ;							// Endpoint index (0->7) of this specific device
