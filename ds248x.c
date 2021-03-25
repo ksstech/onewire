@@ -1,27 +1,9 @@
 /*
- * Copyright 2020 AM Maree/KSS Technologies (Pty) Ltd.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
- * and associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
+ * Copyright 2020-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
-/*
- * ds248x.c
- */
-
+#include	"FreeRTOS_Support.h"
+#include	"hal_config.h"
 #include	"onewire_platform.h"
 #include	"printfx.h"
 #include	"syslog.h"
@@ -55,10 +37,12 @@
 
 const char * const RegNames[ds248xREG_NUM] = {"Stat", "Data", "Chan", "Conf", "Port" } ;
 const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
+
 #if		(halHAS_DS2482_800 > 0)
 	// DS2482-800 channel# check xlat	0	  1		2	  3		4	  5		6	  7
 	static const uint8_t	ds248x_V2N[8] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 } ;
 #endif
+
 #if		(halHAS_DS2484 > 0)
 	static const uint8_t	Trstl[16]	= { 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74 } ;
 	static const uint8_t	Tmsp0[16]	= { 58, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 76, 76, 76, 76, 76 } ;
@@ -91,9 +75,9 @@ int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
 		if (psDS248X->Rptr == ds248xREG_STAT) {
 			ds248xCheckStatus(psDS248X) ;
 		}
-		return true ;
+		return 1 ;
 	}
-	return false ;
+	return 0 ;
 }
 
 int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t Delay) {
@@ -120,10 +104,10 @@ int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t T
 			if (psDS248X->OWB) {
 				IF_myASSERT(debugRESULT, 0) ;
 				ds248xReset(psDS248X) ;
-				return false ;
+				iRV = 0 ;
 			}
 		}
-		return true ;
+		iRV = 1 ;
 	}
 	return false ;
 }
@@ -148,7 +132,7 @@ void	ds248xPrintConfig(ds248x_t * psDS248X, uint8_t Reg) {
 /**
  * ds248xReset() - does device HW reset
  * @brief	if reset successful reads & (indirectly) stores status, also reset CONF & CurChan values
- * @return	status of RST bit ie true or false
+ * @return	status of RST bit ie 1 or 0
  */
 int32_t ds248xReset(ds248x_t * psDS248X) {
 	// Device Reset
@@ -177,8 +161,8 @@ int32_t ds248xReset(ds248x_t * psDS248X) {
  * options are provided in the lower nibble of the provided config byte.
  * The upper nibble in bitwise inverted when written to the DS248x.
  *
- * Returns:  true: config written and response correct
- *			  false: response incorrect
+ * Returns:  1: config written and response correct
+ *			  0: response incorrect
  */
 int32_t ds248xWriteConfig(ds248x_t * psDS248X) {
 // Write configuration (Case A)
@@ -194,9 +178,9 @@ int32_t ds248xWriteConfig(ds248x_t * psDS248X) {
 	if (psDS248X->Rconf != config) {
 		IF_myASSERT(debugRESULT, 0) ;
 		ds248xReset(psDS248X) ;
-		return false ;
+		return 0 ;
 	}
-	return true ;
+	return 1 ;
 }
 
 /**
@@ -209,15 +193,15 @@ int32_t	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 	if ((Reg == ds248xREG_CHAN && psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
 		(Reg == ds248xREG_PADJ && psDS248X->psI2C->Type != i2cDEV_DS2484)) {
 		ds248xPrintConfig(psDS248X, Reg) ;
-		return false ;
 		printfx("Invalid register combination!!!\n") ;
+		return 0 ;
 	}
 	psDS248X->Rptr	= Reg ;
 	uint8_t	cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg } ;
 	IF_SYSTIMER_START(debugTIMING, systimerDS248xA) ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0) ;
 	IF_SYSTIMER_STOP(debugTIMING, systimerDS248xA) ;
-	return true ;
+	return 1 ;
 }
 
 // ############################### DS248x(-x00) DEBUG support functions ############################
@@ -229,7 +213,7 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 	int32_t iRV = 0 ;
 	switch (Reg) {
 	case ds248xREG_STAT:
-		if (ds248xReadRegister(psDS248X, Reg) == false)
+		if (ds248xReadRegister(psDS248X, Reg) == 0)
 			return 0 ;
 		iRV += printfx("STAT(0)=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
 				psDS248X->Rstat,
@@ -248,9 +232,9 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 	case ds248xREG_CHAN:
 #if		(halHAS_DS2482_800 > 0)
 		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800)
-			return false ;
-		if (ds248xReadRegister(psDS248X, Reg) == false)
-			return false ;
+			return 0 ;
+		if (ds248xReadRegister(psDS248X, Reg) == 0)
+			return 0 ;
 		{	int32_t Chan ;										// Channel, start by finding the matching Channel #
 			for (Chan = 0; (Chan < psDS248X->NumChan) && (psDS248X->Rchan != ds248x_V2N[Chan]); ++Chan) ;
 			IF_myASSERT(debugRESULT, Chan < psDS248X->NumChan && psDS248X->Rchan == ds248x_V2N[Chan]) ;
@@ -259,7 +243,7 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 #endif
 		break ;
 	case ds248xREG_CONF:
-		if (ds248xReadRegister(psDS248X, Reg) == false)
+		if (ds248xReadRegister(psDS248X, Reg) == 0)
 			return 0 ;
 		iRV += printfx("CONF(3)=0x%02X  1WS=%c  SPU=%c  PDN=%c  APU=%c\n",
 				psDS248X->Rconf,
@@ -273,7 +257,7 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 		if (psDS248X->psI2C->Type != i2cDEV_DS2484)
 			return 0 ;
 		// PAR = 0b000 ~ tRSTL
-		if (ds248xReadRegister(psDS248X, Reg) == false)
+		if (ds248xReadRegister(psDS248X, Reg) == 0)
 			return 0 ;
 		iRV += printfx("PADJ(4a)=0x%02X  PAR=0  OD=%c  tRSTL=%d uS\n",
 				psDS248X->Rpadj, psDS248X->OD ? '1' : '0',
@@ -327,7 +311,7 @@ void ds248xReportAll(void) {
 /**
  * ds248xDeviceIdentify() - device reset+register reads to ascertain exact device type
  * Returns: erSUCCESS if identified  device was detected and written
- *			 false device not detected
+ *			 0 device not detected
  */
 int32_t	ds248xDeviceIdentify(i2c_dev_info_t * psI2C_DI) {
 #if		(halHAS_DS248X > 0)
@@ -383,13 +367,19 @@ int32_t	ds248xDriverConfig(i2c_dev_info_t * psI2C_DI) {
 	psDS248X->psI2C		= psI2C_DI ;
 	switch(psI2C_DI->Type) {
 #if		(halHAS_DS2482_10X > 0)
-		case i2cDEV_DS2482_10X:		psDS248X->NumChan = 1 ;			break ;
+		case i2cDEV_DS2482_10X:
+			psDS248X->NumChan = 1 ;
+			break ;
 #endif
 #if		(halHAS_DS2482_800 > 0)
-		case i2cDEV_DS2482_800:		psDS248X->NumChan = 8 ;			break ;
+		case i2cDEV_DS2482_800:
+			psDS248X->NumChan = 8 ;
+			break ;
 #endif
 #if		(halHAS_DS2484 > 0)
-		case i2cDEV_DS2484:			psDS248X->NumChan = 1 ;			break ;
+		case i2cDEV_DS2484:
+			psDS248X->NumChan = 1 ;
+			break ;
 #endif
 		default: myASSERT(0) ;
 	}
@@ -430,13 +420,13 @@ int32_t ds248xOWChannelSelect(ds248x_t * psDS248X, uint8_t Chan) {
 		if (psDS248X->Rchan != ds248x_V2N[Chan]) {
 			SL_ERR("Read %d != %d Expected", psDS248X->RegX[psDS248X->Rptr], ds248x_V2N[Chan]) ;
 			IF_myASSERT(debugRESULT, 0) ;
-			return false ;
+			return 0 ;
 		}
 		psDS248X->CurChan	= Chan ;
-		return true ;
+		return 1 ;
 	}
 #endif
-	return true ;
+	return 1 ;
 }
 
 int32_t	ds248xOWSetSPU(ds248x_t * psDS248X) {
@@ -469,8 +459,9 @@ int32_t	ds248xOWSpeed(ds248x_t * psDS248X, bool speed) {
 }
 
 int32_t ds248xOWLevel(ds248x_t * psDS248X, bool level) {
-	if (level)											// DS248X only allow disabling STRONG
+	if (level == owPOWER_STRONG) {						// DS248X only allow disabling STRONG
 		return psDS248X->SPU ;
+	}
 	psDS248X->SPU = level ;
 	ds248xWriteConfig(psDS248X) ;
 	IF_myASSERT(debugRESULT, psDS248X->SPU == level) ;
@@ -508,8 +499,9 @@ void	ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t sendbyte) {
 }
 
 int32_t ds248xOWWriteBytePower(ds248x_t * psDS248X, uint8_t sendbyte) {
-	if (ds248xOWSetSPU(psDS248X) == false)
-		return false ;
+	if (ds248xOWSetSPU(psDS248X) == 0) {
+		return 0 ;
+	}
 	ds248xOWWriteByte(psDS248X, sendbyte) ;
 	return psDS248X->SPU ;
 }

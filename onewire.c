@@ -1,25 +1,5 @@
 /*
- * Copyright 2014-20 AM Maree/KSS Technologies (Pty) Ltd.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
- * and associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- */
-
-/*
- * onewire.c
+ * Copyright 2014-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #include	"hal_config.h"
@@ -30,7 +10,7 @@
 #include	"syslog.h"
 #include	"x_errors_events.h"
 
-#if		defined(ESP_PLATFORM)
+#ifdef	ESP_PLATFORM
 	#include	"esp32/rom/crc.h"					// ESP32 ROM routine
 #else
 	#include	"crc-barr.h"						// Barr group CRC
@@ -72,15 +52,15 @@ int32_t	OWSetSPU(onewire_t * psOW) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWSetSPU(&psaDS248X[psOW->DevNum]) ;
 #endif
-	default:	myASSERT(0) ;	return false ;
+	default:	myASSERT(0) ;	return 0 ;
 	}
 }
 
 /**
  * Reset all of the devices on the 1-Wire Net and return the result.
  *
- * Returns: true(1):  presence pulse(s) detected, device(s) reset
- *			 false(0): no presence pulses detected
+ * Returns	1 :  presence pulse(s) detected, device(s) reset
+ *			0 : no presence pulses detected
  */
 int32_t OWReset(onewire_t * psOW) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
@@ -88,7 +68,7 @@ int32_t OWReset(onewire_t * psOW) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWReset(&psaDS248X[psOW->DevNum]) ;
 #endif
-	default:	myASSERT(0) ;	return false ;
+	default:	myASSERT(0) ;	return 0 ;
 	}
 }
 
@@ -106,7 +86,7 @@ int32_t OWSpeed(onewire_t * psOW, bool speed) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWSpeed(&psaDS248X[psOW->DevNum], speed) ;
 #endif
-	default:	myASSERT(0) ;	return false ;
+	default:	myASSERT(0) ;	return 0 ;
 	}
 }
 
@@ -123,7 +103,7 @@ int32_t OWLevel(onewire_t * psOW, bool level) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWLevel(&psaDS248X[psOW->DevNum], level) ;
 #endif
-	default:	myASSERT(0) ;	return false ;
+	default:	myASSERT(0) ;	return 0 ;
 	}
 }
 
@@ -131,7 +111,7 @@ int32_t OWLevel(onewire_t * psOW, bool level) {
  * OWCheckCRC() - Checks if CRC is ok (ROM Code or Scratch PAD RAM)
  * @param	buf			buffer to be checked for proper CRC
  * @param	buflen		buffer length
- * @return	TRUE if the CRC is correct, FALSE otherwise
+ * @return	1 if the CRC is correct, 0 otherwise
  */
 uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
 	uint8_t data_bit, sr_lsb, fb_bit, shift_reg = 0 ;
@@ -141,11 +121,13 @@ uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
 			sr_lsb		= shift_reg & 0x01 ;
 			fb_bit		= (data_bit ^ sr_lsb) & 0x01 ;
 			shift_reg	= shift_reg >> 1 ;
-			if (fb_bit) shift_reg = shift_reg ^ 0x8c ;
+			if (fb_bit) {
+				shift_reg = shift_reg ^ 0x8c ;
+			}
 		}
 	}
 	IF_PRINT(debugCRC && shift_reg, "CRC=%x FAIL %'-+b\n", shift_reg, buflen, buf) ;
-	return shift_reg ? false : true ;
+	return shift_reg ? 0 : 1 ;
 }
 
 /**
@@ -175,7 +157,7 @@ int32_t	OWSearchTriplet(onewire_t * psOW, uint8_t search_direction) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], search_direction) ;
 #endif
-	default:	myASSERT(0) ;	return false ;
+	default:	myASSERT(0) ;	return 0 ;
 	}
 }
 
@@ -188,7 +170,7 @@ int32_t OWChannelSelect(onewire_t * psOW) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:	return ds248xOWChannelSelect(&psaDS248X[psOW->DevNum], psOW->PhyChan) ;
 #endif
-	default:	myASSERT(0) ;	return false ;
+	default:	myASSERT(0) ;	return 0 ;
 	}
 }
 
@@ -211,7 +193,7 @@ uint8_t OWTouchBit(onewire_t * psOW, uint8_t sendbit) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWTouchBit(&psaDS248X[psOW->DevNum], sendbit) ;
 #endif
-	default:	myASSERT(0) ;	return false ;
+	default:	myASSERT(0) ;	return 0 ;
 	}
 }
 
@@ -228,7 +210,7 @@ void	OWWriteBit(onewire_t * psOW, uint8_t sendbit) { OWTouchBit(psOW, sendbit); 
  *
  * Returns:  1 bit read from 1-Wire Net
  */
-uint8_t OWReadBit(onewire_t * psOW) { return OWTouchBit(psOW, true) ; }
+uint8_t OWReadBit(onewire_t * psOW) { return OWTouchBit(psOW, 1) ; }
 
 /**
  * Send 8 bits of communication to the 1-Wire Net and verify that the
@@ -259,14 +241,15 @@ void	OWWriteByte(onewire_t * psOW, uint8_t sendbyte) {
  *
  * 'sendbyte' - 8 bits to send (least significant bit)
  *
- * Returns:  true: bytes written and echo was the same, strong pullup now on
- *			  false: echo was not the same
+ * Returns:  1: bytes written and echo was the same, strong pullup now on
+ *			  0: echo was not the same
  */
 int32_t OWWriteBytePower(onewire_t * psOW, int32_t sendbyte) {
-	if (OWSetSPU(psOW) != true)
-		return false ;
+	if (OWSetSPU(psOW) != 1) {
+		return 0 ;
+	}
 	OWWriteByte(psOW, sendbyte) ;
-	return true ;
+	return 1 ;
 }
 
 /**
@@ -278,18 +261,19 @@ int32_t OWWriteBytePower(onewire_t * psOW, int32_t sendbyte) {
  * 'applyPowerResponse' - 1 bit response to check, if correct then start
  *								power delivery
  *
- * Returns:  true: bit written and response correct, strong pullup now on
- *			  false: response incorrect
+ * Returns:  1: bit written and response correct, strong pullup now on
+ *			  0: response incorrect
  */
 int32_t OWReadBitPower(onewire_t * psOW, int32_t applyPowerResponse) {
-	if (OWSetSPU(psOW) != true)
-		return false ;
+	if (OWSetSPU(psOW) != 1) {
+		return 0 ;
+	}
 	uint8_t rdbit = OWReadBit(psOW);
 	if (rdbit != applyPowerResponse) {					// check if response was correct
 		OWLevel(psOW, owSPEED_STANDARD);					// if not, turn off strong pull-up
-		return false ;
+		return 0 ;
 	}
-	return true ;
+	return 1 ;
 }
 
 /**
@@ -304,7 +288,7 @@ int32_t	OWReadByte(onewire_t * psOW) {
 #if		(halHAS_DS248X > 0)
 	case owTYPE_DS248X:			return ds248xOWReadByte(&psaDS248X[psOW->DevNum]) ;
 #endif
-	default:	myASSERT(0) ;	return false ;
+	default:	myASSERT(0) ;	return 0 ;
 	}
 }
 
@@ -355,7 +339,7 @@ int32_t	OWReadROM(onewire_t * psOW) {
 	int32_t iRV ;
 	do {
 		for (uint8_t i = 0; i < sizeof(ow_rom_t); ++i) {
-			iRV = OWReadByte(psOW) ;							// read 8x bytes making up the ROM FAM+ID+CRC
+			iRV = OWReadByte(psOW) ;					// read 8x bytes ie ROM FAM+ID+CRC
 			LT_GOTO(iRV, erSUCCESS, exit) ;
 			psOW->ROM.HexChars[i] = iRV ;
 		}
@@ -373,8 +357,9 @@ void	OWAddress(onewire_t * psOW, uint8_t nAddrMethod) {
 	IF_myASSERT(debugPARAM, nAddrMethod == OW_CMD_MATCHROM || nAddrMethod == OW_CMD_SKIPROM) ;
 	OWWriteByte(psOW, nAddrMethod) ;
 	if (nAddrMethod == OW_CMD_MATCHROM) {
-		for (uint8_t i = 0; i < sizeof(ow_rom_t); ++i)
+		for (uint8_t i = 0; i < sizeof(ow_rom_t); ++i) {
 			OWWriteByte(psOW, psOW->ROM.HexChars[i]) ;
+		}
 	}
 }
 
@@ -410,15 +395,15 @@ void	OWFamilySkipSetup(onewire_t * psOW) {
  * continues from the previous search state. The search state
  * can be reset by using the 'OWFirst' function.
  * This function contains one parameter 'alarm_only'.
- * When 'alarm_only' is true (1) the find alarm command
+ * When 'alarm_only' is 1 the find alarm command
  * 0xEC(OW_CMD_SEARCHALARM) is sent instead of
  * the normal search command 0xF0(OW_CMD_SEARCHROM).
  * Using the find alarm command 0xEC will limit the search to only
  * 1-Wire devices that are in an 'alarm' state.
  *
- * Returns:	true (1) : when a 1-Wire device was found and its
+ * Returns:	1: when a 1-Wire device was found and its
  *						  Serial Number placed in the global ROM
- *			false (0): when no new device was found.  Either the
+ *			0: when no new device was found.  Either the
  *						  last search was the last device or there
  *						  are no devices on the 1-Wire Net.
  */
@@ -431,7 +416,7 @@ int32_t OWSearch(onewire_t * psOW, bool alarm_only) {
 			psOW->LastDiscrepancy		= 0 ;
 			psOW->LastDeviceFlag		= 0 ;
 			psOW->LastFamilyDiscrepancy	= 0 ;
-			return false ;
+			return 0 ;
 		}
 		OWWriteByte(psOW, alarm_only ? OW_CMD_SEARCHALARM : OW_CMD_SEARCHROM) ;
 		do {											// loop to do the search
@@ -493,8 +478,8 @@ int32_t OWSearch(onewire_t * psOW, bool alarm_only) {
 
 /**
  * Find the 'first' device on the 1W network
- * Return true  : device found, ROM number in ROM.Number buffer
- *		  false : no device present
+ * Return 1  : device found, ROM number in ROM.Number buffer
+ *		  0 : no device present
  */
 int32_t OWFirst(onewire_t * psOW, bool alarm_only) {
 	psOW->LastDiscrepancy		= 0 ;					// reset the search state
@@ -505,15 +490,15 @@ int32_t OWFirst(onewire_t * psOW, bool alarm_only) {
 
 /**
  * Find the 'next' device on the 1W network
- * Return true  : device found, ROM number in ROM.Number buffer
- *		  false : device not found, end of search
+ * Return 1  : device found, ROM number in ROM.Number buffer
+ *		  0 : device not found, end of search
  */
 int32_t OWNext(onewire_t * psOW, bool alarm_only) { return OWSearch(psOW, alarm_only) ; }
 
 /**
  * Verify the device with the ROM number in ROM buffer is present.
- * Return true  : device verified present
- *		  false : device not present
+ * Return 1  : device verified present
+ *		  0 : device not present
  */
 int32_t OWVerify(onewire_t * psOW) {
 	onewire_t	backup ;
@@ -521,11 +506,11 @@ int32_t OWVerify(onewire_t * psOW) {
 	psOW->LastDiscrepancy	= 64 ;				// set search to find the same device
 	psOW->LastDeviceFlag	= 0 ;
 
-	int32_t iRV = OWSearch(psOW, false) ;
-	if (iRV == true) {
+	int32_t iRV = OWSearch(psOW, 0) ;
+	if (iRV == 1) {
 		for (int32_t i = 0; i < sizeof(ow_rom_t); ++i) {
 			if (backup.ROM.HexChars[i] != psOW->ROM.HexChars[i]) {
-				iRV = false ;
+				iRV = 0 ;
 				break ;
 			}
 		}

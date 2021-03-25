@@ -30,10 +30,12 @@
 
 // ################################# Platform related variables ####################################
 
-const char * const OWBusType[] = { "DS248x", "RTM" "GPIO" } ;
 ow_chan_info_t * psaOW_CI = NULL ;					// Array of last read ROM & timestamp info
-uint8_t		OWNumChan = 0, OWNumDev = 0 ;
 ow_flags_t	OWflags ;
+
+static const char * const OWBusType[] = { "DS248x", "RTM" "GPIO" } ;
+static uint8_t	OWNumChan = 0 ;
+static uint8_t	OWNumDev = 0 ;
 
 // ################################# Application support functions #################################
 
@@ -55,12 +57,12 @@ int32_t	OWPlatformChanLog2Phy(onewire_t * psOW, uint8_t Chan) {
 			psOW->DevNum	= i ;
 			psOW->PhyChan	= Chan - psDS248X->Lo ;
 //			TRACK("Done: Ch=%d  DN=%d  N=%d  L=%d  H=%d  P=%d", Chan, psOW->DevNum, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi, psOW->PhyChan) ;
-			return true ;
+			return 1 ;
 		}
 	}
 #endif
 	IF_myASSERT(debugRESULT, 0) ;
-	return false ;
+	return 0 ;
 }
 
 int32_t	OWPlatformChanPhy2Log(onewire_t * psOW) {
@@ -84,45 +86,54 @@ ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t LogChan) {
  */
 int32_t	OWPlatformCB_PrintROM(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 	int32_t iRV = 0 ;
-	if (FlagMask.bRT)
-	if (FlagMask.bCount)
-	if (FlagMask.bNL)
+	if (FlagMask.bRT) {
 		iRV += printfx("%!.R: ", RunTime) ;
+	}
+	if (FlagMask.bCount) {
 		iRV += printfx("#%u ", FlagMask.uCount) ;
+	}
 	iRV += printfx("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ;
+	if (FlagMask.bNL) {
 		iRV += printfx("\n") ;
+	}
 	return iRV ;
 }
 
 int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) {
 	int32_t iRV = OWPlatformCB_PrintROM((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
-	if (FlagMask.bNL)
 	iRV += printfx("  Log=%d  Type=%s[%d]  Phy=%d", OWPlatformChanPhy2Log(psOW), OWBusType[psOW->BusType], psOW->DevNum, psOW->PhyChan) ;
+	if (FlagMask.bNL) {
 		iRV += printfx("\n") ;
+	}
 	return iRV ;
 }
 
 int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	int32_t iRV = OWPlatformCB_Print1W((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
-	iRV += printfx("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d",
-		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb, psDS18X20->sEWx.Var.varVal.x32.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
-	if (FlagMask.bNL)
+	iRV += printfx("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d", psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
+		psDS18X20->sEWx.Var.varVal.x32.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
 	iRV += printfx("  Res=%d", psDS18X20->Res + 9) ;
+	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) {
 		iRV += printfx("  Conf=0x%02X %s", psDS18X20->fam28.Conf, psDS18X20->fam28.Conf >> 5 != psDS18X20->Res ? "ERROR" : "") ; ;
+	}
+	if (FlagMask.bNL) {
 		iRV += printfx("\n") ;
+	}
 	return iRV ;
 }
 
 int32_t OWPlatformCB_PrintChan(flagmask_t FlagMask, ow_chan_info_t * psCI) {
-	if (psCI->LastRead)
-	if (psCI->LastROM.Family)
 	int32_t iRV = printfx("OW ch=%d  ", FlagMask.uCount) ;
+	if (psCI->LastRead) {
 		iRV += printfx("%r  ", FlagMask.uCount, psCI->LastRead) ;
+	}
+	if (psCI->LastROM.Family) {
 		iRV += OWPlatformCB_PrintROM((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
-	if (FlagMask.bNL)
+	}
 	iRV += printfx("  DS18B=%d  DS18S=%d  DS18X=%d", psCI->ds18b20, psCI->ds18s20, psCI->ds18xxx) ;
+	if (FlagMask.bNL) {
 		iRV += printfx("\n") ;
+	}
 	return iRV ;
 }
 
@@ -158,32 +169,35 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 	uint32_t uCount = 0 ;
 	for (uint8_t OWBus = 0; OWBus < OWNumChan; ++OWBus) {
 		OWPlatformChanLog2Phy(psOW, OWBus) ;
-		if (OWChannelSelect(psOW) == false)	{
+		if (OWChannelSelect(psOW) == 0)	{
 			IF_TRACK(debugTRACK, "Channel selection error") ;
 			break ;
 		}
 		if (Family) {
 			OWTargetSetup(psOW, Family) ;
-			iRV = OWSearch(psOW, false) ;
+			iRV = OWSearch(psOW, 0) ;
 			if (psOW->ROM.Family != Family) {
 				IF_TRACK(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
 				continue ;
 			}
 		} else {
-			iRV = OWFirst(psOW, false) ;
+			iRV = OWFirst(psOW, 0) ;
 		}
 		while (iRV) {
 			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
 			iRV = Handler((flagmask_t) uCount, psOW) ;
-			if (iRV < erSUCCESS)
+			if (iRV < erSUCCESS) {
 				break ;
-			if (iRV > 0)
+			}
+			if (iRV > 0) {
 				++uCount ;
-			iRV = OWNext(psOW, false) ;						// try to find next device (if any)
+			}
+			iRV = OWNext(psOW, 0) ;						// try to find next device (if any)
 		}
-		if (iRV < erSUCCESS)
+		if (iRV < erSUCCESS) {
 			break ;
+		}
 	}
 	IF_SL_ERR(iRV < erSUCCESS, "Handler error=%d", iRV) ;
 	return iRV < erSUCCESS ? iRV : uCount ;
@@ -195,19 +209,19 @@ int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewi
 	uint32_t uCount = 0 ;
 	for (uint8_t x = 0; x < OWNumChan; ++x) {
 		OWPlatformChanLog2Phy(psOW, x) ;
-		if (OWChannelSelect(psOW) == false)	{
+		if (OWChannelSelect(psOW) == 0)	{
 			IF_SL_INFO(debugTRACK, "Channel selection error") ;
 			break ;
 		}
 		if (Family) {
 			OWTargetSetup(psOW, Family) ;
-			iRV = OWSearch(psOW, false) ;
+			iRV = OWSearch(psOW, 0) ;
 			if (psOW->ROM.Family != Family) {
 				IF_SL_INFO(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
 				continue ;
 			}
 		} else {
-			iRV = OWFirst(psOW, false) ;
+			iRV = OWFirst(psOW, 0) ;
 		}
 		while (iRV) {
 			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
@@ -217,7 +231,7 @@ int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewi
 				break ;
 			if (iRV > 0)
 				++uCount ;
-			iRV = OWNext(psOW, false) ;						// try to find next device (if any)
+			iRV = OWNext(psOW, 0) ;						// try to find next device (if any)
 		}
 		if (iRV < erSUCCESS)
 			break ;
