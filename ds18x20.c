@@ -85,6 +85,7 @@ cmnd_t saDS18Cmnd[] = {
 
 ds18x20_t *	psaDS18X20	= NULL ;
 uint8_t		Fam10_28Count	= 0 ;
+static uint8_t	PrevBus ;
 
 // #################################### Local ONLY functions #######################################
 
@@ -123,10 +124,10 @@ int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
 	memset(psDS18X20->RegX, 0xFF, Len) ;				// 0xFF to read
 	OWBlock(&psDS18X20->sOW, psDS18X20->RegX, Len) ;
 
-	int32_t iRV ;
+	int32_t iRV = 1 ;									// default return status
 	if (Len == SIZEOF_MEMBER(ds18x20_t, RegX)) {		// if full scratchpad read, check CRC
 		iRV = OWCheckCRC(psDS18X20->RegX, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
-	IF_myASSERT(debugRESULT, iRV != 0) ;
+		IF_myASSERT(debugRESULT, iRV != 0) ;			// ensure CRC is correct
 	} else {
 		OWReset(&psDS18X20->sOW) ;						// terminate read
 	}
@@ -315,16 +316,10 @@ void	ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 
 float	ds18x20GetTemperature(epw_t * psEWS) { return psEWS->Var.varVal.x32.f32 ; }
 
-int32_t	ds18x20ReadConvertAll(struct epw_t * psEWP) {
+int32_t	ds18x20ReadConvertAll(epw_t * psEWP) {
+	PrevBus = 0xFF ;
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
-#if 0				// read & convert each enumerated, 1 by 1
-		if (ds18x20SampleTemperature(psDS18X20, OW_CMD_MATCHROM) == 0) {
-			SL_ERR("Sampling failed") ;
-			continue ;
-		}
-		static uint8_t	PrevBus = 0xFF ;
-#else
 		if (psDS18X20->sOW.PhyChan != PrevBus) {
 			if (ds18x20SampleTemperature(psDS18X20, OW_CMD_SKIPROM) == 0) {
 				SL_ERR("Sampling failed") ;
@@ -332,7 +327,6 @@ int32_t	ds18x20ReadConvertAll(struct epw_t * psEWP) {
 			}
 			PrevBus = psDS18X20->sOW.PhyChan ;
 		}
-#endif
 		if (ds18x20ReadTemperature(psDS18X20)) {
 			ds18x20ConvertTemperature(psDS18X20) ;
 		} else {
