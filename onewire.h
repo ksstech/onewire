@@ -8,7 +8,7 @@
 
 #pragma		once
 
-#include	"hal_config.h"
+#include	"hal_variables.h"
 #include	"hal_i2c.h"
 #include	"ds248x.h"
 
