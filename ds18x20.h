@@ -99,8 +99,8 @@ struct epw_t ;
 int32_t	ds18x20ReadConvertAll(struct epw_t * psEpWork) ;
 int32_t	ds18x20ScanAlarmsAll(void) ;
 
-int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) ;
-int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) ;
+int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) ;
+int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) ;
 struct rule_t ;
 int32_t	ds18x20ConfigMode (struct rule_t * psRule) ;
 int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) ;

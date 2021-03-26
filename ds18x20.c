@@ -357,29 +357,36 @@ int32_t	ds18x20ScanAlarmsAll(void) {
  SKIP -SPU +XXXmS		Work
 
  */
-int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int8_t i8Res) {
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, i8Res, 12, uint8_t)) {
-		uint8_t u8Res = ((i8Res - 9) << 5) | 0x1F ;
+int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
+	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
+		uint8_t u8Res = ((Res - 9) << 5) | 0x1F ;
 		if (psDS18X20->fam28.Conf != u8Res) {
-			IF_PRINT(debugCONFIG, "Config Res:0x%02X -> 0x%02X (%d -> %d)\n", psDS18X20->fam28.Conf, u8Res, psDS18X20->Res + 9, i8Res) ;
-			psDS18X20->fam28.Conf = u8Res ;
-			psDS18X20->Res = i8Res - 9 ;
+			IF_PRINT(debugCONFIG, "Config Res:0x%02X -> 0x%02X (%d -> %d)\n",
+					psDS18X20->fam28.Conf, u8Res, psDS18X20->Res + 9, Res) ;
+			psDS18X20->fam28.Conf = Res ;
+			psDS18X20->Res = Res - 9 ;
 			ds18x20WriteSP(psDS18X20) ;
 			return 1 ;
 		}
+		return 0 ;
 	}
-	return 0 ;
+	SET_ERRINFO("Invalid Family/Resolution") ;
+	return erSCRIPT_INV_VALUE ;
 }
 
-int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int8_t i8Lo, int8_t i8Hi) {
-	if (psDS18X20->Tlo != i8Lo || psDS18X20->Thi != i8Hi) {
-		IF_PRINT(debugCONFIG, "Config Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, i8Lo, psDS18X20->Thi, i8Hi) ;
-		psDS18X20->Tlo = i8Lo ;
-		psDS18X20->Thi = i8Hi ;
-		ds18x20WriteSP(psDS18X20) ;
-		return 1 ;
+int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
+	if (INRANGE(-128, Lo, 127, int) && INRANGE(128, Hi, 127, int)) {
+		if (psDS18X20->Tlo != Lo || psDS18X20->Thi != Hi) {
+			IF_PRINT(debugCONFIG, "Config Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
+			psDS18X20->Tlo = Lo ;
+			psDS18X20->Thi = Hi ;
+			ds18x20WriteSP(psDS18X20) ;
+			return 1 ;
+		}
+		return 0 ;
 	}
-	return 0 ;
+	SET_ERRINFO("Invalid Lo/Hi alarm limits") ;
+	return erSCRIPT_INV_VALUE ;
 }
 
 enum { optINVALID = 0, optRESOLUTION, optTHRESHOLDS, optWRITE } ;
@@ -399,6 +406,7 @@ int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
 	if (Xcur == 255) {									// non-specific total count ?
 		Xcur = Xmax ;									// yes, set to actual count.
 	} else if (Xcur > Xmax) {
+		SET_ERRINFO("Invalid EP Index") ;
 		return erSCRIPT_INV_INDEX ;
 	}
 	if (Xcur == Xmax) {
@@ -409,21 +417,22 @@ int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
 	int p0 = *(paX32.pi32 + p++);
 	int p1 = *(paX32.pi32 + p++);
 	int p2 = *(paX32.pi32 + p++);
-	int32_t iRV = erSUCCESS ;
+	int32_t iRV = 0 ;
 
 	do {
 		ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
 		switch (p0) {
 		case optRESOLUTION:
-			ds18x20SetResolution(psDS18X20, p1) ;
+			iRV = ds18x20SetResolution(psDS18X20, p1) ;
 			break ;
 		case optTHRESHOLDS:
-			ds18x20SetAlarms(psDS18X20, p1, p2) ;
+			iRV = ds18x20SetAlarms(psDS18X20, p1, p2) ;
 			break ;
 		case optWRITE:
-			ds18x20WriteSP(psDS18X20) ;
+			iRV = ds18x20WriteSP(psDS18X20) ;
 			break ;
 		default:
+			SET_ERRINFO("Invalid Mode (p0)") ;
 			iRV = erSCRIPT_INV_MODE ;
 		}
 		if (iRV < erSUCCESS) {
