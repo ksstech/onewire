@@ -18,6 +18,8 @@
 
 #include	<string.h>
 
+// ################################ Global/Local Debug macros ######################################
+
 #define	debugFLAG					0xD000
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
@@ -111,7 +113,7 @@ int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) {
 int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	int32_t iRV = OWPlatformCB_Print1W((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
 	iRV += printfx("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d", psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
-		psDS18X20->sEWx.Var.varVal.x32.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
+		psDS18X20->sEWx.Var.val.x32.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
 	iRV += printfx("  Res=%d", psDS18X20->Res + 9) ;
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) {
 		iRV += printfx("  Conf=0x%02X %s", psDS18X20->fam28.Conf, psDS18X20->fam28.Conf >> 5 != psDS18X20->Res ? "ERROR" : "") ; ;
@@ -290,9 +292,9 @@ int32_t	OWPlatformConfig(void) {
 
 		// enumerate any/all physical devices (possibly) (permanently) attached to individual channel(s)
 		onewire_t	sOW ;
-		if ((iRV = OWPlatformScanner(0, OWPlatformCB_Count, &sOW)) > 0)
+		if ((iRV = OWPlatformScanner(0, OWPlatformCB_Count, &sOW)) > 0) {
 			OWNumDev += iRV ;
-
+		}
 #if		(halHAS_DS1990X > 0)
 		IF_SL_INFO(debugTRACK && Family01Count, "DS1990x found %d devices", Family01Count) ;
 		iRV = ds1990xConfig(URI_DS1990X) ;				// cannot enumerate, simple config
@@ -301,8 +303,9 @@ int32_t	OWPlatformConfig(void) {
 
 #if		(halHAS_DS18X20 > 0)
 		IF_SL_INFO(debugTRACK && Fam10_28Count, "DS18x20 found %d devices", Fam10_28Count) ;
-		if (Fam10_28Count)
+		if (Fam10_28Count) {
 			iRV = ds18x20Enumerate(URI_DS18X20) ;		// enumerate & config individually
+		}
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1820A, systimerTICKS, "DS1820A", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1820B, systimerTICKS, "DS1820B", myMS_TO_TICKS(1), myMS_TO_TICKS(10)) ;
 #endif
