@@ -437,7 +437,7 @@ int32_t ds248xOWChannelSelect(ds248x_t * psDS248X, uint8_t Chan) {
 		// against the code expected, but store the actual channel number if successful
 		if (psDS248X->Rchan != ds248x_V2N[Chan]) {
 			SL_ERR("Read %d != %d Expected", psDS248X->RegX[psDS248X->Rptr], ds248x_V2N[Chan]) ;
-			IF_myASSERT(debugRESULT, 0) ;
+//			IF_myASSERT(debugRESULT, 0) ;
 			return 0 ;
 		}
 		psDS248X->CurChan	= Chan ;
