@@ -375,7 +375,7 @@ int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 }
 
 int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
-	if (INRANGE(-128, Lo, 127, int) && INRANGE(128, Hi, 127, int)) {
+	if (INRANGE(-128, Lo, 127, int) && INRANGE(-128, Hi, 127, int)) {
 		if (psDS18X20->Tlo != Lo || psDS18X20->Thi != Hi) {
 			IF_PRINT(debugCONFIG, "Config Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
 			psDS18X20->Tlo = Lo ;
