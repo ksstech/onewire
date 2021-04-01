@@ -69,7 +69,7 @@ int32_t	OWPlatformCB_ReadDS1990X(flagmask_t sFM, onewire_t * psOW) {
 	}
 	psOW_CI->LastROM.Value	= psOW->ROM.Value ;
 	psOW_CI->LastRead		= NowRead ;
-	xTaskNotify(EventsHandle, 1UL << (LogChan + se1W_FIRST), eSetBits) ;
+	xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits) ;
 	portYIELD() ;
 #if		(debugEVENTS)
 	sFM.bRT	= 1 ;

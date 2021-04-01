@@ -175,10 +175,10 @@ int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
 	memset(psEWx, 0, sizeof(epw_t)) ;
 	psEWx->uri						= URI_DS18X20 ;
 	psEWx->idx						= sFM.uCount ;
-	psEWx->Var.def.cv.vt	= vtVALUE ;
-	psEWx->Var.def.cv.vs	= vs32B ;
-	psEWx->Var.def.cv.vf	= vfFXX ;
-	psEWx->Var.def.cv.vc	= 1 ;
+	psEWx->var.def.cv.vt	= vtVALUE ;
+	psEWx->var.def.cv.vs	= vs32B ;
+	psEWx->var.def.cv.vf	= vfFXX ;
+	psEWx->var.def.cv.vc	= 1 ;
 	ds18x20Initialize(psDS18X20) ;
 
 	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(OWPlatformChanPhy2Log(psOW)) ;
@@ -215,9 +215,9 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	IF_myASSERT(debugRESULT, halCONFIG_inFLASH(sEI.psES) && halCONFIG_inSRAM(sEI.psEW)) ;
 
 	sEI.psEW->uri					= xUri ;
-	sEI.psEW->Var.def.cv.pntr	= 1 ;
-	sEI.psEW->Var.def.cv.vc= DevCount ;		// number enumerated
-	sEI.psEW->Var.val.px.pv	= (void *) &sDS18X20Func ;
+	sEI.psEW->var.def.cv.pntr	= 1 ;
+	sEI.psEW->var.def.cv.vc= DevCount ;		// number enumerated
+	sEI.psEW->var.val.px.pv	= (void *) &sDS18X20Func ;
 
 	if (DevCount == Fam10_28Count) {
 		iRV = DevCount ;
@@ -278,7 +278,7 @@ int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psD
 int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const uint8_t	u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
 	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
-	psDS18X20->sEWx.Var.val.x32.f32 = (float) u16Adj / 16.0 ;
+	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
 
 #if		(debugCONVERT)
 	OWPlatformCB_PrintDS18(makeMASKFLAG(1,0,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
@@ -314,7 +314,7 @@ void	ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
 }
 
-float	ds18x20GetTemperature(epw_t * psEWS) { return psEWS->Var.val.x32.f32 ; }
+float	ds18x20GetTemperature(epw_t * psEWS) { return psEWS->var.val.x32.f32 ; }
 
 int32_t	ds18x20ReadConvertAll(epw_t * psEWP) {
 	PrevBus = 0xFF ;
@@ -398,7 +398,7 @@ int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
 	IF_PRINT(debugCONFIG, "DS18X20 Mode p0=%d p1=%d p2=%d p3=%d\n", *paX32.pi32, *(paX32.pi32+1), *(paX32.pi32+2), *(paX32.pi32+3)) ;
 
 	int	Xcur = 0, p = 0 ;
-	int Xmax = psEW->Var.def.cv.vc ;
+	int Xmax = psEW->var.def.cv.vc ;
 	if (Xmax > 1) {										// multiple possible end-points?
 		Xcur = *(paX32.pi32 + p++) ;					// get # of selected end-point(s)
 	}
