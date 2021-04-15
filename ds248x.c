@@ -389,9 +389,7 @@ int		ds248xOWChannelSelect(ds248x_t * psDS248X, uint8_t Chan) {
 			return 0 ;
 		}
 		psDS248X->CurChan	= Chan ;
-		return 1 ;
 	}
-#endif
 	return 1 ;
 }
 
