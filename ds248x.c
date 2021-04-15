@@ -73,14 +73,15 @@ int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
 	int32_t iRV = halI2C_Read(psDS248X->psI2C, &psDS248X->RegX[psDS248X->Rptr], 1) ;
 	xRtosSemaphoreGive(&psDS248X->psI2C->mux) ;
-	// During the device discovery/config phases errors are valid and indicate pre/absence
-	// of a specific device, type or submodel (DS2482-800 vs -10x). Hence selective error check
-	IF_myASSERT(debugRESULT && psDS248X->Test == 0, iRV == erSUCCESS) ;
 	if (iRV == erSUCCESS) {
 		if (psDS248X->Rptr == ds248xREG_STAT) {
 			ds248xCheckStatus(psDS248X) ;
 		}
 		return 1 ;
+	} else {
+		// During the device discovery/config phases errors are valid and indicate pre/absence
+		// of a specific device, type or submodel (DS2482-800 vs -10x). Hence selective error check
+		IF_myASSERT(debugRESULT && psDS248X->Test == 0, 0) ;
 	}
 	return 0 ;
 }
