@@ -429,8 +429,11 @@ int		ds248xOWLevel(ds248x_t * psDS248X, bool level) {
 		return psDS248X->SPU ;
 	}
 	psDS248X->SPU = level ;
-	ds248xWriteConfig(psDS248X) ;
-	IF_myASSERT(debugRESULT, psDS248X->SPU == level) ;
+	if ((ds248xWriteConfig(psDS248X) != 1) ||
+		(psDS248X->SPU != level)) {
+		SL_ERR("Failed setting power!!!") ;
+		return 0 ;
+	}
 	return psDS248X->SPU ;
 }
 
