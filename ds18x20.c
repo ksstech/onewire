@@ -175,8 +175,8 @@ int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
 
 	epw_t * psEWx = &psDS18X20->sEWx ;
 	memset(psEWx, 0, sizeof(epw_t)) ;
-	psEWx->uri						= URI_DS18X20 ;
-	psEWx->idx						= sFM.uCount ;
+	psEWx->uri	= URI_DS18X20 ;
+	psEWx->idx	= sFM.uCount ;
 	psEWx->var.def.cv.vt	= vtVALUE ;
 	psEWx->var.def.cv.vs	= vs32B ;
 	psEWx->var.def.cv.vf	= vfFXX ;
@@ -199,7 +199,7 @@ int32_t	ds18x20Enumerate(int32_t xUri) {
 	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
 	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psaDS18X20)) ;
 
-	IF_PRINT(debugTRACK, "AutoEnum DS18X20: Found=%d", Fam10_28Count) ;
+	IF_PRINT(debugCONFIG, "AutoEnum DS18X20: Found=%d", Fam10_28Count) ;
 	onewire_t	sOW ;
 	iRV = OWPlatformScanner(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
 	if (iRV > 0) {
@@ -360,13 +360,14 @@ int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
 		uint8_t u8Res = ((Res - 9) << 5) | 0x1F ;
 		if (psDS18X20->fam28.Conf != u8Res) {
-			IF_PRINT(debugCONFIG, "Config Res:0x%02X -> 0x%02X (%d -> %d)\n",
+			IF_PRINT(debugCONFIG, "SP Res:0x%02X -> 0x%02X (%d -> %d)\n",
 					psDS18X20->fam28.Conf, u8Res, psDS18X20->Res + 9, Res) ;
 			psDS18X20->fam28.Conf = Res ;
 			psDS18X20->Res = Res - 9 ;
 			ds18x20WriteSP(psDS18X20) ;
 			return 1 ;
 		}
+		// Not written, config already the same
 		return 0 ;
 	}
 	SET_ERRINFO("Invalid Family/Resolution") ;
@@ -376,12 +377,13 @@ int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	if (INRANGE(-128, Lo, 127, int) && INRANGE(-128, Hi, 127, int)) {
 		if (psDS18X20->Tlo != Lo || psDS18X20->Thi != Hi) {
-			IF_PRINT(debugCONFIG, "Config Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
+			IF_PRINT(debugCONFIG, "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
 			psDS18X20->Tlo = Lo ;
 			psDS18X20->Thi = Hi ;
 			ds18x20WriteSP(psDS18X20) ;
 			return 1 ;
 		}
+		// Not written, config already the same
 		return 0 ;
 	}
 	SET_ERRINFO("Invalid Lo/Hi alarm limits") ;
@@ -454,23 +456,17 @@ int32_t	CmndDS18RDT(cli_t * psCLI) {
 }
 
 int32_t	CmndDS18RDSP(cli_t * psCLI) {
-	do {
-		ds18x20ReadSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++], 9) ;
-	} while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
+	do ds18x20ReadSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++], 9) ; while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18WRSP(cli_t * psCLI) {
-	do {
-		ds18x20WriteSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ;
-	} while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
+	do ds18x20WriteSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ; while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
 	return erSUCCESS ;
 }
 
 int32_t	CmndDS18WREE(cli_t * psCLI) {
-	do {
-		ds18x20WriteEE(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ;
-	} while(psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
+	do ds18x20WriteEE(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ; while(psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
 	return erSUCCESS ;
 }
 
