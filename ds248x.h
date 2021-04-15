@@ -101,7 +101,6 @@ typedef struct __attribute__((packed)) ds248x_s {		// DS248X I2C <> 1Wire bridge
 		} ;
 		uint8_t			RegX[5] ;
 	} ;
-	uint8_t				StatX ;							// previous STAT reg
 	uint8_t				CurChan	: 3 ;					// 0 -> 7
 	uint8_t				Rptr	: 3 ;					// 0 -> 4
 	uint8_t				Test	: 1 ;					// indicate test/identify stage
@@ -111,8 +110,10 @@ typedef struct __attribute__((packed)) ds248x_s {		// DS248X I2C <> 1Wire bridge
 	uint8_t				NumChan	: 4 ;					// 0 / 1 / 8
 	uint8_t				Lo		: 4 ;
 	uint8_t				Hi		: 4 ;
+	// Status bits for 8 channels
+	uint8_t				PrvStat[8] ;					// previous STAT reg
 } ds248x_t ;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 13) ;
+DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 20) ;
 
 // #################################### Public Data structures #####################################
 

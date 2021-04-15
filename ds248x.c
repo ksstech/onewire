@@ -55,6 +55,19 @@ int32_t ds248xReset(ds248x_t * psDS248X) ;
 
 // ################################ Local ONLY utility functions ###################################
 
+void	ds248xCheckStatus(ds248x_t * psDS248X) {
+	const uint8_t DS248Xmask[4] = { 0b00000111, 0b00011111, 0b00111111, 0b11111111 } ;
+	uint8_t Mask = DS248Xmask[OWflags.Level] ;
+	uint8_t StatX = psDS248X->PrvStat[psDS248X->CurChan] ;
+	if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
+		char * pcBuf = pcBitMapDecodeChanges(StatX, psDS248X->Rstat, 0x000000FF, StatNames) ;
+		printfx("I2C=%d  OW=%u  Stat=0x%02X->0x%02X : %s\n", psDS248X->psI2C->DevIdx,
+				psDS248X->CurChan, StatX, psDS248X->Rstat, pcBuf) ;
+		free(pcBuf) ;
+	}
+	psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat ;
+}
+
 int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
 	xRtosSemaphoreTake(&psDS248X->psI2C->mux, portMAX_DELAY) ;
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
@@ -116,17 +129,6 @@ int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t T
 	}
 	xRtosSemaphoreGive(&psDS248X->psI2C->mux) ;
 	return iRV ;
-}
-
-void	ds248xCheckStatus(ds248x_t * psDS248X) {
-	const uint8_t DS248Xmask[4] = { 0b00000100, 0b00010110, 0b00011111, 0b11111111 } ;
-	uint8_t Mask = DS248Xmask[OWflags.Level] ;
-	if ((psDS248X->Rstat & Mask) != (psDS248X->StatX & Mask)) {
-		char * pcBuf = pcBitMapDecodeChanges(psDS248X->StatX, psDS248X->Rstat, 0x000000FF, StatNames) ;
-		printfx("D=%d (0x%02X) : %s\n", psDS248X->psI2C->DevIdx, psDS248X->Rstat, pcBuf) ;
-		free(pcBuf) ;
-	}
-	psDS248X->StatX = psDS248X->Rstat ;
 }
 
 void	ds248xPrintConfig(ds248x_t * psDS248X, uint8_t Reg) {
@@ -208,6 +210,20 @@ int32_t	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 
 // ############################### DS248x(-x00) DEBUG support functions ############################
 
+int32_t	ds248xReportStatus(uint8_t Num, ds248x_stat_t Stat) {
+	return printfx("STAT(4) #%u=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
+			Num,
+			Stat.STAT,
+			Stat.DIR ? '1' : '0',
+			Stat.TSB ? '1' : '0',
+			Stat.SBR ? '1' : '0',
+			Stat.RST ? '1' : '0',
+			Stat.LL  ? '1' : '0',
+			Stat.SD  ? '1' : '0',
+			Stat.PPD ? '1' : '0',
+			Stat.OWB ? '1' : '0') ;
+}
+
 /**
  * Display register contents, decode status & configuration
  */
@@ -218,16 +234,8 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 	case ds248xREG_STAT:
 		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) {
 			return 0 ;
-		iRV += printfx("STAT(0)=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
-				psDS248X->Rstat,
-				psDS248X->DIR ? '1' : '0',
-				psDS248X->TSB ? '1' : '0',
-				psDS248X->SBR ? '1' : '0',
-				psDS248X->RST ? '1' : '0',
-				psDS248X->LL  ? '1' : '0',
-				psDS248X->SD  ? '1' : '0',
-				psDS248X->PPD ? '1' : '0',
-				psDS248X->OWB ? '1' : '0') ;
+		}
+		for (int i = 0; i < psDS248X->NumChan; iRV += ds248xReportStatus(i, (ds248x_stat_t) psDS248X->PrvStat[i++]));
 		break ;
 	case ds248xREG_DATA:
 		iRV += printfx("DATA(1)=0x%02X (Last read)\n", psDS248X->Rdata) ;
