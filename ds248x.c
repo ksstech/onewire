@@ -263,36 +263,25 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 				psDS248X->APU	? '1' : '0') ;
 		break ;
 	case ds248xREG_PADJ:
-		if (psDS248X->psI2C->Type != i2cDEV_DS2484)
 		if (Refresh == 0) {
 			return 0 ;
-		// PAR = 0b000 ~ tRSTL
-		if (ds248xReadRegister(psDS248X, Reg) == 0)
 		}
+		if ((psDS248X->psI2C->Type != i2cDEV_DS2484) ||
+			(ds248xReadRegister(psDS248X, Reg) == 0)) {
 			return 0 ;
-		iRV += printfx("PADJ(4a)=0x%02X  PAR=0  OD=%c  tRSTL=%d uS\n",
-				psDS248X->Rpadj, psDS248X->OD ? '1' : '0',
-				Trstl[psDS248X->VAL] * (psDS248X->OD ? 1 : 10)) ;
-		// PAR = 0b001 ~ tMSP
+		}
+		iRV += printfx("PADJ=0x%02X  OD=%c | tRSTL=%duS | tMSP=", psDS248X->Rpadj,
+				psDS248X->OD ? '1' : '0', Trstl[psDS248X->VAL] * (psDS248X->OD ? 1 : 10)) ;
 		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx("PADJ(4b)=0x%02X  PAR=1  OD=%c  tMSP=",
-				psDS248X->Rpadj, psDS248X->OD	? '1' : '0') ;
-		iRV += printfx(psDS248X->OD ? "%d uS\n" : "%.1f uS\n",
+		iRV += printfx(psDS248X->OD ? "%duS" : "%.1fuS",
 				psDS248X->OD ? (float) Tmsp1[psDS248X->VAL] / 10.0 : Tmsp0[psDS248X->VAL]) ;
-		// PAR = 0b010 ~ tWOL
 		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx("PADJ(4c)=0x%02X  PAR=2  OD=%c  tWOL=",
-				psDS248X->Rpadj, psDS248X->OD	? '1' : '0') ;
-		iRV += printfx(psDS248X->OD ? "%d uS\n" : "%.1f uS\n",
+		iRV += printfx(psDS248X->OD ? " | tWOL=%duS" : " | tWOL=%.1fuS",
 				psDS248X->OD ? (float) Twol1[psDS248X->VAL] / 10.0 : Twol0[psDS248X->VAL]) ;
-		// PAR = 0b011 ~ tREC0
 		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx("PADJ(4d)=0x%02X  PAR=3  OD=%c  tREC0=%.2f uS\n",
-				psDS248X->Rpadj, psDS248X->OD	? '1' : '0', (float) Trec0[psDS248X->VAL] / 100.0) ;
-		// PAR = 0b100 ~ rWPU
+		iRV += printfx(" | tREC0=%.2fuS", (float) Trec0[psDS248X->VAL] / 100.0) ;
 		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx("PADJ(4e)=0x%02X  PAR=4  OD=%c  rWPU=%f ohm\n",
-				psDS248X->Rpadj, psDS248X->OD	? '1' : '0', (float) Rwpu[psDS248X->VAL]) ;
+		iRV += printfx(" | rWPU=%f ohm\n", (float) Rwpu[psDS248X->VAL]) ;
 		break ;
 	}
 	return iRV ;
