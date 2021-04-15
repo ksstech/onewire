@@ -102,15 +102,11 @@ int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) {
 
 int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psDS18X20)) ;
-	int32_t iRV = OWChannelSelect(&psDS18X20->sOW) ;
-	IF_myASSERT(debugRESULT, iRV != 0) ;
-
-	iRV = OWReset(&psDS18X20->sOW) ;
-	IF_myASSERT(debugRESULT, iRV != 0) ;
-
-//	iRV = DS2482SetOverDrive() ;
-//	IF_myASSERT(debugRESULT, iRV != 0) ;
-
+	if ((OWChannelSelect(&psDS18X20->sOW) == 0) ||
+		(OWReset(&psDS18X20->sOW) == 0) ||
+		(psDS18X20->OD && OWSpeed(&psDS18X20->sOW, owSPEED_ODRIVE) == owSPEED_STANDARD)) {
+		return 0 ;
+	}
 	OWAddress(&psDS18X20->sOW, u8AddrMethod) ;
 	return iRV ;
 }
