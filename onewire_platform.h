@@ -2,10 +2,6 @@
  * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
-/*
- * onewire_platform.h
- */
-
 #pragma		once
 
 #include	"onewire.h"

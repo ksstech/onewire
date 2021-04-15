@@ -346,7 +346,7 @@ void	OWPlatformReportAll(void) {
 		OWPlatformCB_PrintChan(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,x), &psaOW_CI[x]) ;
 	}
 #if 	(halHAS_DS248X > 0)
-	ds248xReportAll() ;
+	ds248xReportAll(1) ;
 #endif
 #if 	(halHAS_DS18X20 > 0)
 	ds18x20ReportAll() ;
