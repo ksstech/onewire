@@ -224,11 +224,11 @@ int32_t	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 /**
  * Display register contents, decode status & configuration
  */
-int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
+int32_t	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 	int32_t iRV = 0 ;
 	switch (Reg) {
 	case ds248xREG_STAT:
-		if (ds248xReadRegister(psDS248X, Reg) == 0)
+		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) {
 			return 0 ;
 		iRV += printfx("STAT(0)=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
 				psDS248X->Rstat,
@@ -246,9 +246,8 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 		break ;
 	case ds248xREG_CHAN:
 #if		(halHAS_DS2482_800 > 0)
-		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800)
-			return 0 ;
-		if (ds248xReadRegister(psDS248X, Reg) == 0)
+		if ((psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
+			(Refresh && ds248xReadRegister(psDS248X, Reg) == 0)) {
 			return 0 ;
 		{	int32_t Chan ;										// Channel, start by finding the matching Channel #
 			for (Chan = 0; (Chan < psDS248X->NumChan) && (psDS248X->Rchan != ds248x_V2N[Chan]); ++Chan) ;
@@ -258,8 +257,9 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 #endif
 		break ;
 	case ds248xREG_CONF:
-		if (ds248xReadRegister(psDS248X, Reg) == 0)
+		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) {
 			return 0 ;
+		}
 		iRV += printfx("CONF(3)=0x%02X  1WS=%c  SPU=%c  PDN=%c  APU=%c\n",
 				psDS248X->Rconf,
 				psDS248X->OWS	? '1' : '0',
@@ -270,9 +270,11 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 	case ds248xREG_PADJ:
 #if		(halHAS_DS2484 > 0)
 		if (psDS248X->psI2C->Type != i2cDEV_DS2484)
+		if (Refresh == 0) {
 			return 0 ;
 		// PAR = 0b000 ~ tRSTL
 		if (ds248xReadRegister(psDS248X, Reg) == 0)
+		}
 			return 0 ;
 		iRV += printfx("PADJ(4a)=0x%02X  PAR=0  OD=%c  tRSTL=%d uS\n",
 				psDS248X->Rpadj, psDS248X->OD ? '1' : '0',
@@ -306,19 +308,17 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, uint32_t Reg) {
 /**
  * ds248xReport() - report decoded status of a specific device
  */
-void	ds248xReport(ds248x_t * psDS248X) {
+void	ds248xReport(ds248x_t * psDS248X, bool Refresh) {
 	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
-	for (uint32_t Reg = 0; Reg < ds248xREG_NUM; ++Reg)
-		ds248xReportRegister(psDS248X, Reg) ;
+	for (int Reg = 0; Reg < ds248xREG_NUM; ds248xReportRegister(psDS248X, Reg++, Refresh)) ;
 	printfx("\n") ;
 }
 
 /**
  * ds248xReportAll() - report decoded status of all devices and all registers
  */
-void ds248xReportAll(void) {
-	for (int32_t i = 0; i < ds248xCount; ++i)
-		ds248xReport(&psaDS248X[i]) ;
+void	ds248xReportAll(bool Refresh) {
+	for (int i = 0; i < ds248xCount; ds248xReport(&psaDS248X[i++], Refresh)) ;
 }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
