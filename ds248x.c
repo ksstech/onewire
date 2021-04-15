@@ -38,25 +38,16 @@
 const char * const RegNames[ds248xREG_NUM] = {"Stat", "Data", "Chan", "Conf", "Port" } ;
 const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
 
-#if		(halHAS_DS2482_800 > 0)
-	// DS2482-800 channel# check xlat	0	  1		2	  3		4	  5		6	  7
-	static const uint8_t	ds248x_V2N[8] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 } ;
-#endif
-
-#if		(halHAS_DS2484 > 0)
-	static const uint8_t	Trstl[16]	= { 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74 } ;
-	static const uint8_t	Tmsp0[16]	= { 58, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 76, 76, 76, 76, 76 } ;
-	static const uint8_t	Tmsp1[16]	= { 55, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 110, 110, 110 } ;
-	static const uint8_t	Twol0[16]	= { 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 70, 70, 70, 70, 70, 70 } ;
-	static const uint8_t	Twol1[16]	= { 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 100, 100, 100, 100, 100 } ;
-	static const uint16_t	Trec0[16]	= { 275, 275, 275, 275, 275, 275, 525, 775, 1025, 1275, 1525, 1775, 2025, 2275, 2525, 2525 } ;
-	static const uint16_t	Rwpu[16]	= { 500, 500, 500, 500, 500, 500, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000 } ;
-#endif
-
-// ###################################### Public variables #########################################
-
-uint8_t		ds248xCount	= 0 ;
-ds248x_t *	psaDS248X = NULL ;
+// DS2482-800 only CHAN register xlat	0	  1		2	  3		4	  5		6	  7
+static const uint8_t ds248x_V2N[8] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 } ;
+// DS2484 only reporting/debugging
+static const uint8_t Trstl[16]	= { 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74 } ;
+static const uint8_t Tmsp0[16]	= { 58, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 76, 76, 76, 76, 76 } ;
+static const uint8_t Tmsp1[16]	= { 55, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 110, 110, 110 } ;
+static const uint8_t Twol0[16]	= { 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 70, 70, 70, 70, 70, 70 } ;
+static const uint8_t Twol1[16]	= { 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 100, 100, 100, 100, 100 } ;
+static const uint16_t Trec0[16]	= { 275, 275, 275, 275, 275, 275, 525, 775, 1025, 1275, 1525, 1775, 2025, 2275, 2525, 2525 } ;
+static const uint16_t Rwpu[16]	= { 500, 500, 500, 500, 500, 500, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000 } ;
 
 // ############################### Forward function declarations ###################################
 
@@ -162,12 +153,8 @@ int32_t ds248xReset(ds248x_t * psDS248X) {
 	psDS248X->Rdata		= 0 ;
 	psDS248X->Rconf		= 0 ;							// all bits cleared (default) config
 	psDS248X->CurChan	= 0 ;
-#if		(halHAS_DS2482_800 > 0)
-	psDS248X->Rchan		= ds248x_V2N[0] ;				// ONLY for DS2482-800
-#endif
-#if		(halHAS_DS2484 > 0)
-	psDS248X->Rpadj		= 0 ;							// ONLY for DS2484
-#endif
+	psDS248X->Rchan		= ds248x_V2N[0] ;				// DS2482-800 specific
+	psDS248X->Rpadj		= 0 ;							// DS2484 specific
 	return psDS248X->RST ;
 }
 
@@ -226,6 +213,7 @@ int32_t	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
  */
 int32_t	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 	int32_t iRV = 0 ;
+	int	Chan ;
 	switch (Reg) {
 	case ds248xREG_STAT:
 		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) {
@@ -245,16 +233,15 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 		iRV += printfx("DATA(1)=0x%02X (Last read)\n", psDS248X->Rdata) ;
 		break ;
 	case ds248xREG_CHAN:
-#if		(halHAS_DS2482_800 > 0)
 		if ((psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
 			(Refresh && ds248xReadRegister(psDS248X, Reg) == 0)) {
 			return 0 ;
-		{	int32_t Chan ;										// Channel, start by finding the matching Channel #
-			for (Chan = 0; (Chan < psDS248X->NumChan) && (psDS248X->Rchan != ds248x_V2N[Chan]); ++Chan) ;
-			IF_myASSERT(debugRESULT, Chan < psDS248X->NumChan && psDS248X->Rchan == ds248x_V2N[Chan]) ;
-			iRV = printfx("CHAN(2)=0x%02X  Rchan=0x%02X  Chan=%d  Xlat=0x%02X\n", psDS248X->CHAN, psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
 		}
-#endif
+		// Channel, start by finding the matching Channel #
+		for (Chan = 0; Chan < psDS248X->NumChan && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
+		IF_myASSERT(debugRESULT, Chan < psDS248X->NumChan && psDS248X->Rchan == ds248x_V2N[Chan]) ;
+		iRV = printfx("CHAN(2)=0x%02X  Rchan=0x%02X  Chan=%d  Xlat=0x%02X\n",
+				psDS248X->CHAN, psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
 		break ;
 	case ds248xREG_CONF:
 		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) {
@@ -268,7 +255,6 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 				psDS248X->APU	? '1' : '0') ;
 		break ;
 	case ds248xREG_PADJ:
-#if		(halHAS_DS2484 > 0)
 		if (psDS248X->psI2C->Type != i2cDEV_DS2484)
 		if (Refresh == 0) {
 			return 0 ;
@@ -299,7 +285,6 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 		ds248xI2C_Read(psDS248X) ;
 		iRV += printfx("PADJ(4e)=0x%02X  PAR=4  OD=%c  rWPU=%f ohm\n",
 				psDS248X->Rpadj, psDS248X->OD	? '1' : '0', (float) Rwpu[psDS248X->VAL]) ;
-#endif
 		break ;
 	}
 	return iRV ;
@@ -328,13 +313,11 @@ void	ds248xReportAll(bool Refresh) {
  * @return	erSUCCESS if supported device was detected, if not erFAILURE
  */
 int32_t	ds248xDeviceIdentify(i2c_dev_info_t * psI2C_DI) {
-#if		(halHAS_DS248X > 0)
 	ds248x_t	sDS248X = { 0 } ;						// temporary device structure
 	psI2C_DI->Delay		= pdMS_TO_TICKS(10) ;			// default device timeout
 	sDS248X.psI2C		= psI2C_DI ;					// link to I2C device discovered
 	sDS248X.Test		= 1 ;							// disable I2C error messages in both
 	psI2C_DI->Test		= 1 ;							// this and halI2C modules
-	#if	(halHAS_DS2484 > 0)
 	sDS248X.psI2C->Type = i2cDEV_DS2484 ;
 	if (ds248xReset(&sDS248X) &&						// generic DS248X, check DS2484
 		ds248xReadRegister(&sDS248X, ds248xREG_PADJ) &&	// PADJ read OK
@@ -342,8 +325,6 @@ int32_t	ds248xDeviceIdentify(i2c_dev_info_t * psI2C_DI) {
 		psI2C_DI->DevIdx 	= ds248xCount++ ;
 		return erSUCCESS ;
 	}
-	#endif
-	#if	(halHAS_DS2482_800 > 0)
 	sDS248X.psI2C->Type = i2cDEV_DS2482_800 ;
 	if (ds248xReset(&sDS248X) &&						// generic DS248X, check DS2482-800
 		ds248xReadRegister(&sDS248X, ds248xREG_CHAN) &&	// CSR read OK
@@ -351,16 +332,12 @@ int32_t	ds248xDeviceIdentify(i2c_dev_info_t * psI2C_DI) {
 		psI2C_DI->DevIdx 	= ds248xCount++ ;
 		return erSUCCESS ;
 	}
-	#endif
-	#if	(halHAS_DS2482_10X > 0)							// NOT YET TESTED !!!!
 	sDS248X.psI2C->Type = i2cDEV_DS2482_10X ;
 	if (ds248xReset(&sDS248X) &&						// generic DS248X, check DS2482-800
 		!ds248xReadRegister(&sDS248X, ds248xREG_CHAN)) {// CSR read FAIL !!!
 		psI2C_DI->DevIdx 	= ds248xCount++ ;
 		return erSUCCESS ;
 	}
-	#endif
-#endif
 	return erFAILURE ;
 }
 
@@ -380,23 +357,13 @@ int32_t	ds248xDriverConfig(i2c_dev_info_t * psI2C_DI) {
 	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx] ;
 	psDS248X->psI2C		= psI2C_DI ;
 	switch(psI2C_DI->Type) {
-#if		(halHAS_DS2482_10X > 0)
-		case i2cDEV_DS2482_10X:
-			psDS248X->NumChan = 1 ;
-			break ;
-#endif
-
-#if		(halHAS_DS2482_800 > 0)
 		case i2cDEV_DS2482_800:
 			psDS248X->NumChan = 8 ;
 			break ;
-#endif
-
-#if		(halHAS_DS2484 > 0)
+		case i2cDEV_DS2482_10X:
 		case i2cDEV_DS2484:
 			psDS248X->NumChan = 1 ;
 			break ;
-#endif
 		default: myASSERT(0) ;
 	}
 	ds248xReset(psDS248X) ;
