@@ -2,12 +2,8 @@
  * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
-/*
- * ds18x20.c
- */
-
+#include	"hal_variables.h"
 #include	"onewire_platform.h"
-
 #include	"endpoints.h"
 #include	"printfx.h"
 #include	"syslog.h"
@@ -24,7 +20,7 @@
 #include	<string.h>
 #include	<stdint.h>
 
-#define	debugFLAG					0xD000
+#define	debugFLAG					0xF000
 
 #define	debugCONFIG					(debugFLAG & 0x0001)
 #define	debugREAD					(debugFLAG & 0x0002)
@@ -42,7 +38,7 @@
  * 	each device can be individually R/W addressed
  * 	some operations eg temp sample/convert
  * 		happens reasonably slowly (up to 750mS)
- * 		can be triggered to execute in parallel for all devices on a bus
+ * 		can be triggered to execute in parallel for all "equivalent" devices on a bus
  *	To optimise operation, this driver is based on the following decisions/constraints:
  *		Tsns is specified at device type (psEWP level) for ALL /ow/ds18x20 devices
  *		always trigger a sample+convert operation for ALL devices on a bus at same time.
@@ -50,7 +46,7 @@
  *		maintain a minimum Tsns of 1000mSec to be bigger than the ~750mS standard.
  * 	Test parasitic power
  * 	Test & benchmark overdrive speed
- * 	Implement and test ALARM scan and over/under event generation
+ * 	Implement and test ALARM scan and over/under alarm status scan
  */
 
 
@@ -90,13 +86,14 @@ static uint8_t	PrevBus ;
 // #################################### Local ONLY functions #######################################
 
 int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) {
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psDS18X20)) ;
 	int32_t iRV = OWChannelSelect(&psDS18X20->sOW) ;
 	IF_myASSERT(debugRESULT, iRV != 0) ;
 
 	OWAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) ;
 	OWWriteByte(&psDS18X20->sOW, DS18X20_READ_PSU) ;
 	iRV = OWReadBit(&psDS18X20->sOW) ;					// return status 0=parasitic 1=external
-	IF_PRINT(debugTRACK, iRV ? "External Power" : "Parasitic Power") ;
+	IF_PRINT(debugPOWER, "PSU=%s\n", iRV ? "Ext" : "Para") ;
 	return iRV ;
 }
 
@@ -108,7 +105,7 @@ int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 		return 0 ;
 	}
 	OWAddress(&psDS18X20->sOW, u8AddrMethod) ;
-	return iRV ;
+	return 1 ;
 }
 
 // ###################################### scratchpad support #######################################
