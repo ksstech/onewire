@@ -49,11 +49,6 @@
  * 	Implement and test ALARM scan and over/under alarm status scan
  */
 
-
-#ifndef URI_DS18X20
-	#define	URI_DS18X20 URI_UNKNOWN	// dummy value to facilitate compile if EndPoint not used.
-#endif
-
 // ################################ Forward function declaration ###################################
 
 epw_t * ds18x20GetWork(int32_t x) ;
