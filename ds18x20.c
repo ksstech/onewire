@@ -387,20 +387,19 @@ int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	return erSCRIPT_INV_VALUE ;
 }
 
-enum { optINVALID = 0, optRESOLUTION, optTHRESHOLDS, optWRITE } ;
-
 int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
+	if (psaDS18X20 == NULL) {
+		SET_ERRINFO("No DS18x20 enumerated") ;
+		return erSCRIPT_INV_OPERATION ;
+	}
+	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	epw_t * psEW = &table_work[psRule->actPar0[psRule->ActIdx]] ;
 	px_t	paX32 ;
 	paX32.pi32 = (int32_t *) &psRule->para.i32[0][0] ;
-	IF_PRINT(debugCONFIG, "DS18X20 Mode p0=%d p1=%d p2=%d p3=%d\n", *paX32.pi32, *(paX32.pi32+1), *(paX32.pi32+2), *(paX32.pi32+3)) ;
-
-	int	Xcur = 0, p = 0 ;
+	IF_PRINT(debugCONFIG, "DS18X20 Mode p0=%d p1=%d p2=%d p3=%d p4=%d\n", *paX32.pi32,
+					*(paX32.pi32+1), *(paX32.pi32+2), *(paX32.pi32+3), *(paX32.pi32+4)) ;
+	int	Xcur = *paX32.pi32++ ;
 	int Xmax = psEW->var.def.cv.vc ;
-	if (Xmax > 1) {										// multiple possible end-points?
-		Xcur = *(paX32.pi32 + p++) ;					// get # of selected end-point(s)
-	}
-	IF_PRINT(debugCONFIG, "  XCur=%d/%d\n", Xcur, Xmax) ;
 	if (Xcur == 255) {									// non-specific total count ?
 		Xcur = Xmax ;									// yes, set to actual count.
 	} else if (Xcur > Xmax) {
@@ -412,31 +411,31 @@ int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
 	} else {
 		Xmax = Xcur ;									// single Xcur
 	}
-	int p0 = *(paX32.pi32 + p++);
-	int p1 = *(paX32.pi32 + p++);
-	int p2 = *(paX32.pi32 + p++);
 	int32_t iRV = 0 ;
+	int lo = *paX32.pi32++ ;
+	int hi = *paX32.pi32++ ;
+	int res = *paX32.pi32++ ;
+	int wr = *paX32.pi32 ;
+	if (wr == 0 || wr == 1) {							// if parameter omitted, do not persist
+		do {
+			ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
+			// Do resolution 1st since small range (9-12) a good test for valid parameter
+			iRV = ds18x20SetResolution(psDS18X20, res) ;
+			if (iRV >= erSUCCESS) {
+				iRV = ds18x20SetAlarms(psDS18X20, lo, hi) ;
+				if (iRV >= erSUCCESS && wr == 1) {
+					iRV = ds18x20WriteSP(psDS18X20) ;
+				}
+			}
+			if (iRV < erSUCCESS) {
+				break ;
+			}
+		} while (++Xcur < Xmax) ;
+	} else {
+		SET_ERRINFO("Invalid persist flag, not 0/1") ;
+		iRV = erSCRIPT_INV_MODE ;
+	}
 
-	do {
-		ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
-		switch (p0) {
-		case optRESOLUTION:
-			iRV = ds18x20SetResolution(psDS18X20, p1) ;
-			break ;
-		case optTHRESHOLDS:
-			iRV = ds18x20SetAlarms(psDS18X20, p1, p2) ;
-			break ;
-		case optWRITE:
-			iRV = ds18x20WriteSP(psDS18X20) ;
-			break ;
-		default:
-			SET_ERRINFO("Invalid Mode (p0)") ;
-			iRV = erSCRIPT_INV_MODE ;
-		}
-		if (iRV < erSUCCESS) {
-			break ;
-		}
-	} while (++Xcur < Xmax) ;
 	return iRV ;
 }
 
