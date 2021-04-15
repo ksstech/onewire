@@ -1,14 +1,9 @@
 /*
- * Copyright 2011-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
- */
-
-/*
- * onewire.h
+ * Copyright 2017-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma		once
 
-#include	"hal_variables.h"
 #include	"hal_i2c.h"
 #include	"ds248x.h"
 
@@ -110,11 +105,14 @@ DUMB_STATIC_ASSERT(sizeof(onewire_t) == 12) ;
 typedef struct __attribute__((packed)) ow_chan_info_s {
 	ow_rom_t	LastROM ;
 	seconds_t	LastRead ;
-	struct {
-		uint8_t		ds18b20	: 4 ;
-		uint8_t		ds18s20	: 4 ;
-		uint8_t		ds18xxx	: 4 ;
-		uint8_t		spare	: 4 ;
+	union {
+		struct {
+			uint8_t		ds18b20	: 4 ;
+			uint8_t		ds18s20	: 4 ;
+			uint8_t		ds18xxx	: 4 ;
+			uint8_t		spare	: 4 ;
+		} ;
+		uint16_t	ds18any ;
 	} ;
 } ow_chan_info_t ;
 DUMB_STATIC_ASSERT(sizeof(ow_chan_info_t) == 14) ;
@@ -126,14 +124,14 @@ typedef struct ow_flags_s {
 
 // ################################ Generic 1-Wire LINK API's ######################################
 
-int32_t OWSetSPU(onewire_t * psOW) ;
-int32_t OWReset(onewire_t * psOW) ;
-int32_t OWSpeed(onewire_t * psOW, bool speed) ;
-int32_t OWLevel(onewire_t * psOW, bool level) ;
+int		OWSetSPU(onewire_t * psOW) ;
+int		OWReset(onewire_t * psOW) ;
+int		OWSpeed(onewire_t * psOW, bool speed) ;
+int		OWLevel(onewire_t * psOW, bool level) ;
 uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) ;
 uint8_t	OWCalcCRC8(onewire_t * psOW, uint8_t data) ;
-int32_t	OWSearchTriplet(onewire_t * psOW, uint8_t search_direction) ;
-int32_t OWChannelSelect(onewire_t * psOW) ;
+uint8_t	OWSearchTriplet(onewire_t * psOW, uint8_t search_direction) ;
+int		OWChannelSelect(onewire_t * psOW) ;
 
 // ################################## Bit/Byte Read/Write ##########################################
 
@@ -141,22 +139,22 @@ uint8_t OWTouchBit(onewire_t * psOW, uint8_t sendbit) ;
 void	OWWriteBit(onewire_t * psOW, uint8_t sendbit) ;
 uint8_t OWReadBit(onewire_t * psOW) ;
 void	OWWriteByte(onewire_t * psOW, uint8_t sendbyte) ;
-int32_t OWWriteBytePower(onewire_t * psOW, int32_t sendbyte) ;
-int32_t OWReadBitPower(onewire_t * psOW, int32_t applyPowerResponse) ;
-int32_t	OWReadByte(onewire_t * psOW) ;
+int		OWWriteBytePower(onewire_t * psOW, int sendbyte) ;
+int		OWReadBitPower(onewire_t * psOW, uint8_t applyPowerResponse) ;
+uint8_t	OWReadByte(onewire_t * psOW) ;
 uint8_t OWTouchByte(onewire_t * psOW, uint8_t sendbyte) ;
 void	OWBlock(onewire_t * psOW, uint8_t * tran_buf, int32_t tran_len) ;
-int32_t	OWReadROM(onewire_t * psOW) ;
+int		OWReadROM(onewire_t * psOW) ;
 void	OWAddress(onewire_t * psOW, uint8_t nAddrMethod) ;
 
 // ############################## Search and Variations thereof ####################################
 
 void	OWTargetSetup(onewire_t * psOW, uint8_t family_code) ;
 void	OWFamilySkipSetup(onewire_t * psOW) ;
-int32_t OWSearch(onewire_t * psOW, bool alarm_only) ;
-int32_t OWFirst(onewire_t * psOW, bool alarm_only) ;
-int32_t OWNext(onewire_t * psOW, bool alarm_only) ;
-int32_t OWVerify(onewire_t * psOW) ;
+int		OWSearch(onewire_t * psOW, bool alarm_only) ;
+int 	OWFirst(onewire_t * psOW, bool alarm_only) ;
+int 	OWNext(onewire_t * psOW, bool alarm_only) ;
+int		OWVerify(onewire_t * psOW) ;
 
 #ifdef __cplusplus
 }
