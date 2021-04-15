@@ -89,44 +89,32 @@ int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
 int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t Delay) {
 	xRtosSemaphoreTake(&psDS248X->psI2C->mux, portMAX_DELAY) ;
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
-	int32_t iRV ;
-#if 1
-	iRV = halI2C_Write(psDS248X->psI2C, pTxBuf, TxSize) ;
-	IF_myASSERT(debugRESULT && psDS248X->Test == 0, iRV == erSUCCESS) ;
+	int32_t	iRV = halI2C_Write(psDS248X->psI2C, pTxBuf, TxSize) ;
 	if (iRV == erSUCCESS) {
 		if (Delay) {
 			i64TaskDelayUsec(Delay) ;
 		}
 		iRV = halI2C_Read(psDS248X->psI2C, &psDS248X->RegX[psDS248X->Rptr], 1) ;
 	}
-#else
-	if (Delay > 0) {
-		iRV = halI2C_Write(psDS248X->psI2C, pTxBuf, TxSize) ;
-		// During the device discovery/config phases errors are valid and indicate pre/absence
-		// of a specific device, type or submodel (DS2482-800 vs -10x). Hence selective error check
-		IF_myASSERT(debugRESULT && psDS248X->Test == 0, iRV == erSUCCESS) ;
-		if (iRV == erSUCCESS) {
-			i64TaskDelayUsec(Delay) ;
-			iRV = halI2C_Read(psDS248X->psI2C, &psDS248X->RegX[psDS248X->Rptr], 1) ;
-		}
-	} else {
-		iRV = halI2C_WriteRead(psDS248X->psI2C, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr], 1) ;
-	}
-#endif
-	// During the device discovery/config phases errors are valid and indicate pre/absence
-	// of a specific device, type or submodel (DS2482-800 vs -10x). Hence selective error check
-	IF_myASSERT(debugRESULT && psDS248X->Test == 0, iRV == erSUCCESS) ;
 	if (iRV == erSUCCESS) {
+		iRV = 1 ;
 		if (psDS248X->Rptr == ds248xREG_STAT) {
 			ds248xCheckStatus(psDS248X) ;
-			if (psDS248X->OWB) {
-				ds248xReport(psDS248X) ;
-//				IF_myASSERT(debugRESULT, 0) ;
+			if (psDS248X->OWB) {						// 1W still busy?
+				ds248xReport(psDS248X, 0) ;				// avoid, tries to read registers = lockup
 				ds248xReset(psDS248X) ;
 				iRV = 0 ;
 			}
+		} else {
+			// normally nothing to do, maybe some tests..
+			if (psDS248X->Rptr == ds248xREG_CONF) {
+				myASSERT(psDS248X->APU == 1) ;
+			}
 		}
-		iRV = 1 ;
+	} else {
+		// During device discovery/config errors are valid, indicate presence or absence of specific
+		// device, type or submodel (DS2482-800 vs -10x). Hence selective error check
+		IF_myASSERT(debugRESULT && psDS248X->Test == 0, 0) ;
 	}
 	xRtosSemaphoreGive(&psDS248X->psI2C->mux) ;
 	return iRV ;
