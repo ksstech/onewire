@@ -116,11 +116,12 @@ int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) {
 
 int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	int32_t iRV = OWPlatformCB_Print1W((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
-	iRV += printfx("  Traw=0x%04X (Tc=%.4f) Thi=%d  Tlo=%d", psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
-		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Thi, psDS18X20->Tlo) ;
-	iRV += printfx("  Res=%d", psDS18X20->Res + 9) ;
+	iRV += printfx("  Traw=0x%04X/%.4fC  Tlo=%d  Thi=%d", psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
+		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi) ;
+	iRV += printfx("  Res=%d  PSU=%s", psDS18X20->Res + 9, psDS18X20->Pwr ? "Ext" : "Para") ;
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) {
-		iRV += printfx("  Conf=0x%02X %s", psDS18X20->fam28.Conf, psDS18X20->fam28.Conf >> 5 != psDS18X20->Res ? "ERROR" : "") ; ;
+		iRV += printfx("  Conf=0x%02X %s", psDS18X20->fam28.Conf,
+				((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "") ; ;
 	}
 	if (FlagMask.bNL) {
 		iRV += printfx("\n") ;
@@ -150,15 +151,20 @@ int32_t OWPlatformCB_PrintChan(flagmask_t FlagMask, ow_chan_info_t * psCI) {
 int32_t	OWPlatformCB_Count(flagmask_t FlagCount, onewire_t * psOW) {
 	switch (psOW->ROM.Family) {
 #if		(halHAS_DS1990X == 1)							// DS1990A/R, 2401/11 devices
-	case OWFAMILY_01:	++Family01Count ;	return 1 ;
+	case OWFAMILY_01:
+		++Family01Count ;
+		return 1 ;
 #endif
 
 #if		(halHAS_DS18X20 == 1)							// DS18x20 Thermometers
 	case OWFAMILY_10:
-	case OWFAMILY_28:	++Fam10_28Count ;	return 1 ;
+	case OWFAMILY_28:
+		++Fam10_28Count ;
+		return 1 ;
 #endif
 
-	default:	SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.Family) ;
+	default:
+		SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.Family) ;
 	}
 	return 0 ;
 }
@@ -178,7 +184,7 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 			(OWChannelSelect(psOW) == 0)) {
 			continue ;
 		}
-		if (Family) {
+		if (Family != 0) {
 			OWTargetSetup(psOW, Family) ;
 			iRV = OWSearch(psOW, 0) ;
 			if (psOW->ROM.Family != Family) {
@@ -209,6 +215,7 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
+#if 0
 int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewire_t *), void * pVoid, onewire_t * psOW) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int32_t	iRV = erSUCCESS ;
@@ -233,27 +240,33 @@ int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewi
 			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
 			iRV = Handler((flagmask_t) uCount, pVoid, psOW) ;
-			if (iRV < erSUCCESS)
+			if (iRV < erSUCCESS) {
 				break ;
-			if (iRV > 0)
+			}
+			if (iRV > 0) {
 				++uCount ;
+			}
 			iRV = OWNext(psOW, 0) ;						// try to find next device (if any)
 		}
-		if (iRV < erSUCCESS)
+		if (iRV < erSUCCESS) {
 			break ;
+		}
 	}
 	IF_SL_ERR(iRV < erSUCCESS, "Handler error=%d", iRV) ;
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
+#endif
 
-int32_t OWPlatformEndpoints(struct epw_t * psEW) {
+int32_t OWPlatformEndpoints(epw_t * psEW) {
 	int32_t iRV = erFAILURE;
 #if		(halHAS_DS1990X > 0)
 	onewire_t sOW ;
 #endif
 	switch(psEW->uri) {
 #if		(halHAS_DS18X20 > 0)
-	case URI_DS18X20:	iRV = ds18x20ReadConvertAll(NULL) ;		break ;
+	case URI_DS18X20:
+		iRV = ds18x20ReadConvertAll(NULL) ;
+		break ;
 #endif
 
 #if		(halHAS_DS1990X > 0)
@@ -281,17 +294,16 @@ int32_t OWPlatformEndpoints(struct epw_t * psEW) {
  * OWPlatformConfig() -
  */
 int32_t	OWPlatformConfig(void) {
-	int32_t	iRV = 0 ;
 	IF_SYSTIMER_INIT(debugTIMING, systimerOW1, systimerTICKS, "OW1", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
 	IF_SYSTIMER_INIT(debugTIMING, systimerOW2, systimerTICKS, "OW2", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
 	/* Start by iterating over each instance of each type of 1-Wire technology (DS248x/RTM/GPIO) supported.
 	 * For each technology enumerate each physical device and the logical channels on each device before
 	 * moving on to the next device (same type) or next technology */
 #if		(halHAS_DS248X > 0)
-	for (int32_t i = 0; i < ds248xCount; ++i) {
+	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
 		psDS248X->Lo	= OWNumChan ;
-		psDS248X->Hi	= OWNumChan + psDS248X->NumChan -1 ;
+		psDS248X->Hi	= OWNumChan + psDS248X->NumChan - 1 ;
 		OWNumChan		+= psDS248X->NumChan ;
 	}
 #endif
@@ -304,6 +316,7 @@ int32_t	OWPlatformConfig(void) {
 
 		// enumerate any/all physical devices (possibly) (permanently) attached to individual channel(s)
 		onewire_t	sOW ;
+		int32_t	iRV = 0 ;
 		if ((iRV = OWPlatformScanner(0, OWPlatformCB_Count, &sOW)) > 0) {
 			OWNumDev += iRV ;
 		}
@@ -326,8 +339,9 @@ int32_t	OWPlatformConfig(void) {
 }
 
 void	OWPlatformReportAll(void) {
-	for (int x = 0; x < OWNumChan; ++x)
+	for (int x = 0; x < OWNumChan; ++x) {
 		OWPlatformCB_PrintChan(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,x), &psaOW_CI[x]) ;
+	}
 #if 	(halHAS_DS248X > 0)
 	ds248xReportAll() ;
 #endif
