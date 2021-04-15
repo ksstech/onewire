@@ -412,8 +412,10 @@ int		ds248xOWChannelSelect(ds248x_t * psDS248X, uint8_t Chan) {
 
 int		ds248xOWSetSPU(ds248x_t * psDS248X) {
 	psDS248X->SPU = 1 ;
-	ds248xWriteConfig(psDS248X) ;
-	IF_myASSERT(debugRESULT, psDS248X->SPU == 1) ;
+	int iRV = ds248xWriteConfig(psDS248X) ;
+	if (iRV == 0 || psDS248X->SPU == 0) {
+		SL_ERR("I2C=%u  Ch=%u  iRV=%d Fail", psDS248X->I2Cnum, psDS248X->CurChan, iRV) ;
+	}
 	return psDS248X->SPU ;
 }
 
