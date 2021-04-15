@@ -66,19 +66,37 @@ enum {													// STATus register bitmap
 /**
  * PER DEVICE info to track DS248X devices detected and map assignment of LOG to PHY channels
  */
+typedef union ds248x_stat_t {
+	struct {
+/*LSB*/	uint8_t		OWB		: 1 ;					// 1-Wire Busy
+		uint8_t		PPD		: 1 ;					// Presence Pulse Detected
+		uint8_t		SD		: 1 ;
+		uint8_t		LL		: 1 ;					// Link Level
+		uint8_t		RST		: 1 ;					// ReSeT
+		uint8_t		SBR		: 1 ;					// Single Bit Read
+		uint8_t		TSB		: 1 ;					//
+/*MSB*/	uint8_t		DIR		: 1 ;					// DIRection
+	} ;
+	uint8_t		STAT ;
+} ds248x_stat_t ;
+
 typedef struct __attribute__((packed)) ds248x_s {		// DS248X I2C <> 1Wire bridge
 	i2c_dev_info_t *	psI2C ;							// size = 4
 	union {												// size = 5
 		struct {
-	/*LSB*/	uint8_t		OWB		: 1 ;					// 1-Wire Busy
-			uint8_t		PPD		: 1 ;					// Presence Pulse Detected
-			uint8_t		SD		: 1 ;
-			uint8_t		LL		: 1 ;					// Link Level
-			uint8_t		RST		: 1 ;					// ReSeT
-			uint8_t		SBR		: 1 ;					//
-			uint8_t		TSB		: 1 ;					//
-	/*MSB*/	uint8_t		DIR		: 1 ;					// DIRection
-
+			union {
+				struct {
+			/*LSB*/	uint8_t		OWB		: 1 ;					// 1-Wire Busy
+					uint8_t		PPD		: 1 ;					// Presence Pulse Detected
+					uint8_t		SD		: 1 ;
+					uint8_t		LL		: 1 ;					// Link Level
+					uint8_t		RST		: 1 ;					// ReSeT
+					uint8_t		SBR		: 1 ;					// Single Bit Read
+					uint8_t		TSB		: 1 ;					//
+			/*MSB*/	uint8_t		DIR		: 1 ;					// DIRection
+				} ;
+				uint8_t		STAT ;
+			} ;
 			uint8_t		DATA 	: 8 ;					// DATA Register
 			uint8_t		CHAN	: 8 ;					// CHANnel Selected Register
 
