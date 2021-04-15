@@ -21,7 +21,14 @@
 	DS18X20:
 		As far as possible, all devices in reasonable proximity should be connected to a single OW bus.
 		External power (Gnd + IO + Vcc) should be used to power the devices to ensure read reliability.
-		If DS18X20 iButtons are used they cannot be enumerated hence cannot be SENSE/LOG configured. (RULES ??) 
+		DS18X20 iButtons cannot be enumerated hence cannot be SENSE/LOG configured.(RULES ??) 
+		
+		If DS18X20 connected to any of DS2482-800 channels on KSS-AC0x, parasitic power is difficult.
+			4	OW	GND		NC		Black
+			3	LED	GND		Black	NC		Red+Blk
+			2	LED	Vcc		Red		Red
+			1	OW	IO		Yellow	Yellow	Yellow
+					Result:	OK		FAIL		
 
 	DS1990x:
 		If used for 1:1 (bedroom) access control do NOT install more than 1 iButton reader per OW bus.
