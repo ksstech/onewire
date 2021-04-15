@@ -20,7 +20,11 @@
 
 // ################################ Global/Local Debug macros ######################################
 
-#define	debugFLAG					0xD000
+#define	debugFLAG					0xF000
+
+#define	debugCONFIG					(debugFLAG & 0x0001)
+#define	debugSCANNER				(debugFLAG & 0x0002)
+#define	debugMAPPING				(debugFLAG & 0x0004)
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -51,19 +55,19 @@ int32_t	OWPlatformChanLog2Phy(onewire_t * psOW, uint8_t Chan) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (Chan < OWNumChan)) ;
 	memset(psOW, 0, sizeof(onewire_t)) ;
 #if		(halHAS_DS248X > 0)
-	for (int32_t i = 0; i < ds248xCount; ++i) {
+	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
-//		TRACK("Read: C=%d  Did=%d  N=%d  L=%d  H=%d", Chan, i, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi) ;
+		IF_TRACK(debugMAPPING, "Read: Ch=%d  Idx=%d  N=%d  L=%d  H=%d", Chan, i, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi) ;
 		if (psDS248X->NumChan && INRANGE(psDS248X->Lo, Chan, psDS248X->Hi, uint8_t)) {
 			psOW->BusType	= owTYPE_DS248X ;
 			psOW->DevNum	= i ;
 			psOW->PhyChan	= Chan - psDS248X->Lo ;
-//			TRACK("Done: Ch=%d  DN=%d  N=%d  L=%d  H=%d  P=%d", Chan, psOW->DevNum, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi, psOW->PhyChan) ;
+			IF_TRACK(debugMAPPING, "Done: Ch=%d  DN=%d  N=%d  L=%d  H=%d  P=%d", Chan, psOW->DevNum, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi, psOW->PhyChan) ;
 			return 1 ;
 		}
 	}
 #endif
-	IF_myASSERT(debugRESULT, 0) ;
+	SL_ERR("Invalid Logical Ch=%d", Chan) ;
 	return 0 ;
 }
 
@@ -170,22 +174,22 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 	int32_t	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
 	for (uint8_t OWBus = 0; OWBus < OWNumChan; ++OWBus) {
-		OWPlatformChanLog2Phy(psOW, OWBus) ;
-		if (OWChannelSelect(psOW) == 0)	{
-			IF_TRACK(debugTRACK, "Channel selection error") ;
-			break ;
+		if ((OWPlatformChanLog2Phy(psOW, OWBus) == 0) ||
+			(OWChannelSelect(psOW) == 0)) {
+			continue ;
 		}
 		if (Family) {
 			OWTargetSetup(psOW, Family) ;
 			iRV = OWSearch(psOW, 0) ;
 			if (psOW->ROM.Family != Family) {
-				IF_TRACK(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
+				IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
 				continue ;
 			}
 		} else {
 			iRV = OWFirst(psOW, 0) ;
 		}
 		while (iRV) {
+			IF_EXEC_2(debugSCANNER, OWPlatformCB_Print1W, makeMASKFLAG(0,0,0,0,0,0,0,0,0,0,0,0,OWBus), psOW) ;
 			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
 			iRV = Handler((flagmask_t) uCount, psOW) ;
@@ -212,14 +216,14 @@ int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewi
 	for (uint8_t x = 0; x < OWNumChan; ++x) {
 		OWPlatformChanLog2Phy(psOW, x) ;
 		if (OWChannelSelect(psOW) == 0)	{
-			IF_SL_INFO(debugTRACK, "Channel selection error") ;
+			IF_SL_INFO(debugSCANNER, "Channel selection error") ;
 			break ;
 		}
 		if (Family) {
 			OWTargetSetup(psOW, Family) ;
 			iRV = OWSearch(psOW, 0) ;
 			if (psOW->ROM.Family != Family) {
-				IF_SL_INFO(debugTRACK, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
+				IF_SL_INFO(debugSCANNER, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
 				continue ;
 			}
 		} else {
@@ -258,7 +262,15 @@ int32_t OWPlatformEndpoints(struct epw_t * psEW) {
 		iRV = OWPlatformScanner(OWFAMILY_01, OWPlatformCB_ReadDS1990X, &sOW) ;
 		break ;
 #endif
-	default: SL_ERR("Invalid/Unsupported 1-Wire family (URI=%d)", psEW->uri) ; break ;
+
+	default:
+		if (psEW->uri == 0) {
+			xEpWorkToUri(psEW) ;
+			if (psEW->uri == URI_DS18X20) {
+
+			}
+		}
+		SL_ERR("Invalid/Unsupported 1-Wire family (URI=%d)", psEW->uri) ;
 	}
 	return iRV ;
 }
@@ -296,14 +308,14 @@ int32_t	OWPlatformConfig(void) {
 			OWNumDev += iRV ;
 		}
 #if		(halHAS_DS1990X > 0)
-		IF_SL_INFO(debugTRACK && Family01Count, "DS1990x found %d devices", Family01Count) ;
+		IF_SL_INFO(debugCONFIG && Family01Count, "DS1990x found %d devices", Family01Count) ;
 		iRV = ds1990xConfig(URI_DS1990X) ;				// cannot enumerate, simple config
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1990, systimerTICKS, "DS1990", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
 #endif
 
 #if		(halHAS_DS18X20 > 0)
-		IF_SL_INFO(debugTRACK && Fam10_28Count, "DS18x20 found %d devices", Fam10_28Count) ;
 		if (Fam10_28Count) {
+			IF_SL_INFO(debugCONFIG, "DS18x20 found %d devices", Fam10_28Count) ;
 			iRV = ds18x20Enumerate(URI_DS18X20) ;		// enumerate & config individually
 		}
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1820A, systimerTICKS, "DS1820A", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
