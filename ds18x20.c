@@ -129,7 +129,7 @@ int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
 		OWReset(&psDS18X20->sOW) ;						// terminate read
 		iRV = 1 ;
 	}
-	IF_PRINT(debugREAD, "SP Read: %-'+b\n", Len, psDS18X20->RegX) ;
+	IF_PRINT(debugREAD, "SP Read: %-'+B\n", Len, psDS18X20->RegX) ;
 	return iRV ;
 }
 
