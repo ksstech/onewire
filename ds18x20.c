@@ -25,6 +25,7 @@
 #define	debugCONFIG					(debugFLAG & 0x0001)
 #define	debugREAD					(debugFLAG & 0x0002)
 #define	debugCONVERT				(debugFLAG & 0x0004)
+#define	debugPOWER					(debugFLAG & 0x0008)
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -160,6 +161,7 @@ int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) {
 					? psDS18X20->fam28.Conf >> 5
 					: owFAM28_RES9B ;
 	ds18x20ConvertTemperature(psDS18X20) ;
+	psDS18X20->Pwr = ds18x20CheckPower(psDS18X20) ;
 	return 1 ;
 }
 
