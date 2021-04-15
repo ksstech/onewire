@@ -135,8 +135,6 @@ DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 20) ;
 
 // #################################### Public Data structures #####################################
 
-extern	uint8_t		ds248xCount ;
-extern	ds248x_t *	psaDS248X	;
 
 // ################################ DS248X I2C Read/Write support ##################################
 
