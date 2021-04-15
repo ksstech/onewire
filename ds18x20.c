@@ -112,31 +112,40 @@ int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
 
 int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
 	IF_myASSERT(debugPARAM, INRANGE(0, Len, SIZEOF_MEMBER(ds18x20_t, RegX), int32_t)) ;
-	ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM);
+	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == 0) {
+		return 0 ;
+	}
+	int32_t iRV ;
 	OWWriteByte(&psDS18X20->sOW, DS18X20_READ_SP) ;
 	memset(psDS18X20->RegX, 0xFF, Len) ;				// 0xFF to read
 	OWBlock(&psDS18X20->sOW, psDS18X20->RegX, Len) ;
 
-	int32_t iRV = 1 ;									// default return status
 	if (Len == SIZEOF_MEMBER(ds18x20_t, RegX)) {		// if full scratchpad read, check CRC
 		iRV = OWCheckCRC(psDS18X20->RegX, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
-		IF_myASSERT(debugRESULT, iRV != 0) ;			// ensure CRC is correct
+		if (iRV != 1)  {
+			SL_ERR("CRC Failed") ;
+		}
 	} else {
 		OWReset(&psDS18X20->sOW) ;						// terminate read
+		iRV = 1 ;
 	}
 	IF_PRINT(debugREAD, "SP Read: %-'+b\n", Len, psDS18X20->RegX) ;
 	return iRV ;
 }
 
 int32_t	ds18x20WriteSP(ds18x20_t * psDS18X20) {
-	ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) ;
+	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == 0) {
+		return 0 ;
+	}
 	OWWriteByte(&psDS18X20->sOW, DS18X20_WRITE_SP) ;
 	OWBlock(&psDS18X20->sOW, (uint8_t *) &psDS18X20->Thi, psDS18X20->sOW.ROM.Family == OWFAMILY_28 ? 3 : 2) ;	// Thi, Tlo [+Conf]
 	return 1 ;
 }
 
 int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) {
-	ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) ;
+	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == 0) {
+		return 0 ;
+	}
 	int32_t iRV = OWWriteBytePower(&psDS18X20->sOW, DS18X20_COPY_SP) ;
 	IF_myASSERT(debugRESULT, iRV != 0) ;
 
@@ -235,10 +244,9 @@ int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 }
 
 int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
-	ds18x20SelectAndAddress(psDS18X20, u8AddrMethod) ;
-	int32_t iRV = OWWriteBytePower(&psDS18X20->sOW, DS18X20_CONVERT) ;
-	if (iRV == 0) {
-		return iRV ;
+	if ((ds18x20SelectAndAddress(psDS18X20, u8AddrMethod) == 0) ||
+		(OWWriteBytePower(&psDS18X20->sOW, DS18X20_CONVERT) == 0)) {
+		return 0 ;
 	}
 	TickType_t Tconv = pdMS_TO_TICKS(ds18x20DELAY_CONVERT) ;
 	/* ONLY decrease delay if:
@@ -315,7 +323,6 @@ int32_t	ds18x20ReadConvertAll(epw_t * psEWP) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
 		if (psDS18X20->sOW.PhyChan != PrevBus) {
 			if (ds18x20SampleTemperature(psDS18X20, OW_CMD_SKIPROM) == 0) {
-				SL_ERR("Sampling failed") ;
 				continue ;
 			}
 			PrevBus = psDS18X20->sOW.PhyChan ;
@@ -348,7 +355,6 @@ int32_t	ds18x20ScanAlarmsAll(void) {
  SKIP +SPU +XXXms		Work
  MATCH +SPU +XXXmS		Work
  SKIP -SPU +XXXmS		Work
-
  */
 int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
