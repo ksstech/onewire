@@ -200,7 +200,7 @@ int32_t	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 // ############################### DS248x(-x00) DEBUG support functions ############################
 
 int32_t	ds248xReportStatus(uint8_t Num, ds248x_stat_t Stat) {
-	return printfx("STAT(4) #%u=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
+	return printfx("STAT(0) #%u=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
 			Num,
 			Stat.STAT,
 			Stat.DIR ? '1' : '0',
@@ -237,8 +237,7 @@ int32_t	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < psDS248X->NumChan && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
 		IF_myASSERT(debugRESULT, Chan < psDS248X->NumChan && psDS248X->Rchan == ds248x_V2N[Chan]) ;
-		iRV = printfx("CHAN(2)=0x%02X  Rchan=0x%02X  Chan=%d  Xlat=0x%02X\n",
-				psDS248X->CHAN, psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
+		iRV = printfx("CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
 		break ;
 	case ds248xREG_CONF:
 		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) {
@@ -315,7 +314,7 @@ int32_t	ds248xDeviceIdentify(i2c_dev_info_t * psI2C_DI) {
 			if (iRV == 0) {								// CSR read FAIL
 				psI2C_DI->Type = i2cDEV_DS2482_10X ;	// NOT YET TESTED !!!!
 				psI2C_DI->DevIdx 	= ds248xCount++ ;	// valid 2482-10x
-			} else if (sDS248X.CHAN == ds248x_V2N[0]) {	// CHAN=0 default
+			} else if (sDS248X.Rchan == ds248x_V2N[0]) {	// CHAN=0 default
 				psI2C_DI->DevIdx 	= ds248xCount++ ;	// valid 2482-800
 			} else {
 				psI2C_DI->Type 		= i2cDEV_UNDEF ;	// not successful, undefined
@@ -385,7 +384,7 @@ int		ds248xOWChannelSelect(ds248x_t * psDS248X, uint8_t Chan) {
 		// value read back not same as the channel number sent so verify the return
 		// against the code expected, but store the actual channel number if successful
 		if (psDS248X->Rchan != ds248x_V2N[Chan]) {
-			SL_ERR("Read %d != %d Expected", psDS248X->RegX[psDS248X->Rptr], ds248x_V2N[Chan]) ;
+			SL_ERR("Read %d != %d Expected", psDS248X->Rchan, ds248x_V2N[Chan]) ;
 			return 0 ;
 		}
 		psDS248X->CurChan	= Chan ;
