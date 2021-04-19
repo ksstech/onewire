@@ -94,28 +94,29 @@ typedef struct __attribute__((packed)) ds248x_s {		// DS248X I2C <> 1Wire bridge
 					uint8_t		SBR		: 1 ;					// Single Bit Read
 					uint8_t		TSB		: 1 ;					//
 			/*MSB*/	uint8_t		DIR		: 1 ;					// DIRection
-				} ;
-				uint8_t		STAT ;
+				};
+				uint8_t		Rstat ;
 			} ;
-			uint8_t		DATA 	: 8 ;					// DATA Register
-			uint8_t		CHAN	: 8 ;					// CHANnel Selected Register
-
-	/*LSB*/	uint8_t		APU		: 1 ;					// Active Pull Up
-			uint8_t		PDN		: 1 ;					// Pull Down (DS2484 only)
-			uint8_t		SPU		: 1 ;					// Strong Pull Up
-			uint8_t		OWS		: 1 ;					// 1-Wire Speed
-	/*MSB*/	uint8_t		RES1	: 4 ;
-
-	/*LSB*/	uint8_t		VAL		: 4 ;					// PARameter VALue
-			uint8_t		OD		: 1 ;					// OverDrive control
-	/*MSB*/	uint8_t		PAR		: 3 ;					// PARameter selector
-		} ;
-		struct {
-			uint8_t		Rstat ;
 			uint8_t		Rdata ;
 			uint8_t		Rchan ;							// Code read back after ChanSel
-			uint8_t		Rconf ;
-			uint8_t		Rpadj ;
+			union {
+				struct {
+			/*LSB*/	uint8_t		APU		: 1 ;					// Active Pull Up
+					uint8_t		PDN		: 1 ;					// Pull Down (DS2484 only)
+					uint8_t		SPU		: 1 ;					// Strong Pull Up
+					uint8_t		OWS		: 1 ;					// 1-Wire Speed
+			/*MSB*/	uint8_t		RES1	: 4 ;
+				} ;
+				uint8_t		Rconf ;
+			} ;
+			union {
+				struct {
+			/*LSB*/	uint8_t		VAL		: 4 ;					// PARameter VALue
+					uint8_t		OD		: 1 ;					// OverDrive control
+			/*MSB*/	uint8_t		PAR		: 3 ;					// PARameter selector
+				} ;
+				uint8_t		Rpadj ;
+			} ;
 		} ;
 		uint8_t			RegX[5] ;
 	} ;
