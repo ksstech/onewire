@@ -342,8 +342,8 @@ int32_t	OWPlatformConfig(void) {
 }
 
 void	OWPlatformReportAll(void) {
-	for (int x = 0; x < OWNumChan; ++x) {
-		OWPlatformCB_PrintChan(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,x), &psaOW_CI[x]) ;
+	for (int OWChan = 0; OWChan < OWNumChan; ++OWChan) {
+		OWPlatformCB_PrintChan(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,OWChan), &psaOW_CI[OWChan]) ;
 	}
 #if 	(halHAS_DS248X > 0)
 	ds248xReportAll(1) ;
