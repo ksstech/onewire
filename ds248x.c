@@ -89,13 +89,7 @@ int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
 int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t uSdly) {
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
-	int32_t	iRV = halI2C_Write(psDS248X->psI2C, pTxBuf, TxSize) ;
-	if (iRV == erSUCCESS) {
-		if (Delay) {
-			i64TaskDelayUsec(Delay) ;
-		}
-		iRV = halI2C_Read(psDS248X->psI2C, &psDS248X->RegX[psDS248X->Rptr], 1) ;
-	}
+	int32_t iRV = halI2C_WriteDelayRead(psDS248X->psI2C, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr], 1, uSdly) ;
 	if (iRV == erSUCCESS) {
 		iRV = 1 ;
 		if (psDS248X->Rptr == ds248xREG_STAT) {
