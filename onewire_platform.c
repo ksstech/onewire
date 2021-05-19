@@ -41,7 +41,7 @@ ow_flags_t	OWflags ;
 
 static const char * const OWBusType[] = { "DS248x", "RTM" "GPIO" } ;
 static uint8_t	OWNumChan = 0 ;
-static uint8_t	OWNumDev = 0 ;
+static uint8_t	OWNumDev = 0 ;						// total ALL types, counted but not yet used
 
 // ################################# Application support functions #################################
 
@@ -78,7 +78,7 @@ int32_t	OWPlatformChanPhy2Log(onewire_t * psOW) {
 }
 
 ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t LogChan) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaOW_CI) && LogChan < OWNumChan) ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaOW_CI) && (LogChan < OWNumChan)) ;
 	return &psaOW_CI[LogChan] ;
 }
 
@@ -182,8 +182,8 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int32_t	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
-	for (uint8_t OWBus = 0; OWBus < OWNumChan; ++OWBus) {
-		if ((OWPlatformChanLog2Phy(psOW, OWBus) == 0) ||
+	for (uint8_t OWChan = 0; OWChan < OWNumChan; ++OWChan) {
+		if ((OWPlatformChanLog2Phy(psOW, OWChan) == 0) ||
 			(OWChannelSelect(psOW) == 0)) {
 			continue ;
 		}
@@ -198,7 +198,7 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 			iRV = OWFirst(psOW, 0) ;
 		}
 		while (iRV) {
-			IF_EXEC_2(debugSCANNER, OWPlatformCB_Print1W, makeMASKFLAG(0,0,0,0,0,0,0,0,0,0,0,0,OWBus), psOW) ;
+			IF_EXEC_2(debugSCANNER, OWPlatformCB_Print1W, makeMASKFLAG(0,0,0,0,0,0,0,0,0,0,0,0,OWChan), psOW) ;
 			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
 			iRV = Handler((flagmask_t) uCount, psOW) ;
@@ -223,8 +223,8 @@ int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewi
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int32_t	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
-	for (uint8_t x = 0; x < OWNumChan; ++x) {
-		OWPlatformChanLog2Phy(psOW, x) ;
+	for (uint8_t OWChan = 0; OWChan < OWNumChan; ++OWChan) {
+		OWPlatformChanLog2Phy(psOW, OWChan) ;
 		if (OWChannelSelect(psOW) == 0)	{
 			IF_SL_INFO(debugSCANNER, "Channel selection error") ;
 			break ;
