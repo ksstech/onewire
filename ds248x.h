@@ -152,8 +152,7 @@ void	ds248xReportAll(bool Refresh) ;
 
 // ############################### Identify, test and configure ####################################
 
-int32_t ds248xDetect(ds248x_t * psDS248X) ;
-int32_t	ds248xDeviceIdentify(i2c_dev_info_t * psI2C_DI) ;
+int32_t	ds248xIdentify(i2c_dev_info_t * psI2C_DI) ;
 /**
  * ds248xDriverConfig() - sets default device config
  *	1-Wire speed (c1WS) = standard (0)
@@ -161,7 +160,7 @@ int32_t	ds248xDeviceIdentify(i2c_dev_info_t * psI2C_DI) ;
  *	Presence pulse masking (cPPM) = off (0)		[Discontinued, support removed]
  *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
  */
-int32_t	ds248xDriverConfig(i2c_dev_info_t * psI2C_DI) ;
+int32_t	ds248xConfig(i2c_dev_info_t * psI2C_DI) ;
 
 // ############################## DS248X-x00 1-Wire support functions ##############################
 

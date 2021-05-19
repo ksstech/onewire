@@ -61,8 +61,8 @@ typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20
 	} ;
 	uint8_t	Idx		: 3 ;								// Endpoint index (0->7) of this specific device
 	uint8_t	Res		: 2 ;								// Resolution 0=9b 1=10b 2=11b 3=12b
-	uint8_t	Pwr		: 1 ;
-	uint8_t	OD		: 1 ;
+	uint8_t	Pwr		: 1 ;								// Power  0=Parasitic  1=External
+	uint8_t	OD		: 1 ;								// OverDrive 0=Disabled 1=Enabled
 	uint8_t	SBits	: 1 ;
 	epw_t	sEWx ;
 } ds18x20_t ;
