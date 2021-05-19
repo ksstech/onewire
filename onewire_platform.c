@@ -130,17 +130,16 @@ int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 }
 
 int32_t OWPlatformCB_PrintChan(flagmask_t FlagMask, ow_chan_info_t * psCI) {
-	if (psCI->ds18any == 0) {
-		return 0 ;
-	}
 	int32_t iRV = printfx("OW ch=%d  ", FlagMask.uCount) ;
 	if (psCI->LastRead) {
-		iRV += printfx("%r  ", FlagMask.uCount, psCI->LastRead) ;
+		iRV += printfx("%r  ", psCI->LastRead) ;
 	}
 	if (psCI->LastROM.Family) {
 		iRV += OWPlatformCB_PrintROM((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
 	}
-	iRV += printfx("  DS18B=%d  DS18S=%d  DS18X=%d", psCI->ds18b20, psCI->ds18s20, psCI->ds18xxx) ;
+	if (psCI->ds18any) {
+		iRV += printfx("  DS18B=%d  DS18S=%d  DS18X=%d", psCI->ds18b20, psCI->ds18s20, psCI->ds18xxx) ;
+	}
 	if (FlagMask.bNL) {
 		iRV += printfx("\n") ;
 	}
