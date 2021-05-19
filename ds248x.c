@@ -69,10 +69,10 @@ void	ds248xCheckStatus(ds248x_t * psDS248X) {
 }
 
 int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
-	xRtosSemaphoreTake(&psDS248X->psI2C->mux, portMAX_DELAY) ;
+	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
 	int32_t iRV = halI2C_Read(psDS248X->psI2C, &psDS248X->RegX[psDS248X->Rptr], 1) ;
-	xRtosSemaphoreGive(&psDS248X->psI2C->mux) ;
+	xRtosSemaphoreGive(&psDS248X->mux) ;
 	if (iRV == erSUCCESS) {
 		if (psDS248X->Rptr == ds248xREG_STAT) {
 			ds248xCheckStatus(psDS248X) ;
@@ -86,8 +86,8 @@ int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
 	return 0 ;
 }
 
-int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t Delay) {
-	xRtosSemaphoreTake(&psDS248X->psI2C->mux, portMAX_DELAY) ;
+int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t uSdly) {
+	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
 	int32_t	iRV = halI2C_Write(psDS248X->psI2C, pTxBuf, TxSize) ;
 	if (iRV == erSUCCESS) {
@@ -116,7 +116,7 @@ int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t T
 		// device, type or submodel (DS2482-800 vs -10x). Hence selective error check
 		IF_myASSERT(debugRESULT && psDS248X->Test == 0, 0) ;
 	}
-	xRtosSemaphoreGive(&psDS248X->psI2C->mux) ;
+	xRtosSemaphoreGive(&psDS248X->mux) ;
 	return iRV ;
 }
 
