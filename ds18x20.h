@@ -69,6 +69,7 @@ typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20
 
 // ###################################### Public variables #########################################
 
+extern	ds18x20_t *	psaDS18X20 ;
 extern	uint8_t	Fam10_28Count ;
 
 // ###################################### Public functions #########################################
@@ -91,6 +92,7 @@ int32_t	ds18x20WriteSP(ds18x20_t * psDS18X20) ;
 int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) ;
 
 int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) ;
+int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) ;
 void	ds18x20ReportAll(void) ;
 
 /*
