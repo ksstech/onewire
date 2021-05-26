@@ -163,14 +163,14 @@ int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
 	memcpy(&psDS18X20->sOW, psOW, sizeof(onewire_t)) ;
 	psDS18X20->Idx	= sFM.uCount ;
 
-	epw_t * psEWx = &psDS18X20->sEWx ;
-	memset(psEWx, 0, sizeof(epw_t)) ;
-	psEWx->uri	= URI_DS18X20 ;
-	psEWx->idx	= sFM.uCount ;
-	psEWx->var.def.cv.vt	= vtVALUE ;
-	psEWx->var.def.cv.vs	= vs32B ;
-	psEWx->var.def.cv.vf	= vfFXX ;
-	psEWx->var.def.cv.vc	= 1 ;
+	epw_t * psEWS = &psDS18X20->sEWx ;
+	memset(psEWS, 0, sizeof(epw_t)) ;
+	psEWS->var.def.cv.vf	= vfFXX ;
+	psEWS->var.def.cv.vt	= vtVALUE ;
+	psEWS->var.def.cv.vs	= vs32B ;
+	psEWS->var.def.cv.vc	= 1 ;
+	psEWS->idx				= sFM.uCount ;
+	psEWS->uri				= URI_DS18X20 ;
 	ds18x20Initialize(psDS18X20) ;
 
 	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(OWPlatformChanPhy2Log(psOW)) ;
@@ -202,17 +202,20 @@ int32_t	ds18x20Enumerate(void) {
 	IF_PRINT(debugREAD, "  Enum=%d\n", DevCount) ;
 
 	// Do once-off initialization for work structure entries
-	epi_t	sEI ;
-	vEpGetInfoWithIndex(&sEI, xUri) ;			// setup pointers to static and work tables
-	IF_myASSERT(debugRESULT, halCONFIG_inFLASH(sEI.psES) && halCONFIG_inSRAM(sEI.psEW)) ;
+	epw_t * psEWP = &table_work[URI_DS18X20] ;
+	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP)) ;
+	psEWP->var.def.cv.pntr	= 1 ;
+	psEWP->var.def.cv.vf	= vfFXX ;
+	psEWP->var.def.cv.vt	= vtENUM ;
+	psEWP->var.def.cv.vs	= vs32B ;
+	psEWP->var.def.cv.vc	= ds18x20NumDev ;		// number enumerated
+	psEWP->var.val.px.pv	= (void *) &sDS18X20Func ;
+	psEWP->Tsns				= ds18x20T_SNS_NORM ;	// All 4 channels read in succession
+	psEWP->Rsns				= ds18x20T_SNS_NORM ;	// with blocking I2C driver
+	psEWP->uri				= URI_DS18X20 ;			// Used in OWPlatformEndpoints()
 
-	sEI.psEW->uri					= xUri ;
-	sEI.psEW->var.def.cv.pntr	= 1 ;
-	sEI.psEW->var.def.cv.vc= DevCount ;		// number enumerated
-	sEI.psEW->var.val.px.pv	= (void *) &sDS18X20Func ;
-
-	if (DevCount == Fam10_28Count) {
-		iRV = DevCount ;
+	if (ds18x20NumDev == Fam10_28Count) {
+		iRV = ds18x20NumDev ;
 	} else {
 		SL_ERR("Only %d of %d enumerated!!!", DevCount, Fam10_28Count) ;
 		iRV = erFAILURE ;

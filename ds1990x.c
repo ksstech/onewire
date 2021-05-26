@@ -82,6 +82,11 @@ int32_t	OWPlatformCB_ReadDS1990X(flagmask_t sFM, onewire_t * psOW) {
 int32_t	ds1990xConfig(void) {
 	epw_t * psEWP = &table_work[URI_DS1990X] ;
 	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP)) ;
+	psEWP->var.def.cv.vf	= vfUXX ;
+	psEWP->var.def.cv.vt	= vtVALUE ;
+	psEWP->var.def.cv.vs	= vs32B ;
+	psEWP->Tsns				= ds1990xT_SNS_NORM ;		// All (0+) iButtons read in succession
+	psEWP->Rsns				= ds1990xT_SNS_NORM ;		// with blocking I2C driver
 	psEWP->uri				= URI_DS1990X ;				// Used in OWPlatformEndpoints()
 	return erSUCCESS ;
 }
