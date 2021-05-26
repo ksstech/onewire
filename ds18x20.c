@@ -184,7 +184,7 @@ int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
 
 int32_t	ds18x20Enumerate(void) {
 	int32_t	iRV = 0 ;
-	uint8_t	DevCount = 0 ;
+	uint8_t	ds18x20NumDev = 0 ;
 	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
 	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
 	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psaDS18X20)) ;
@@ -193,13 +193,13 @@ int32_t	ds18x20Enumerate(void) {
 	onewire_t	sOW ;
 	iRV = OWPlatformScanner(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
 	if (iRV > 0) {
-		DevCount += iRV ;
+		ds18x20NumDev += iRV ;
 	}
 	iRV = OWPlatformScanner(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
 	if (iRV > 0) {
-		DevCount += iRV ;
+		ds18x20NumDev += iRV ;
 	}
-	IF_PRINT(debugREAD, "  Enum=%d\n", DevCount) ;
+	IF_PRINT(debugREAD, "  Enum=%d\n", ds18x20NumDev) ;
 
 	// Do once-off initialization for work structure entries
 	epw_t * psEWP = &table_work[URI_DS18X20] ;
@@ -217,7 +217,7 @@ int32_t	ds18x20Enumerate(void) {
 	if (ds18x20NumDev == Fam10_28Count) {
 		iRV = ds18x20NumDev ;
 	} else {
-		SL_ERR("Only %d of %d enumerated!!!", DevCount, Fam10_28Count) ;
+		SL_ERR("Only %d of %d enumerated!!!", ds18x20NumDev, Fam10_28Count) ;
 		iRV = erFAILURE ;
 	}
 	return iRV ;										// number of devices enumerated
