@@ -9,13 +9,6 @@
 #include	"syslog.h"
 #include	"systiming.h"					// timing debugging
 #include	"x_errors_events.h"
-#include	"x_values_convert.h"
-#include	"x_string_to_values.h"
-#include	"x_string_general.h"
-
-#include	"commands.h"
-#include	"ds18x20_cmds.h"
-#include	"rules_engine.h"
 
 #include	<string.h>
 #include	<stdint.h>
