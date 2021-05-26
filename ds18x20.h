@@ -105,7 +105,7 @@ int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) ;
 struct rule_t ;
 int32_t	ds18x20ConfigMode (struct rule_t * psRule) ;
 int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) ;
-int32_t	ds18x20Enumerate(int32_t xUri)  ;
+int32_t	ds18x20Enumerate(void)  ;
 
 #ifdef __cplusplus
 	}

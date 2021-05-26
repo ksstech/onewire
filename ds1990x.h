@@ -46,7 +46,7 @@ extern	uint8_t	Family01Count, ds1990ReadIntvl ;
 // ###################################### Public functions #########################################
 
 int32_t	OWPlatformCB_ReadDS1990X(flagmask_t, onewire_t *) ;
-int32_t	ds1990xConfig(int32_t xUri) ;
+int32_t	ds1990xConfig(void) ;
 
 #ifdef __cplusplus
 }

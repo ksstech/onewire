@@ -79,10 +79,9 @@ int32_t	OWPlatformCB_ReadDS1990X(flagmask_t sFM, onewire_t * psOW) {
 	return erSUCCESS ;
 }
 
-int32_t	ds1990xConfig(int32_t xUri) {
-	epi_t	sEpInfo ;
-	vEpGetInfoWithIndex(&sEpInfo, xUri) ;			// setup pointers to static and work tables
-	IF_myASSERT(debugRESULT, sEpInfo.psES && sEpInfo.psEW) ;
-	sEpInfo.psEW->uri	= xUri ;
+int32_t	ds1990xConfig(void) {
+	epw_t * psEWP = &table_work[URI_DS1990X] ;
+	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP)) ;
+	psEWP->uri				= URI_DS1990X ;				// Used in OWPlatformEndpoints()
 	return erSUCCESS ;
 }

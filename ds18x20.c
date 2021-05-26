@@ -189,7 +189,7 @@ int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
 	return 1 ;											// number of devices enumerated
 }
 
-int32_t	ds18x20Enumerate(int32_t xUri) {
+int32_t	ds18x20Enumerate(void) {
 	int32_t	iRV = 0 ;
 	uint8_t	DevCount = 0 ;
 	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;

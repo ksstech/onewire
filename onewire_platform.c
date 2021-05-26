@@ -282,7 +282,7 @@ int32_t OWPlatformEndpoints(epw_t * psEW) {
 		if (psEW->uri == 0) {
 			xEpWorkToUri(psEW) ;
 			if (psEW->uri == URI_DS18X20) {
-
+				// XXX Add support to make work!!!
 			}
 		}
 		SL_ERR("Invalid/Unsupported 1-Wire family (URI=%d)", psEW->uri) ;
@@ -324,14 +324,14 @@ int32_t	OWPlatformConfig(void) {
 		}
 #if		(halHAS_DS1990X > 0)
 		IF_SL_INFO(debugCONFIG && Family01Count, "DS1990x found %d devices", Family01Count) ;
-		iRV = ds1990xConfig(URI_DS1990X) ;				// cannot enumerate, simple config
+		iRV = ds1990xConfig() ;				// cannot enumerate, simple config
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1990, systimerTICKS, "DS1990", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
 #endif
 
 #if		(halHAS_DS18X20 > 0)
 		if (Fam10_28Count) {
 			IF_SL_INFO(debugCONFIG, "DS18x20 found %d devices", Fam10_28Count) ;
-			iRV = ds18x20Enumerate(URI_DS18X20) ;		// enumerate & config individually
+			iRV = ds18x20Enumerate() ;		// enumerate & config individually
 		}
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1820A, systimerTICKS, "DS1820A", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS1820B, systimerTICKS, "DS1820B", myMS_TO_TICKS(1), myMS_TO_TICKS(10)) ;
