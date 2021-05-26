@@ -389,12 +389,11 @@ int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
 		return erSCRIPT_INV_OPERATION ;
 	}
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
-	epw_t * psEW = &table_work[psRule->actPar0[psRule->ActIdx]] ;
-	px_t	paX32 ;
-	paX32.pi32 = (int32_t *) &psRule->para.i32[0][0] ;
-	IF_PRINT(debugCONFIG, "DS18X20 Mode p0=%d p1=%d p2=%d p3=%d p4=%d\n", *paX32.pi32,
-					*(paX32.pi32+1), *(paX32.pi32+2), *(paX32.pi32+3), *(paX32.pi32+4)) ;
-	int	Xcur = *paX32.pi32++ ;
+	uint8_t	AI = psRule->ActIdx ;
+	epw_t * psEW = &table_work[psRule->actPar0[AI]] ;
+	px_t	px ;
+	px.pu32 = (uint32_t *) &psRule->para.u32[AI][0] ;
+	int	Xcur = *px.pu32++ ;
 	int Xmax = psEW->var.def.cv.vc ;
 	if (Xcur == 255) {									// non-specific total count ?
 		Xcur = Xmax ;									// yes, set to actual count.
@@ -407,11 +406,12 @@ int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
 	} else {
 		Xmax = Xcur ;									// single Xcur
 	}
+	uint32_t lo	= *px.pu32++ ;
+	uint32_t hi	= *px.pu32++ ;
+	uint32_t res = *px.pu32++ ;
+	uint32_t wr	= *px.pu32 ;
+	IF_PRINT(debugCONFIG, "DS18X20 Mode Xcur=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, lo, hi, res, wr) ;
 	int32_t iRV = 0 ;
-	int lo = *paX32.pi32++ ;
-	int hi = *paX32.pi32++ ;
-	int res = *paX32.pi32++ ;
-	int wr = *paX32.pi32 ;
 	if (wr == 0 || wr == 1) {							// if parameter omitted, do not persist
 		do {
 			ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
