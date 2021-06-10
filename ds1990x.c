@@ -34,7 +34,7 @@
 
 #include	<string.h>
 
-#define	debugFLAG					0xC001
+#define	debugFLAG					0xE001
 
 #define	debugEVENTS					(debugFLAG & 0x0001)
 
