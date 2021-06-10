@@ -259,37 +259,6 @@ int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewi
 }
 #endif
 
-int32_t OWPlatformEndpoints(epw_t * psEW) {
-	int32_t iRV = erFAILURE;
-#if		(halHAS_DS1990X > 0)
-	onewire_t sOW ;
-#endif
-	switch(psEW->uri) {
-#if		(halHAS_DS18X20 > 0)
-	case URI_DS18X20:
-		iRV = ds18x20ReadConvertAll(NULL) ;
-		break ;
-#endif
-
-#if		(halHAS_DS1990X > 0)
-	case URI_DS1990X:
-		Family01Count = 0 ;
-		iRV = OWPlatformScanner(OWFAMILY_01, OWPlatformCB_ReadDS1990X, &sOW) ;
-		break ;
-#endif
-
-	default:
-		if (psEW->uri == 0) {
-			xEpWorkToUri(psEW) ;
-			if (psEW->uri == URI_DS18X20) {
-				// XXX Add support to make work!!!
-			}
-		}
-		SL_ERR("Invalid/Unsupported 1-Wire family (URI=%d)", psEW->uri) ;
-	}
-	return iRV ;
-}
-
 // ################### Identification, Diagnostics & Configuration functions #######################
 
 /**
