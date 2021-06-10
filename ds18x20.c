@@ -70,12 +70,12 @@ static uint8_t	PrevBus ;
 int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psDS18X20)) ;
 	int32_t iRV = OWChannelSelect(&psDS18X20->sOW) ;
-	IF_myASSERT(debugRESULT, iRV != 0) ;
-
-	OWAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) ;
-	OWWriteByte(&psDS18X20->sOW, DS18X20_READ_PSU) ;
-	iRV = OWReadBit(&psDS18X20->sOW) ;					// return status 0=parasitic 1=external
-	IF_PRINT(debugPOWER, "PSU=%s\n", iRV ? "Ext" : "Para") ;
+	if (iRV != 0) {
+		OWAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) ;
+		OWWriteByte(&psDS18X20->sOW, DS18X20_READ_PSU) ;
+		iRV = OWReadBit(&psDS18X20->sOW) ;					// return status 0=parasitic 1=external
+		IF_PRINT(debugPOWER, "PSU=%s\n", iRV ? "Ext" : "Para") ;
+	}
 	return iRV ;
 }
 
