@@ -83,8 +83,8 @@ typedef union ds248x_stat_t {
 	uint8_t		STAT ;
 } ds248x_stat_t ;
 
-typedef struct __attribute__((packed)) ds248x_s {		// DS248X I2C <> 1Wire bridge
-	i2c_dev_info_t *	psI2C ;							// size = 4
+typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
+	i2c_di_t *	psI2C ;							// size = 4
 	SemaphoreHandle_t	mux ;
 	TimerHandle_t	timer ;
 	union {												// size = 5
@@ -156,7 +156,7 @@ void	ds248xReportAll(bool Refresh) ;
 
 // ############################### Identify, test and configure ####################################
 
-int32_t	ds248xIdentify(i2c_dev_info_t * psI2C_DI) ;
+int32_t	ds248xIdentify(i2c_di_t * psI2C_DI) ;
 /**
  * ds248xDriverConfig() - sets default device config
  *	1-Wire speed (c1WS) = standard (0)
@@ -164,7 +164,8 @@ int32_t	ds248xIdentify(i2c_dev_info_t * psI2C_DI) ;
  *	Presence pulse masking (cPPM) = off (0)		[Discontinued, support removed]
  *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
  */
-int32_t	ds248xConfig(i2c_dev_info_t * psI2C_DI) ;
+int32_t	ds248xConfig(i2c_di_t * psI2C_DI) ;
+void	ds248xReConfig(i2c_di_t * psI2C_DI) ;
 
 // ############################## DS248X-x00 1-Wire support functions ##############################
 

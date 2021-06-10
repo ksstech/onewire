@@ -293,7 +293,7 @@ void	ds248xReportAll(bool Refresh) {
  * ds248xIdentify() - device reset+register reads to ascertain exact device type
  * @return	erSUCCESS if supported device was detected, if not erFAILURE
  */
-int32_t	ds248xIdentify(i2c_dev_info_t * psI2C_DI) {
+int32_t	ds248xIdentify(i2c_di_t * psI2C_DI) {
 	ds248x_t sDS248X = { 0 } ;							// temporary device structure
 	psI2C_DI->Delay	= pdMS_TO_TICKS(10) ;				// default device timeout
 	sDS248X.psI2C	= psI2C_DI ;						// link to I2C device discovered
@@ -321,7 +321,7 @@ int32_t	ds248xIdentify(i2c_dev_info_t * psI2C_DI) {
 	return psI2C_DI->Type == i2cDEV_UNDEF ? erFAILURE : erSUCCESS ;
 }
 
-int32_t	ds248xConfig(i2c_dev_info_t * psI2C_DI) {
+int32_t	ds248xConfig(i2c_di_t * psI2C_DI) {
 	if (psaDS248X == NULL) {							// 1st time here...
 		IF_myASSERT(debugPARAM, psI2C_DI->DevIdx == 0) ;
 		psaDS248X = malloc(ds248xCount * sizeof(ds248x_t)) ;
