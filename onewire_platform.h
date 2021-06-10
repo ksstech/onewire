@@ -29,7 +29,7 @@ extern	ow_flags_t	OWflags ;
 // ###################################### Public functions #########################################
 
 ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t) ;
-int32_t	OWPlatformChanLog2Phy(onewire_t *, uint8_t) ;
+void	OWPlatformChanLog2Phy(onewire_t *, uint8_t) ;
 int32_t	OWPlatformChanPhy2Log(onewire_t *) ;
 // Common callback handlers
 int32_t	OWPlatformCB_PrintROM(flagmask_t FlagMask, ow_rom_t * psROM) ;

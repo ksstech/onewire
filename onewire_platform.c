@@ -51,24 +51,24 @@ static uint8_t	OWNumDev = 0 ;						// total ALL types, counted but not yet used
  * 	2.	RCT 	depending on config
  * 	3.	GPIO	depending on config
  */
-int32_t	OWPlatformChanLog2Phy(onewire_t * psOW, uint8_t Chan) {
+void	OWPlatformChanLog2Phy(onewire_t * psOW, uint8_t Chan) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (Chan < OWNumChan)) ;
 	memset(psOW, 0, sizeof(onewire_t)) ;
 #if		(halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
-		IF_TRACK(debugMAPPING, "Read: Ch=%d  Idx=%d  N=%d  L=%d  H=%d", Chan, i, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi) ;
+		IF_TRACK(debugMAPPING, "Read: Ch=%d  Idx=%d  N=%d  L=%d  H=%d\n", Chan, i, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi) ;
 		if (psDS248X->NumChan && INRANGE(psDS248X->Lo, Chan, psDS248X->Hi, uint8_t)) {
 			psOW->BusType	= owTYPE_DS248X ;
 			psOW->DevNum	= i ;
 			psOW->PhyChan	= Chan - psDS248X->Lo ;
-			IF_TRACK(debugMAPPING, "Done: Ch=%d  DN=%d  N=%d  L=%d  H=%d  P=%d", Chan, psOW->DevNum, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi, psOW->PhyChan) ;
-			return 1 ;
+			IF_TRACK(debugMAPPING, "Done: Ch=%d  DN=%d  N=%d  L=%d  H=%d  P=%d\n", Chan, psOW->DevNum, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi, psOW->PhyChan) ;
+			return ;
 		}
 	}
 #endif
 	SL_ERR("Invalid Logical Ch=%d", Chan) ;
-	return 0 ;
+	IF_myASSERT(debugRESULT, 0) ;
 }
 
 int32_t	OWPlatformChanPhy2Log(onewire_t * psOW) {
@@ -182,15 +182,15 @@ int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t 
 	int32_t	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
 	for (uint8_t OWChan = 0; OWChan < OWNumChan; ++OWChan) {
-		if ((OWPlatformChanLog2Phy(psOW, OWChan) == 0) ||
-			(OWChannelSelect(psOW) == 0)) {
+		OWPlatformChanLog2Phy(psOW, OWChan) ;
+		if (OWChannelSelect(psOW) == 0) {
 			continue ;
 		}
 		if (Family != 0) {
 			OWTargetSetup(psOW, Family) ;
 			iRV = OWSearch(psOW, 0) ;
 			if (psOW->ROM.Family != Family) {
-				IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
+				IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found\n", Family, psOW->ROM.Family) ;
 				continue ;
 			}
 		} else {
