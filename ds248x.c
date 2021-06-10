@@ -317,6 +317,13 @@ int32_t	ds248xIdentify(i2c_di_t * psI2C_DI) {
 		}
 	}
 	psI2C_DI->Test	= 0 ;
+	if (psI2C_DI->Type != i2cDEV_UNDEF) {
+		// 20 bytes = 1mS @ 100Khz, 250uS @ 400Khz
+		psI2C_DI->Speed = i2cSPEED_400 ;
+	}
+	if (sDS248X.mux) {
+		vSemaphoreDelete(sDS248X.mux) ;
+	}
 	return (psI2C_DI->Type == i2cDEV_UNDEF) ? erFAILURE : erSUCCESS ;
 }
 
