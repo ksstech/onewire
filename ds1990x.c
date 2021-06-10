@@ -22,6 +22,7 @@
  * onewire_platform.c
  */
 
+#include	"hal_variables.h"
 #include	"onewire_platform.h"
 #include	"task_events.h"
 #include	"endpoints.h"
@@ -29,7 +30,7 @@
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
 #include	"x_errors_events.h"
-#include	"hal_variables.h"
+#include	"x_utilities.h"								// vShowActivity
 
 #include	<string.h>
 
@@ -58,7 +59,7 @@ uint8_t	ds1990ReadIntvl	= ds1990READ_INTVL ;
 
 /* To avoid registering multiple reads if iButton is held in place too long we enforce a
  * period of 'x' seconds within which successive reads of the same tag will be ignored */
-int32_t	OWPlatformCB_ReadDS1990X(flagmask_t sFM, onewire_t * psOW) {
+int32_t	ds1990xDetectCB(flagmask_t sFM, onewire_t * psOW) {
 	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
 	uint8_t		LogChan = OWPlatformChanPhy2Log(psOW) ;
 	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(LogChan) ;
@@ -79,14 +80,22 @@ int32_t	OWPlatformCB_ReadDS1990X(flagmask_t sFM, onewire_t * psOW) {
 	return erSUCCESS ;
 }
 
+int32_t	ds1990xScanAll(epw_t * psEWP) {
+	vShowActivity(0) ;
+	onewire_t sOW ;
+	Family01Count = 0 ;
+	return OWPlatformScanner(OWFAMILY_01, ds1990xDetectCB, &sOW) ;
+}
+
 int32_t	ds1990xConfig(void) {
 	epw_t * psEWP = &table_work[URI_DS1990X] ;
 	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP)) ;
+	psEWP->var.def.cv.vc	= 1 ;
 	psEWP->var.def.cv.vf	= vfUXX ;
 	psEWP->var.def.cv.vt	= vtVALUE ;
 	psEWP->var.def.cv.vs	= vs32B ;
-	psEWP->Tsns				= ds1990xT_SNS_NORM ;		// All (0+) iButtons read in succession
-	psEWP->Rsns				= ds1990xT_SNS_NORM ;		// with blocking I2C driver
+	psEWP->Tsns				= ds1990xT_SNS_NORM ;
+	psEWP->Rsns				= ds1990xT_SNS_NORM ;
 	psEWP->uri				= URI_DS1990X ;				// Used in OWPlatformEndpoints()
 	return erSUCCESS ;
 }
