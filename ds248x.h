@@ -4,6 +4,9 @@
 
 #pragma		once
 
+#include	"hal_config.h"
+#include	"hal_i2c.h"
+
 #include	<stdint.h>
 
 #ifdef __cplusplus
@@ -83,6 +86,7 @@ typedef union ds248x_stat_t {
 typedef struct __attribute__((packed)) ds248x_s {		// DS248X I2C <> 1Wire bridge
 	i2c_dev_info_t *	psI2C ;							// size = 4
 	SemaphoreHandle_t	mux ;
+	TimerHandle_t	timer ;
 	union {												// size = 5
 		struct {
 			union {
@@ -133,7 +137,7 @@ typedef struct __attribute__((packed)) ds248x_s {		// DS248X I2C <> 1Wire bridge
 	// Status bits for 8 channels
 	uint8_t				PrvStat[8] ;					// previous STAT reg
 } ds248x_t ;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 24) ;
+DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 28) ;
 
 // #################################### Public Data structures #####################################
 

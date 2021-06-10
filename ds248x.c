@@ -71,7 +71,8 @@ void	ds248xCheckStatus(ds248x_t * psDS248X) {
 int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
-	int32_t iRV = halI2C_Read(psDS248X->psI2C, &psDS248X->RegX[psDS248X->Rptr], 1) ;
+	int32_t iRV = halI2C_Queue(psDS248X->psI2C, i2cR_B, &psDS248X->RegX[psDS248X->Rptr],
+			SIZEOF_MEMBER(ds248x_t, Rconf), NULL, 0, (i2cq_p1_t) NULL, (i2cq_p2_t) NULL) ;
 	xRtosSemaphoreGive(&psDS248X->mux) ;
 	if (iRV == erSUCCESS) {
 		if (psDS248X->Rptr == ds248xREG_STAT) {
@@ -89,7 +90,8 @@ int32_t	ds248xI2C_Read(ds248x_t * psDS248X) {
 int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t uSdly) {
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
-	int32_t iRV = halI2C_WriteDelayRead(psDS248X->psI2C, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr], 1, uSdly) ;
+	int32_t iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize,
+			&psDS248X->RegX[psDS248X->Rptr], 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) (uint32_t) 0) ;
 	if (iRV == erSUCCESS) {
 		iRV = 1 ;
 		if (psDS248X->Rptr == ds248xREG_STAT) {
@@ -362,6 +364,7 @@ int32_t	ds248xConfig(i2c_dev_info_t * psI2C_DI) {
  *			erFAILURE if device not detected or failure to perform select; else
  *			whatever status returned by halI2C_WriteRead()
  */
+
 int		ds248xOWChannelSelect(ds248x_t * psDS248X, uint8_t Chan) {
 	if (psDS248X->psI2C->Type == i2cDEV_DS2482_800)	{
 		/* Channel Select (Case A)
@@ -383,6 +386,7 @@ int		ds248xOWChannelSelect(ds248x_t * psDS248X, uint8_t Chan) {
 		}
 		psDS248X->CurChan	= Chan ;
 	}
+
 	return 1 ;
 }
 
