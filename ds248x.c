@@ -351,6 +351,12 @@ int32_t	ds248xConfig(i2c_di_t * psI2C_DI) {
 			break ;
 		default: myASSERT(0) ;
 	}
+	ds248xReConfig(psI2C_DI) ;
+	return erSUCCESS ;
+}
+
+void	ds248xReConfig(i2c_di_t * psI2C_DI) {
+	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx] ;
 	ds248xReset(psDS248X) ;
 	IF_myASSERT(debugRESULT, psDS248X->RST == 1) ;
 
@@ -358,7 +364,6 @@ int32_t	ds248xConfig(i2c_di_t * psI2C_DI) {
 	psDS248X->APU	= 1 ;								// LSBit
 	ds248xWriteConfig(psDS248X) ;
 	IF_myASSERT(debugRESULT, psDS248X->APU == 1) ;
-	return erSUCCESS ;
 }
 
 // ############################## DS248x-x00 1-Wire support functions ##############################
