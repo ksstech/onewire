@@ -102,8 +102,7 @@ int32_t	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t T
 				iRV = 0 ;
 			}
 		} else {
-			// normally nothing to do, maybe some tests..
-			if (psDS248X->Rptr == ds248xREG_CONF) {
+			if (psDS248X->Rptr == ds248xREG_CONF) {		// normally nothing to do, maybe some tests..
 				myASSERT(psDS248X->APU == 1) ;
 			}
 		}
@@ -296,9 +295,9 @@ void	ds248xReportAll(bool Refresh) {
 int32_t	ds248xIdentify(i2c_di_t * psI2C_DI) {
 	ds248x_t sDS248X = { 0 } ;							// temporary device structure
 	psI2C_DI->Delay	= pdMS_TO_TICKS(10) ;				// default device timeout
+	psI2C_DI->Test	= 1 ;								// and halI2C modules
 	sDS248X.psI2C	= psI2C_DI ;						// link to I2C device discovered
 	sDS248X.Test	= 1 ;								// disable I2C error messages in DS248X
-	psI2C_DI->Test	= 1 ;								// and halI2C modules
 	if (ds248xReset(&sDS248X) == 1) {
 		psI2C_DI->Type = i2cDEV_DS2484 ;
 		int32_t iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ) ;
@@ -317,8 +316,8 @@ int32_t	ds248xIdentify(i2c_di_t * psI2C_DI) {
 			}
 		}
 	}
-	psI2C_DI->Test = 0 ;
-	return psI2C_DI->Type == i2cDEV_UNDEF ? erFAILURE : erSUCCESS ;
+	psI2C_DI->Test	= 0 ;
+	return (psI2C_DI->Type == i2cDEV_UNDEF) ? erFAILURE : erSUCCESS ;
 }
 
 int32_t	ds248xConfig(i2c_di_t * psI2C_DI) {
@@ -333,7 +332,6 @@ int32_t	ds248xConfig(i2c_di_t * psI2C_DI) {
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS248xE, systimerCLOCKS, "DS248xE", myUS_TO_CLOCKS(300), myUS_TO_CLOCKS(3000)) ;
 		IF_SYSTIMER_INIT(debugTIMING, systimerDS248xF, systimerCLOCKS, "DS248xF", myUS_TO_CLOCKS(300), myUS_TO_CLOCKS(3000)) ;
 	}
-	psI2C_DI->Delay		= pdMS_TO_TICKS(10) ;			// default device timeout
 	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx] ;
 	psDS248X->psI2C		= psI2C_DI ;
 	switch(psI2C_DI->Type) {
