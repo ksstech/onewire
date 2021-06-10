@@ -45,8 +45,8 @@ typedef	struct __attribute__((packed)) fam10 { uint8_t Res0, Res1, Remain, Count
 typedef	struct __attribute__((packed)) fam28 { uint8_t Conf, Res1, Res2, Res3 ; } fam28 ;
 DUMB_STATIC_ASSERT(sizeof(fam10) == sizeof(fam28)) ;
 
-typedef struct __attribute__((packed)) ds18x20_s {		// DS1820, DS18S20 & DS18B20 9[12] bit Temperature sensors
-	onewire_t	sOW ;									// size = 12
+typedef struct __attribute__((packed)) ds18x20_s {		// DS1820/S20/B20 9/12 bit Temp sensors
+	onewire_t	sOW ;									// address of enumerated sensor (size = 12)
 	union {												// Scratchpad
 		struct __attribute__((packed)) {
 			uint8_t	Tlsb, Tmsb ;						// last RAM sample
