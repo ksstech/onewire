@@ -18,11 +18,13 @@
 
 #define	ds18x20SINGLE_DEVICE				0
 #define	ds18x20TRIGGER_GLOBAL				0
-#define	ds18x20DELAY_CONVERT				752
+#define	ds18x20DELAY_CONVERT				750
 #define	ds18x20DELAY_SP_COPY				11
 
 #define	ds18x20T_SNS_MIN					1000
 #define	ds18x20T_SNS_NORM					60000
+
+#define	ds18x20BUILD_TASK					1
 
 // ################################## DS18X20 1-Wire Commands ######################################
 
@@ -46,7 +48,8 @@ typedef	struct __attribute__((packed)) fam28 { uint8_t Conf, Res1, Res2, Res3 ; 
 DUMB_STATIC_ASSERT(sizeof(fam10) == sizeof(fam28)) ;
 
 typedef struct __attribute__((packed)) ds18x20_s {		// DS1820/S20/B20 9/12 bit Temp sensors
-	onewire_t	sOW ;									// address of enumerated sensor (size = 12)
+	owdi_t	sOW ;										// address of enumerated sensor (size = 12)
+	epw_t		sEWx ;
 	union {												// Scratchpad
 		struct __attribute__((packed)) {
 			uint8_t	Tlsb, Tmsb ;						// last RAM sample
@@ -64,49 +67,34 @@ typedef struct __attribute__((packed)) ds18x20_s {		// DS1820/S20/B20 9/12 bit T
 	uint8_t	Pwr		: 1 ;								// Power  0=Parasitic  1=External
 	uint8_t	OD		: 1 ;								// OverDrive 0=Disabled 1=Enabled
 	uint8_t	SBits	: 1 ;
-	epw_t	sEWx ;
 } ds18x20_t ;
 
 // ###################################### Public variables #########################################
 
 extern	ds18x20_t *	psaDS18X20 ;
-extern	uint8_t	Fam10_28Count ;
+extern	uint8_t	Fam10Count, Fam28Count, Fam10_28Count ;
 
 // ###################################### Public functions #########################################
 
 /**
  * ds18x20CheckPower() - Read the power supply type (parasitic or external)
  */
-int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) ;
+int	ds18x20CheckPower(ds18x20_t * psDS18X20) ;
+int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) ;
 
-/**
- * ds18x20SelectAndAddress() - Select logical bus (device, physical bus) and address/skip ROM
- */
-int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t nAddrMethod) ;
+int	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) ;
+int	ds18x20WriteSP(ds18x20_t * psDS18X20) ;
+int	ds18x20WriteEE(ds18x20_t * psDS18X20) ;
 
-int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) ;
-int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) ;
+int	ds18x20Initialize(ds18x20_t * psDS18X20) ;
+int	ds18x20ResetConfig(ds18x20_t * psDS18X20) ;
+void ds18x20ReportAll(void) ;
 
-int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) ;
-int32_t	ds18x20WriteSP(ds18x20_t * psDS18X20) ;
-int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) ;
+// ##################################### I2C Task support ##########################################
 
-int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) ;
-int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) ;
-void	ds18x20ReportAll(void) ;
-
-/*
- * ds18x20ReadConvertAll() - 1 bus at a time, all devices address & convert, then read & convert 1 at a time.
- */
-struct epw_t ;
-int32_t	ds18x20ReadConvertAll(struct epw_t * psEpWork) ;
-int32_t	ds18x20ScanAlarmsAll(void) ;
-
-int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) ;
-int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) ;
 struct rule_t ;
 int32_t	ds18x20ConfigMode (struct rule_t * psRule) ;
-int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) ;
+int32_t	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) ;
 int32_t	ds18x20Enumerate(void)  ;
 
 #ifdef __cplusplus

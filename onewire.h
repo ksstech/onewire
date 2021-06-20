@@ -32,6 +32,8 @@ extern "C" {
 
 #define	owPLATFORM_MAXCHAN			9
 
+#define	ds18x20BARE_BONES			1
+
 // ################################## Generic 1-Wire Commands ######################################
 
 #define OW_CMD_SEARCHROM     		0xF0
@@ -77,45 +79,24 @@ extern "C" {
 
 // ######################################## Enumerations ###########################################
 
-
-// Intention is to remove this and use the i2cDEV_TYPE definitions to determine the device detected.
-//		DS248x			ESP32 RMT    GPIO Software
-enum { owTYPE_DS248X, owTYPE_RMTXXX, owTYPE_GPIOSW,	owTYPE_MAXNUM } ;
 enum { owSPEED_STANDARD, owSPEED_ODRIVE	} ;
 enum { owPOWER_STANDARD, owPOWER_STRONG	} ;
 enum { owFAM28_RES9B, owFAM28_RES10B, owFAM28_RES11B, owFAM28_RES12B } ;
 
 // ######################################### Structures ############################################
 
-typedef	struct __attribute__((packed)) onewire_s {
-	ow_rom_t		ROM ;								// size = 1+6+1
-	uint8_t 		LastDiscrepancy ;
-	uint8_t 		LastFamilyDiscrepancy ;
-	uint8_t 		crc8 ;
-	uint8_t 		LastDeviceFlag	: 1 ;
-	uint8_t			BusType			: 2 ;				// owTYPE_XXXXXX
-	uint8_t			DevNum			: 2 ;				// index into 1W DevInfo table
-	uint8_t			PhyChan			: 3 ;
-} onewire_t ;
-DUMB_STATIC_ASSERT(sizeof(onewire_t) == 12) ;
-
-/* PER CHANNEL info keeping track of last device read (ROM & timestamp) on each channel
- * Used to avoid re-reading a device (primarily DS1990X type) too regularly.
- */
-typedef struct __attribute__((packed)) ow_chan_info_s {
-	ow_rom_t	LastROM ;
-	seconds_t	LastRead ;
-	union {
-		struct {
-			uint8_t		ds18b20	: 4 ;
-			uint8_t		ds18s20	: 4 ;
-			uint8_t		ds18xxx	: 4 ;
-			uint8_t		spare	: 4 ;
-		} ;
-		uint16_t	ds18any ;
-	} ;
-} ow_chan_info_t ;
-DUMB_STATIC_ASSERT(sizeof(ow_chan_info_t) == 14) ;
+typedef	struct __attribute__((packed)) {
+	ow_rom_t	ROM ;								// size = 1+6+1
+	uint8_t 	crc8 ;
+	uint8_t 	LD ;								// LD
+	uint8_t 	LFD ;								// LFD
+	uint8_t 	LDF		: 1 ;						// Last Device Flag
+	uint8_t		DevNum	: 2 ;						// index into 1W DevInfo table
+	uint8_t		PhyBus	: 3 ;
+	uint8_t		OD		: 1 ;
+	uint8_t		Spare	: 1 ;
+} owdi_t ;
+DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12) ;
 
 typedef struct ow_flags_s {
 	uint8_t	Level 	: 2 ;
@@ -124,37 +105,38 @@ typedef struct ow_flags_s {
 
 // ################################ Generic 1-Wire LINK API's ######################################
 
-int		OWSetSPU(onewire_t * psOW) ;
-int		OWReset(onewire_t * psOW) ;
-int		OWSpeed(onewire_t * psOW, bool speed) ;
-int		OWLevel(onewire_t * psOW, bool level) ;
+int		OWSetSPU(owdi_t * psOW) ;
+int		OWReset(owdi_t * psOW) ;
+int		OWSpeed(owdi_t * psOW, bool speed) ;
+int		OWLevel(owdi_t * psOW, bool level) ;
 uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) ;
-uint8_t	OWCalcCRC8(onewire_t * psOW, uint8_t data) ;
-uint8_t	OWSearchTriplet(onewire_t * psOW, uint8_t search_direction) ;
-int		OWChannelSelect(onewire_t * psOW) ;
+uint8_t	OWCalcCRC8(owdi_t * psOW, uint8_t data) ;
+uint8_t	OWSearchTriplet(owdi_t * psOW, uint8_t search_direction) ;
 
 // ################################## Bit/Byte Read/Write ##########################################
 
-uint8_t OWTouchBit(onewire_t * psOW, uint8_t sendbit) ;
-void	OWWriteBit(onewire_t * psOW, uint8_t sendbit) ;
-uint8_t OWReadBit(onewire_t * psOW) ;
-void	OWWriteByte(onewire_t * psOW, uint8_t sendbyte) ;
-int		OWWriteBytePower(onewire_t * psOW, int sendbyte) ;
-int		OWReadBitPower(onewire_t * psOW, uint8_t applyPowerResponse) ;
-uint8_t	OWReadByte(onewire_t * psOW) ;
-uint8_t OWTouchByte(onewire_t * psOW, uint8_t sendbyte) ;
-void	OWBlock(onewire_t * psOW, uint8_t * tran_buf, int32_t tran_len) ;
-int		OWReadROM(onewire_t * psOW) ;
-void	OWAddress(onewire_t * psOW, uint8_t nAddrMethod) ;
+uint8_t OWTouchBit(owdi_t * psOW, uint8_t sendbit) ;
+void	OWWriteBit(owdi_t * psOW, uint8_t sendbit) ;
+uint8_t OWReadBit(owdi_t * psOW) ;
+void	OWWriteByte(owdi_t * psOW, uint8_t sendbyte) ;
+int		OWWriteBytePower(owdi_t * psOW, int sendbyte) ;
+int		OWReadBitPower(owdi_t * psOW, uint8_t applyPowerResponse) ;
+uint8_t	OWReadByte(owdi_t * psOW) ;
+uint8_t OWTouchByte(owdi_t * psOW, uint8_t sendbyte) ;
+void	OWBlock(owdi_t * psOW, uint8_t * tran_buf, int32_t tran_len) ;
+int		OWReadROM(owdi_t * psOW) ;
+void	OWAddress(owdi_t * psOW, uint8_t nAddrMethod) ;
 
 // ############################## Search and Variations thereof ####################################
 
-void	OWTargetSetup(onewire_t * psOW, uint8_t family_code) ;
-void	OWFamilySkipSetup(onewire_t * psOW) ;
-int		OWSearch(onewire_t * psOW, bool alarm_only) ;
-int 	OWFirst(onewire_t * psOW, bool alarm_only) ;
-int 	OWNext(onewire_t * psOW, bool alarm_only) ;
-int		OWVerify(onewire_t * psOW) ;
+void OWTargetSetup(owdi_t * psOW, uint8_t family_code) ;
+void OWFamilySkipSetup(owdi_t * psOW) ;
+int	OWSearch(owdi_t * psOW, bool alarm_only) ;
+int OWFirst(owdi_t * psOW, bool alarm_only) ;
+int OWNext(owdi_t * psOW, bool alarm_only) ;
+int	OWVerify(owdi_t * psOW) ;
+int OWCommand(owdi_t * psOW, uint8_t Command, bool All) ;
+int OWResetCommand(owdi_t * psOW, uint8_t Command, bool All) ;
 
 #ifdef __cplusplus
 }

@@ -13,7 +13,7 @@
 #include	<string.h>
 #include	<stdint.h>
 
-#define	debugFLAG					0xF000
+#define	debugFLAG					0xF001
 
 #define	debugCONFIG					(debugFLAG & 0x0001)
 #define	debugREAD					(debugFLAG & 0x0002)
@@ -45,304 +45,109 @@
 
 // ################################ Forward function declaration ###################################
 
-epw_t * ds18x20GetWork(int32_t x) ;
-void	ds18x20SetDefault(epw_t * psEWP, epw_t *psEWS) ;
-void	ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) ;
-float	ds18x20GetTemperature(epw_t * psEWS) ;
 
 // ######################################### Constants #############################################
 
-const vt_enum_t	sDS18X20Func = {
-	.work	= ds18x20GetWork,
-	.reset	= ds18x20SetDefault,
-	.sense	= ds18x20SetSense,
-	.get	= ds18x20GetTemperature,
-} ;
 
 // ###################################### Local variables ##########################################
 
 ds18x20_t *	psaDS18X20	= NULL ;
-uint8_t		Fam10_28Count	= 0 ;
-static uint8_t	PrevBus ;
+uint8_t		Fam10Count, Fam28Count, Fam10_28Count ;
 
 // #################################### Local ONLY functions #######################################
 
-int32_t	ds18x20CheckPower(ds18x20_t * psDS18X20) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psDS18X20)) ;
-	int32_t iRV = OWChannelSelect(&psDS18X20->sOW) ;
-	if (iRV != 0) {
-		OWAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) ;
-		OWWriteByte(&psDS18X20->sOW, DS18X20_READ_PSU) ;
-		iRV = OWReadBit(&psDS18X20->sOW) ;					// return status 0=parasitic 1=external
-		IF_PRINT(debugPOWER, "PSU=%s\n", iRV ? "Ext" : "Para") ;
-	}
-	return iRV ;
-}
-
-int32_t	ds18x20SelectAndAddress(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psDS18X20)) ;
-	if ((OWChannelSelect(&psDS18X20->sOW) == 0) ||
-		(OWReset(&psDS18X20->sOW) == 0) ||
-		(psDS18X20->OD && OWSpeed(&psDS18X20->sOW, owSPEED_ODRIVE) == owSPEED_STANDARD)) {
-		return 0 ;
-	}
-	OWAddress(&psDS18X20->sOW, u8AddrMethod) ;
-	return 1 ;
+/**
+ * @brief	Read power status bit, AI1 operation, select & release bus
+ * @param	psDS18X20
+ * @return	Power status
+ */
+int	ds18x20CheckPower(ds18x20_t * psDS18X20) {
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_PSU, 1) == 0) return 0 ;
+	psDS18X20->Pwr = OWReadBit(&psDS18X20->sOW) ;					// return status 0=parasitic 1=external
+	IF_PRINT(debugPOWER, "PSU=%s\n", psDS18X20->Pwr ? "Ext" : "Para") ;
+	return psDS18X20->Pwr ;
 }
 
 // ###################################### scratchpad support #######################################
 
-int32_t	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
-	IF_myASSERT(debugPARAM, INRANGE(0, Len, SIZEOF_MEMBER(ds18x20_t, RegX), int32_t)) ;
-	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == 0) {
-		return 0 ;
-	}
-	int32_t iRV ;
-	OWWriteByte(&psDS18X20->sOW, DS18X20_READ_SP) ;
+/**
+ * @brief
+ * @param	psDS18X20
+ * @param	Len
+ * @return
+ * @note	Timing is as follows
+ *	OWReset		196/1348uS
+ *	OWCommand	1447/7740uS
+ *	OWBlock		163/860 per byte, 326/1720 for temperature, 815/4300 for all.
+ *	Total Time	1969/10808 for temperature
+ */
+int	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_SP, 0) == 0) return 0 ;
 	memset(psDS18X20->RegX, 0xFF, Len) ;				// 0xFF to read
 	OWBlock(&psDS18X20->sOW, psDS18X20->RegX, Len) ;
-
-	if (Len == SIZEOF_MEMBER(ds18x20_t, RegX)) {		// if full scratchpad read, check CRC
-		iRV = OWCheckCRC(psDS18X20->RegX, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
-		if (iRV != 1)  {
-			SL_ERR("CRC Failed") ;
-		}
-	} else {
-		OWReset(&psDS18X20->sOW) ;						// terminate read
-		iRV = 1 ;
-	}
-	IF_PRINT(debugREAD, "SP Read: %-'+B\n", Len, psDS18X20->RegX) ;
-	return iRV ;
+	if (Len == SO_MEM(ds18x20_t, RegX)) OWCheckCRC(psDS18X20->RegX, SO_MEM(ds18x20_t, RegX)) ;
+	else OWReset(&psDS18X20->sOW) ;						// terminate read
+	return 1 ;
 }
 
-int32_t	ds18x20WriteSP(ds18x20_t * psDS18X20) {
-	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == 0) {
-		return 0 ;
-	}
-	OWWriteByte(&psDS18X20->sOW, DS18X20_WRITE_SP) ;
+int	ds18x20WriteSP(ds18x20_t * psDS18X20) {
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_WRITE_SP, 0) == 0) return 0 ;
 	OWBlock(&psDS18X20->sOW, (uint8_t *) &psDS18X20->Thi, psDS18X20->sOW.ROM.Family == OWFAMILY_28 ? 3 : 2) ;	// Thi, Tlo [+Conf]
 	return 1 ;
 }
 
-int32_t	ds18x20WriteEE(ds18x20_t * psDS18X20) {
-	if (ds18x20SelectAndAddress(psDS18X20, OW_CMD_MATCHROM) == 0) {
-		return 0 ;
-	}
-	int32_t iRV = OWWriteBytePower(&psDS18X20->sOW, DS18X20_COPY_SP) ;
-	IF_myASSERT(debugRESULT, iRV != 0) ;
-
-	IF_SYSTIMER_START(debugTIMING, systimerDS1820B) ;
+int	ds18x20WriteEE(ds18x20_t * psDS18X20) {
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_COPY_SP, 0) == 0) return 0 ;
 	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_SP_COPY)) ;
-	IF_SYSTIMER_STOP(debugTIMING, systimerDS1820B) ;
-
 	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;
 	return 1 ;
 }
 
-// ############################### ds18x20 (Family 10 & 28) support ################################
+// ################################ Basic temperature support ######################################
 
-int32_t	ds18x20Initialize(ds18x20_t * psDS18X20) {
-	ds18x20ReadSP(psDS18X20, SIZEOF_MEMBER(ds18x20_t, RegX)) ;
-	psDS18X20->Res = (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
-					? psDS18X20->fam28.Conf >> 5
+int	ds18x20TempRead(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psDS18X20, 2) ; }
+
+// ###################################### IRMACOS support ##########################################
+
+int	ds18x20Initialize(ds18x20_t * psDS18X20) {
+	if (ds18x20ReadSP(psDS18X20, SO_MEM(ds18x20_t, RegX))) return 0 ;
+	psDS18X20->Res	= (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
+					? (psDS18X20->fam28.Conf >> 5)
 					: owFAM28_RES9B ;
-	ds18x20ConvertTemperature(psDS18X20) ;
 	psDS18X20->Pwr = ds18x20CheckPower(psDS18X20) ;
-	return 1 ;
-}
-
-int32_t	ds18x20EnumerateCB(flagmask_t sFM, onewire_t * psOW) {
-	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount] ;
-	memcpy(&psDS18X20->sOW, psOW, sizeof(onewire_t)) ;
-	psDS18X20->Idx	= sFM.uCount ;
-
-	epw_t * psEWS = &psDS18X20->sEWx ;
-	memset(psEWS, 0, sizeof(epw_t)) ;
-	psEWS->var.def.cv.vf	= vfFXX ;
-	psEWS->var.def.cv.vt	= vtVALUE ;
-	psEWS->var.def.cv.vs	= vs32B ;
-	psEWS->var.def.cv.vc	= 1 ;
-	psEWS->idx				= sFM.uCount ;
-	psEWS->uri				= URI_DS18X20 ;
-	ds18x20Initialize(psDS18X20) ;
-
-	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(OWPlatformChanPhy2Log(psOW)) ;
-	switch(psOW->ROM.Family) {
-	case OWFAMILY_10:	psOW_CI->ds18s20++ ;	break ;
-	case OWFAMILY_28:	psOW_CI->ds18b20++ ;	break ;
-	default:			psOW_CI->ds18xxx++ ;	break ;
-	}
-	return 1 ;											// number of devices enumerated
-}
-
-int32_t	ds18x20Enumerate(void) {
-	int32_t	iRV = 0 ;
-	uint8_t	ds18x20NumDev = 0 ;
-	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
-	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
-	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psaDS18X20)) ;
-
-	IF_PRINT(debugCONFIG, "AutoEnum DS18X20: Found=%d", Fam10_28Count) ;
-	onewire_t	sOW ;
-	iRV = OWPlatformScanner(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
-	if (iRV > 0) {
-		ds18x20NumDev += iRV ;
-	}
-	iRV = OWPlatformScanner(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
-	if (iRV > 0) {
-		ds18x20NumDev += iRV ;
-	}
-	IF_PRINT(debugREAD, "  Enum=%d\n", ds18x20NumDev) ;
-
-	// Do once-off initialization for work structure entries
-	epw_t * psEWP = &table_work[URI_DS18X20] ;
-	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP)) ;
-	psEWP->var.def.cv.pntr	= 1 ;
-	psEWP->var.def.cv.vf	= vfFXX ;
-	psEWP->var.def.cv.vt	= vtENUM ;
-	psEWP->var.def.cv.vs	= vs32B ;
-	psEWP->var.def.cv.vc	= ds18x20NumDev ;		// number enumerated
-	psEWP->var.val.px.pv	= (void *) &sDS18X20Func ;
-	psEWP->Tsns				= ds18x20T_SNS_NORM ;	// All 4 channels read in succession
-	psEWP->Rsns				= ds18x20T_SNS_NORM ;	// with blocking I2C driver
-	psEWP->uri				= URI_DS18X20 ;			// Used in OWPlatformEndpoints()
-
-	if (ds18x20NumDev == Fam10_28Count) {
-		iRV = ds18x20NumDev ;
-	} else {
-		SL_ERR("Only %d of %d enumerated!!!", ds18x20NumDev, Fam10_28Count) ;
-		iRV = erFAILURE ;
-	}
-	return iRV ;										// number of devices enumerated
-}
-
-/**
- * ds18x20ResetConfig - reset device to default via SP, not written to EE
- */
-int32_t	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
-	psDS18X20->Thi	= 75 ;
-	psDS18X20->Tlo	= 70 ;
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) {
-		psDS18X20->fam28.Conf = 0x7F ;	// 12 bit resolution
-	}
-	ds18x20WriteSP(psDS18X20) ;
-	return ds18x20Initialize(psDS18X20) ;
-}
-
-int32_t	ds18x20SampleTemperature(ds18x20_t * psDS18X20, uint8_t u8AddrMethod) {
-	if ((ds18x20SelectAndAddress(psDS18X20, u8AddrMethod) == 0) ||
-		(OWWriteBytePower(&psDS18X20->sOW, DS18X20_CONVERT) == 0)) {
-		return 0 ;
-	}
-	TickType_t Tconv = pdMS_TO_TICKS(ds18x20DELAY_CONVERT) ;
-	/* ONLY decrease delay if:
-	 * 	specific ROM is addressed AND and it is DS18B20 ; OR
-	 * 	ROM match skipped AND only DS18B20 devices on the bus */
-	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(OWPlatformChanPhy2Log(&psDS18X20->sOW)) ;
-	if ((u8AddrMethod == OW_CMD_SKIPROM && psOW_CI->ds18s20 == 0 && psOW_CI->ds18xxx == 0) ||
-		(u8AddrMethod == OW_CMD_MATCHROM && psDS18X20->sOW.ROM.Family == OWFAMILY_28)) {
-		Tconv /= (4 - psDS18X20->Res) ;
-	}
-	IF_SYSTIMER_START(debugTIMING, systimerDS1820A) ;
-	vTaskDelay(Tconv) ;
-	IF_SYSTIMER_STOP(debugTIMING, systimerDS1820A) ;
-
-	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;
-	return 1 ;
-}
-
-void	ds18x20ReportAll(void) {
-	for (int i = 0; i < Fam10_28Count; ++i) {
-		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
-		OWPlatformCB_PrintDS18(makeMASKFLAG(0,1,0,0,0,1,1,1,1,1,1,1,i), psDS18X20) ;
-	}
-}
-
-// #################################### IRMACOS support ############################################
-
-int32_t	ds18x20ReadTemperature(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psDS18X20, 2) ; }
-
-int32_t	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
-	const uint8_t	u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
-	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
-	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
-
-#if		(debugCONVERT)
-	OWPlatformCB_PrintDS18(makeMASKFLAG(1,0,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
-	printfx("  u16A=0x%04X\n", u16Adj) ;
+	ds18x20ConvertTemperature(psDS18X20) ;
+#if		(debugCONFIG)
+	OWP_PrintDS18_CB(makeMASKFLAG(1,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
 #endif
 	return 1 ;
 }
 
-epw_t * ds18x20GetWork(int32_t x) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS18X20) && x < Fam10_28Count) ;
-	return &psaDS18X20[x].sEWx ;
+/**
+ * @brief	reset device to default via SP, not written to EE
+ * @param	psDS18X20
+ * @return
+ */
+int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
+	psDS18X20->Thi	= 75 ;
+	psDS18X20->Tlo	= 70 ;
+	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) psDS18X20->fam28.Conf = 0x7F ;	// 12 bit resolution
+	ds18x20WriteSP(psDS18X20) ;
+	return ds18x20Initialize(psDS18X20) ;
 }
 
-void	ds18x20SetDefault(epw_t * psEWP, epw_t * psEWS) {
-	IF_myASSERT(debugPARAM, psEWP->fSECsns == 0) ;
-	// Stop sensing on EWP level since vEpConfigReset() will handle EWx
-	psEWP->Rsns = 0 ;
-}
-
-void	ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
-	/* Optimal 1-Wire bus operation require that all devices (of a type) are detected
-	 * (and read) in a single bus scan. BUT, for the DS18x20 the temperature conversion
-	 * time if 750mSec (per bus or device) at normal (not overdrive) bus speed.
-	 * When we get here the psEWS structure will already having been configured with the
-	 * parameters as supplied, just check & adjust for validity & new min Tsns */
-	if (psEWS->Tsns < ds18x20T_SNS_MIN)	{				// requested value in range?
-		psEWS->Tsns = ds18x20T_SNS_MIN ;				// no, default to minimum
-	}
-	if (psEWP->Tsns > psEWS->Tsns) {
-		psEWP->Tsns = psEWS->Tsns ;						// set lowest of EWP/EWS
-	}
-	psEWS->Tsns = 0 ;									// discard EWS value
-	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
-}
-
-float	ds18x20GetTemperature(epw_t * psEWS) { return psEWS->var.val.x32.f32 ; }
-
-int32_t	ds18x20ReadConvertAll(epw_t * psEWP) {
-	PrevBus = 0xFF ;
-	for (int i = 0; i < Fam10_28Count; ++i) {
-		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
-		if (psDS18X20->sOW.PhyChan != PrevBus) {
-			if (ds18x20SampleTemperature(psDS18X20, OW_CMD_SKIPROM) == 0) {
-				continue ;
-			}
-			PrevBus = psDS18X20->sOW.PhyChan ;
-		}
-		if (ds18x20ReadTemperature(psDS18X20)) {
-			ds18x20ConvertTemperature(psDS18X20) ;
-		} else {
-			SL_ERR("Read/Convert failed") ;
-		}
-	}
-	return erSUCCESS ;
-}
-
-int32_t	ds18x20Alarm(flagmask_t sFM, onewire_t * psOW) {
-	sFM.bNL	= 1 ;
-	sFM.bRT	= 1 ;
-	OWPlatformCB_Print1W(sFM, psOW) ;
+int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
+	const uint8_t	u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
+	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
+	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
+#if		(debugCONVERT)
+	OWP_PrintDS18_CB(makeMASKFLAG(1,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
+#endif
 	return 1 ;
 }
 
-int32_t	ds18x20ScanAlarmsAll(void) {
-	onewire_t	sOW ;
-	OWPlatformScanner(OWFAMILY_28, ds18x20Alarm, &sOW) ;
-	return erSUCCESS ;
-}
+// ################################ Rules configuration support ####################################
 
-/*
- SKIP +SPU +750mS		Work
- MATCH +SPU +750mS		Work
- SKIP +SPU +XXXms		Work
- MATCH +SPU +XXXmS		Work
- SKIP -SPU +XXXmS		Work
- */
-int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
+int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
 		uint8_t u8Res = ((Res - 9) << 5) | 0x1F ;
 		if (psDS18X20->fam28.Conf != u8Res) {
@@ -360,23 +165,22 @@ int32_t	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	return erSCRIPT_INV_VALUE ;
 }
 
-int32_t	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
+int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	if (INRANGE(-128, Lo, 127, int) && INRANGE(-128, Hi, 127, int)) {
 		if (psDS18X20->Tlo != Lo || psDS18X20->Thi != Hi) {
 			IF_PRINT(debugCONFIG, "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
 			psDS18X20->Tlo = Lo ;
 			psDS18X20->Thi = Hi ;
 			ds18x20WriteSP(psDS18X20) ;
-			return 1 ;
+			return 1 ;									// new config written
 		}
-		// Not written, config already the same
-		return 0 ;
+		return 0 ;										// Not written, config already the same
 	}
 	SET_ERRINFO("Invalid Lo/Hi alarm limits") ;
 	return erSCRIPT_INV_VALUE ;
 }
 
-int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
+int	ds18x20ConfigMode (struct rule_t * psRule) {
 	if (psaDS18X20 == NULL) {
 		SET_ERRINFO("No DS18x20 enumerated") ;
 		return erSCRIPT_INV_OPERATION ;
@@ -394,36 +198,41 @@ int32_t	ds18x20ConfigMode (struct rule_t * psRule) {
 		SET_ERRINFO("Invalid EP Index") ;
 		return erSCRIPT_INV_INDEX ;
 	}
-	if (Xcur == Xmax) {
-		Xcur = 0 ; 										// range 0 -> Xmax
-	} else {
-		Xmax = Xcur ;									// single Xcur
-	}
+	if (Xcur == Xmax) Xcur = 0 ; 						// range 0 -> Xmax
+	else Xmax = Xcur ;									// single Xcur
 	uint32_t lo	= *px.pu32++ ;
 	uint32_t hi	= *px.pu32++ ;
 	uint32_t res = *px.pu32++ ;
 	uint32_t wr	= *px.pu32 ;
 	IF_PRINT(debugCONFIG, "DS18X20 Mode Xcur=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, lo, hi, res, wr) ;
-	int32_t iRV = 0 ;
+	int iRV = 0 ;
 	if (wr == 0 || wr == 1) {							// if parameter omitted, do not persist
 		do {
 			ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
-			// Do resolution 1st since small range (9-12) a good test for valid parameter
-			iRV = ds18x20SetResolution(psDS18X20, res) ;
-			if (iRV >= erSUCCESS) {
-				iRV = ds18x20SetAlarms(psDS18X20, lo, hi) ;
-				if (iRV >= erSUCCESS && wr == 1) {
-					iRV = ds18x20WriteSP(psDS18X20) ;
+			if (OWP_BusSelect(&psDS18X20->sOW) == 1) {
+				// Do resolution 1st since small range (9-12) a good test for valid parameter
+				iRV = ds18x20SetResolution(psDS18X20, res) ;
+				if (iRV >= erSUCCESS) {
+					iRV = ds18x20SetAlarms(psDS18X20, lo, hi) ;
+					if (iRV >= erSUCCESS && wr == 1) iRV = ds18x20WriteSP(psDS18X20) ;
 				}
+				OWP_BusRelease(&psDS18X20->sOW) ;
 			}
-			if (iRV < erSUCCESS) {
-				break ;
-			}
+			if (iRV < erSUCCESS) break ;
 		} while (++Xcur < Xmax) ;
 	} else {
 		SET_ERRINFO("Invalid persist flag, not 0/1") ;
 		iRV = erSCRIPT_INV_MODE ;
 	}
-
 	return iRV ;
 }
+
+// ################################## Platform enumeration support #################################
+
+// ######################################### Reporting #############################################
+
+void	ds18x20ReportAll(void) {
+	for (int i = 0; i < Fam10_28Count; ++i)
+		OWP_PrintDS18_CB(makeMASKFLAG(0,1,0,0,0,1,1,1,1,1,1,1,i), &psaDS18X20[i]) ;
+}
+

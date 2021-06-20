@@ -6,6 +6,8 @@
  * onewire_platform.c
  */
 
+#include	"hal_config.h"
+
 #include	"endpoint_struct.h"
 #include	"endpoint_id.h"
 #include	"printfx.h"
@@ -15,16 +17,18 @@
 
 #include	"onewire_platform.h"
 #include	"task_events.h"
+#include	"x_utilities.h"								// vShowActivity
 
 #include	<string.h>
 
 // ################################ Global/Local Debug macros ######################################
 
-#define	debugFLAG					0xF000
+#define	debugFLAG					0xF003
 
 #define	debugCONFIG					(debugFLAG & 0x0001)
 #define	debugSCANNER				(debugFLAG & 0x0002)
 #define	debugMAPPING				(debugFLAG & 0x0004)
+#define	debugDS18X20				(debugFLAG & 0x0008)
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -36,282 +40,284 @@
 
 // ################################# Platform related variables ####################################
 
-ow_chan_info_t * psaOW_CI = NULL ;					// Array of last read ROM & timestamp info
+owbi_t * psaOWBI = NULL ;
 ow_flags_t	OWflags ;
 
-static const char * const OWBusType[] = { "DS248x", "RTM" "GPIO" } ;
-static uint8_t	OWNumChan = 0 ;
-static uint8_t	OWNumDev = 0 ;						// total ALL types, counted but not yet used
+static uint8_t	OWP_NumBus = 0 ;
+static uint8_t	OWP_NumDev = 0 ;
 
 // ################################# Application support functions #################################
 
-/* Support to map LOGICAL (platform) channel to PHYSICAL (device) channel
- * Define a sequence in which LOGICAL channels will be allocated:
- * 	1.	248x	1/8 channels based on device(s) detected
- * 	2.	RCT 	depending on config
- * 	3.	GPIO	depending on config
+owbi_t * psOWP_BusGetPointer(uint8_t LogBus) {
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaOWBI) && (LogBus < OWP_NumBus)) ;
+	return &psaOWBI[LogBus] ;
+}
+
+/**
+ * @brief	Map LOGICAL (platform) bus to PHYSICAL (device) bus
+ * @param	psOW - 1W device structure to be updated
+ * @param	LogBus
+ * @note	Physical device & bus info returned in the psOW structure
  */
-void	OWPlatformChanLog2Phy(onewire_t * psOW, uint8_t Chan) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (Chan < OWNumChan)) ;
-	memset(psOW, 0, sizeof(onewire_t)) ;
+void OWP_BusL2P(owdi_t * psOW, uint8_t LogBus) {
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (LogBus < OWP_NumBus)) ;
+	memset(psOW, 0, sizeof(owdi_t)) ;
 #if		(halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
-		IF_TRACK(debugMAPPING, "Read: Ch=%d  Idx=%d  N=%d  L=%d  H=%d\n", Chan, i, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi) ;
-		if (psDS248X->NumChan && INRANGE(psDS248X->Lo, Chan, psDS248X->Hi, uint8_t)) {
-			psOW->BusType	= owTYPE_DS248X ;
+		IF_TRACK(debugMAPPING, "Read: Ch=%d  Idx=%d  N=%d  L=%d  H=%d\n", LogBus, i, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi) ;
+		if (psDS248X->NumChan && INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi, uint8_t)) {
 			psOW->DevNum	= i ;
-			psOW->PhyChan	= Chan - psDS248X->Lo ;
-			IF_TRACK(debugMAPPING, "Done: Ch=%d  DN=%d  N=%d  L=%d  H=%d  P=%d\n", Chan, psOW->DevNum, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi, psOW->PhyChan) ;
+			psOW->PhyBus	= LogBus - psDS248X->Lo ;
+			IF_TRACK(debugMAPPING, "Done: Ch=%d  DN=%d  N=%d  L=%d  H=%d  P=%d\n", LogBus, psOW->DevNum, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi, psOW->PhyBus) ;
 			return ;
 		}
 	}
 #endif
-	SL_ERR("Invalid Logical Ch=%d", Chan) ;
+	SL_ERR("Invalid Logical Ch=%d", LogBus) ;
 	IF_myASSERT(debugRESULT, 0) ;
 }
 
-int32_t	OWPlatformChanPhy2Log(onewire_t * psOW) {
+int	OWP_BusP2L(owdi_t * psOW) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS248X) && halCONFIG_inSRAM(psOW)) ;
 	ds248x_t * psDS248X = &psaDS248X[psOW->DevNum] ;
-	return (psDS248X->Lo + psOW->PhyChan) ;
+	return (psDS248X->Lo + psOW->PhyBus) ;
 }
 
-ow_chan_info_t * psOWPlatformGetInfoPointer(uint8_t LogChan) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaOW_CI) && (LogChan < OWNumChan)) ;
-	return &psaOW_CI[LogChan] ;
+/**
+ * @brief	Select the physical bus based on the 1W device info
+ * @note	NOT an All-In-One function, bus MUST be released after completion
+ * @param	psOW
+ * @return	1 if selected, 0 if error
+ */
+int	 OWP_BusSelect(owdi_t * psOW) {
+	IF_SYSTIMER_START(debugTIMING,stOW1) ;
+	int iRV = ds248xBusSelect(&psaDS248X[psOW->DevNum], psOW->PhyBus) ;
+	IF_SYSTIMER_STOP(debugTIMING,stOW1) ;
+	return iRV ;
 }
+
+/**
+ * @brief	Select [& address] bus (SKIPROM) or device (MATCHROM)
+ * @note	NOT an All-In-One function, bus MUST be released after completion
+ * @param	psOW
+ * @param	u8AddrMethod (SKIPROM or MATCHROM)
+ * @return	1 if successful else 0
+ */
+int	OWP_BusSelectAndAddress(owdi_t * psOW, uint8_t u8AddrMethod) {
+	if (OWP_BusSelect(psOW) == 0) return 0 ;
+	IF_SYSTIMER_START(debugTIMING,stOW2) ;
+	if (psOW->OD && (OWSpeed(psOW, owSPEED_ODRIVE) != owSPEED_ODRIVE)) SL_ERR("Overdrive failed!!!") ;
+	OWAddress(psOW, u8AddrMethod) ;
+	IF_SYSTIMER_STOP(debugTIMING,stOW2) ;
+	return 1 ;
+}
+
+void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]) ; }
 
 // #################################### Handler functions ##########################################
 
 /**
- * OWPlatformCB_PrintROM() - print the 1-Wire ROM information
+ * @brief	Print the 1-Wire ROM information
  * @param	FlagCount -
  * @param	psOW_ROM - pointer to 1-Wire ROM structure
  * @return	number of characters printed
  */
-int32_t	OWPlatformCB_PrintROM(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
-	int32_t iRV = 0 ;
-	if (FlagMask.bRT) {
-		iRV += printfx("%!.R: ", RunTime) ;
-	}
-	if (FlagMask.bCount) {
-		iRV += printfx("#%u ", FlagMask.uCount) ;
-	}
+int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
+	int iRV = 0 ;
+	if (FlagMask.bRT) iRV += printfx("%!.R: ", RunTime) ;
+	if (FlagMask.bCount) iRV += printfx("#%u ", FlagMask.uCount) ;
 	iRV += printfx("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ;
-	if (FlagMask.bNL) {
-		iRV += printfx("\n") ;
-	}
+	if (FlagMask.bNL) iRV += printfx("\n") ;
 	return iRV ;
 }
 
-int32_t	OWPlatformCB_Print1W(flagmask_t FlagMask, onewire_t * psOW) {
-	int32_t iRV = OWPlatformCB_PrintROM((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
-	iRV += printfx("  Log=%d  Type=%s[%d]  Phy=%d", OWPlatformChanPhy2Log(psOW), OWBusType[psOW->BusType], psOW->DevNum, psOW->PhyChan) ;
-	if (FlagMask.bNL) {
-		iRV += printfx("\n") ;
-	}
+int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
+	int iRV = OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
+	iRV += printfx("  Dev=%d  Log=%d  Phy=%d", psOW->DevNum, OWP_BusP2L(psOW), psOW->PhyBus) ;
+	if (FlagMask.bNL) iRV += printfx("\n") ;
 	return iRV ;
 }
 
-int32_t	OWPlatformCB_PrintDS18(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
-	int32_t iRV = OWPlatformCB_Print1W((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
-	iRV += printfx("  Traw=0x%04X/%.4fC  Tlo=%d  Thi=%d", psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
+int	OWP_PrintDS18_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
+	int iRV = OWP_Print1W_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
+	iRV += printfx(" Traw=0x%04X/%.4fC Tlo=%d Thi=%d", psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
 		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi) ;
-	iRV += printfx("  Res=%d  PSU=%s", psDS18X20->Res + 9, psDS18X20->Pwr ? "Ext" : "Para") ;
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) {
-		iRV += printfx("  Conf=0x%02X %s", psDS18X20->fam28.Conf,
-				((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "") ; ;
-	}
-	if (FlagMask.bNL) {
-		iRV += printfx("\n") ;
-	}
+	iRV += printfx(" Res=%d PSU=%s", psDS18X20->Res + 9, psDS18X20->Pwr ? "Ext" : "Para") ;
+	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) iRV += printfx(" Conf=0x%02X %s",
+		psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "") ;
+	if (FlagMask.bNL) iRV += printfx("\n") ;
 	return iRV ;
 }
 
-int32_t OWPlatformCB_PrintChan(flagmask_t FlagMask, ow_chan_info_t * psCI) {
-	int32_t iRV = printfx("OW ch=%d  ", FlagMask.uCount) ;
-	if (psCI->LastRead) {
-		iRV += printfx("%r  ", psCI->LastRead) ;
-	}
-	if (psCI->LastROM.Family) {
-		iRV += OWPlatformCB_PrintROM((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
-	}
-	if (psCI->ds18any) {
-		iRV += printfx("  DS18B=%d  DS18S=%d  DS18X=%d", psCI->ds18b20, psCI->ds18s20, psCI->ds18xxx) ;
-	}
-	if (FlagMask.bNL) {
-		iRV += printfx("\n") ;
-	}
+int	 OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
+	int iRV = printfx("OW ch=%d  ", FlagMask.uCount) ;
+	if (psCI->LastRead) iRV += printfx("%r  ", psCI->LastRead) ;
+	if (psCI->LastROM.Family) iRV += OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
+	if (psCI->ds18any) iRV += printfx("  DS18B=%d  DS18S=%d", psCI->ds18b20, psCI->ds18s20) ;
+	if (FlagMask.bNL) iRV += printfx("\n") ;
 	return iRV ;
 }
 
 /**
- * OWPlatformCB_Count() - Call handler based on device family
- * @return	return value from handler or
+ * @brief
+ * @param	FlagCount
+ * @param	psOW
+ * @return
  */
-int32_t	OWPlatformCB_Count(flagmask_t FlagCount, onewire_t * psOW) {
+int	OWP_Count_CB(flagmask_t FlagCount, owdi_t * psOW) {
 	switch (psOW->ROM.Family) {
-#if		(halHAS_DS1990X == 1)							// DS1990A/R, 2401/11 devices
-	case OWFAMILY_01:
-		++Family01Count ;
-		return 1 ;
+#if		(halHAS_DS1990X > 0)							// DS1990A/R, 2401/11 devices
+	case OWFAMILY_01:	++Family01Count ;	return 1 ;
 #endif
 
-#if		(halHAS_DS18X20 == 1)							// DS18x20 Thermometers
-	case OWFAMILY_10:
-	case OWFAMILY_28:
-		++Fam10_28Count ;
-		return 1 ;
+#if		(halHAS_DS18X20 > 0)							// DS18x20 Thermometers
+	case OWFAMILY_10:	++Fam10Count ;		return 1 ;
+	case OWFAMILY_28:	++Fam28Count ;		return 1 ;
 #endif
 
-	default:
-		SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.Family) ;
+	default: SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.Family) ;
 	}
 	return 0 ;
+}
+
+int	OWP_ScanAlarms_CB(flagmask_t sFM, owdi_t * psOW) {
+	sFM.bNL	= 1 ;
+	sFM.bRT	= 1 ;
+	OWP_Print1W_CB(sFM, psOW) ;
+	return 1 ;
 }
 
 // ################################### Common Scanner functions ####################################
 
 /**
- * OWPlatformScanner() - scan ALL channels sequentially for [specified] family
+ * @brief	Scan ALL channels sequentially for [specified] family
+ * @param	Family
+ * @param	Handler
+ * @param	psOW
  * @return	number of matching ROM's found (>= 0) or an error code (< 0)
  */
-int32_t	OWPlatformScanner(uint8_t Family, int (* Handler)(flagmask_t, onewire_t *), onewire_t * psOW) {
+int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *), owdi_t * psOW) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
-	int32_t	iRV = erSUCCESS ;
+	int	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
-	for (uint8_t OWChan = 0; OWChan < OWNumChan; ++OWChan) {
-		OWPlatformChanLog2Phy(psOW, OWChan) ;
-		if (OWChannelSelect(psOW) == 0) {
-			continue ;
-		}
-		if (Family != 0) {
-			OWTargetSetup(psOW, Family) ;
-			iRV = OWSearch(psOW, 0) ;
-			if (psOW->ROM.Family != Family) {
-				IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found\n", Family, psOW->ROM.Family) ;
-				continue ;
+	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
+		vShowActivity(1) ;
+		OWP_BusL2P(psOW, LogBus) ;
+		if (OWP_BusSelect(psOW)) {
+			if (Family != 0) {
+				OWTargetSetup(psOW, Family) ;
+				iRV = OWSearch(psOW, 0) ;
+				if (iRV > 0 && psOW->ROM.Family != Family) {
+					// Strictly speaking should never get here, iRV must be 0 if same family not found
+					IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found\n", Family, psOW->ROM.Family) ;
+					OWP_BusRelease(psOW) ;
+					continue ;
+				}
+			} else {
+				iRV = OWFirst(psOW, 0) ;
 			}
-		} else {
-			iRV = OWFirst(psOW, 0) ;
-		}
-		while (iRV) {
-			IF_EXEC_2(debugSCANNER, OWPlatformCB_Print1W, makeMASKFLAG(0,0,0,0,0,0,0,0,0,0,0,0,OWChan), psOW) ;
-			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
-			IF_myASSERT(debugRESULT, iRV == 1) ;
-			iRV = Handler((flagmask_t) uCount, psOW) ;
-			if (iRV < erSUCCESS) {
-				break ;
+			while (iRV) {
+				IF_EXEC_2(debugSCANNER, OWP_Print1W_CB, makeMASKFLAG(0,0,0,0,0,0,0,0,0,0,0,0,LogBus), psOW) ;
+				iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
+				IF_myASSERT(debugRESULT, iRV == 1) ;
+				iRV = Handler((flagmask_t) uCount, psOW) ;
+				if (iRV < erSUCCESS) break ;
+				if (iRV > 0) ++uCount ;
+				iRV = OWNext(psOW, 0) ;						// try to find next device (if any)
 			}
-			if (iRV > 0) {
-				++uCount ;
-			}
-			iRV = OWNext(psOW, 0) ;						// try to find next device (if any)
-		}
-		if (iRV < erSUCCESS) {
-			break ;
+			OWP_BusRelease(psOW) ;
+			if (iRV < erSUCCESS) break ;
 		}
 	}
 	IF_SL_ERR(iRV < erSUCCESS, "Handler error=%d", iRV) ;
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
-#if 0
-int32_t	OWPlatformScan(uint8_t Family, int (* Handler)(flagmask_t, void *, onewire_t *), void * pVoid, onewire_t * psOW) {
+int	OWP_Scan2(uint8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void * pVoid, owdi_t * psOW) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
-	int32_t	iRV = erSUCCESS ;
+	int	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
-	for (uint8_t OWChan = 0; OWChan < OWNumChan; ++OWChan) {
-		OWPlatformChanLog2Phy(psOW, OWChan) ;
-		if (OWChannelSelect(psOW) == 0)	{
-			IF_SL_INFO(debugSCANNER, "Channel selection error") ;
-			break ;
-		}
+	for (uint8_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
+		OWP_BusL2P(psOW, LogBus) ;
+		if (OWP_BusSelect(psOW) == 0) continue ;
 		if (Family) {
 			OWTargetSetup(psOW, Family) ;
 			iRV = OWSearch(psOW, 0) ;
-			if (psOW->ROM.Family != Family) {
-				IF_SL_INFO(debugSCANNER, "Family 0x%02X wanted, 0x%02X found", Family, psOW->ROM.Family) ;
+			if (iRV > 0 && psOW->ROM.Family != Family) {
+				IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found\n", Family, psOW->ROM.Family) ;
+				OWP_BusRelease(psOW) ;
 				continue ;
 			}
-		} else {
-			iRV = OWFirst(psOW, 0) ;
-		}
+		} else iRV = OWFirst(psOW, 0) ;
 		while (iRV) {
 			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
 			iRV = Handler((flagmask_t) uCount, pVoid, psOW) ;
-			if (iRV < erSUCCESS) {
-				break ;
-			}
-			if (iRV > 0) {
-				++uCount ;
-			}
+			if (iRV < erSUCCESS)  break ;
+			if (iRV > 0) ++uCount ;
 			iRV = OWNext(psOW, 0) ;						// try to find next device (if any)
 		}
-		if (iRV < erSUCCESS) {
-			break ;
-		}
+		OWP_BusRelease(psOW) ;
+		if (iRV < erSUCCESS) break ;
 	}
 	IF_SL_ERR(iRV < erSUCCESS, "Handler error=%d", iRV) ;
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
-#endif
+
+int	OWP_ScanAlarmsFamily(uint8_t Family) {
+	owdi_t	sOW ;
+	return OWP_Scan(Family, OWP_ScanAlarms_CB, &sOW) ;
+}
 
 // ################### Identification, Diagnostics & Configuration functions #######################
 
 /**
- * OWPlatformConfig() -
+ * @brief
+ * @return
  */
-int32_t	OWPlatformConfig(void) {
-	IF_SYSTIMER_INIT(debugTIMING, systimerOW1, systimerTICKS, "OW1", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
-	IF_SYSTIMER_INIT(debugTIMING, systimerOW2, systimerTICKS, "OW2", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
+int	OWP_Config(void) {
+	IF_SYSTIMER_INIT(debugTIMING, stOW1, stMICROS, "OW1", 100, 1000) ;
+	IF_SYSTIMER_INIT(debugTIMING, stOW2, stMICROS, "OW2", 100, 1000) ;
 	/* Start by iterating over each instance of each type of 1-Wire technology (DS248x/RTM/GPIO) supported.
 	 * For each technology enumerate each physical device and the logical channels on each device before
 	 * moving on to the next device (same type) or next technology */
 #if		(halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
-		psDS248X->Lo	= OWNumChan ;
-		psDS248X->Hi	= OWNumChan + psDS248X->NumChan - 1 ;
-		OWNumChan		+= psDS248X->NumChan ;
+		psDS248X->Lo	= OWP_NumBus ;
+		psDS248X->Hi	= OWP_NumBus + psDS248X->NumChan - 1 ;
+		OWP_NumBus		+= psDS248X->NumChan ;
 	}
 #endif
 
 	// When all technologies & devices individually enumerated
-	if (OWNumChan) {
-		// initialize the logical channel structures
-		psaOW_CI = malloc(OWNumChan * sizeof(ow_chan_info_t)) ;
-		memset(psaOW_CI, 0, OWNumChan * sizeof(ow_chan_info_t)) ;
-
+	if (OWP_NumBus) {
+		psaOWBI = malloc(OWP_NumBus * sizeof(owbi_t)) ;	// initialize the logical channel structures
+		memset(psaOWBI, 0, OWP_NumBus * sizeof(owbi_t)) ;
 		// enumerate any/all physical devices (possibly) (permanently) attached to individual channel(s)
-		onewire_t	sOW ;
-		int32_t	iRV = 0 ;
-		if ((iRV = OWPlatformScanner(0, OWPlatformCB_Count, &sOW)) > 0) {
-			OWNumDev += iRV ;
-		}
+		owdi_t	sOW ;
+		int	iRV = OWP_Scan(0, OWP_Count_CB, &sOW) ;
+		if (iRV > 0) OWP_NumDev += iRV ;
+
 #if		(halHAS_DS1990X > 0)
 		IF_SL_INFO(debugCONFIG && Family01Count, "DS1990x found %d devices", Family01Count) ;
 		iRV = ds1990xConfig() ;				// cannot enumerate, simple config
-		IF_SYSTIMER_INIT(debugTIMING, systimerDS1990, systimerTICKS, "DS1990", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
+		IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990", 10, 1000) ;
 #endif
 
 #if		(halHAS_DS18X20 > 0)
-		if (Fam10_28Count) {
-			IF_SL_INFO(debugCONFIG, "DS18x20 found %d devices", Fam10_28Count) ;
+		if (Fam10Count || Fam28Count) {
 			iRV = ds18x20Enumerate() ;		// enumerate & config individually
 		}
-		IF_SYSTIMER_INIT(debugTIMING, systimerDS1820A, systimerTICKS, "DS1820A", myMS_TO_TICKS(10), myMS_TO_TICKS(1000)) ;
-		IF_SYSTIMER_INIT(debugTIMING, systimerDS1820B, systimerTICKS, "DS1820B", myMS_TO_TICKS(1), myMS_TO_TICKS(10)) ;
 #endif
 	}
-	return OWNumDev ;
+	return OWP_NumDev ;
 }
 
-void	OWPlatformReportAll(void) {
-	for (int OWChan = 0; OWChan < OWNumChan; ++OWChan) {
-		OWPlatformCB_PrintChan(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,OWChan), &psaOW_CI[OWChan]) ;
+void OWP_Report(void) {
+	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
+		OWP_PrintChan_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,LogBus), &psaOWBI[LogBus]) ;
 	}
 #if 	(halHAS_DS248X > 0)
 	ds248xReportAll(1) ;
@@ -319,4 +325,198 @@ void	OWPlatformReportAll(void) {
 #if 	(halHAS_DS18X20 > 0)
 	ds18x20ReportAll() ;
 #endif
+}
+
+// ###################################### DS18X20 support ##########################################
+
+epw_t * ds18x20GetWork(int32_t x) ;
+void	ds18x20SetDefault(epw_t * psEWP, epw_t *psEWS) ;
+void	ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) ;
+float	ds18x20GetTemperature(epw_t * psEWx) ;
+
+const vt_enum_t	sDS18X20Func = {
+	.work	= ds18x20GetWork,
+	.reset	= ds18x20SetDefault,
+	.sense	= ds18x20SetSense,
+	.get	= ds18x20GetTemperature,
+} ;
+
+epw_t * ds18x20GetWork(int32_t x) {
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS18X20) && x < Fam10_28Count) ;
+	return &psaDS18X20[x].sEWx ;
+}
+
+void ds18x20SetDefault(epw_t * psEWP, epw_t * psEWS) {
+	IF_myASSERT(debugPARAM, psEWP->fSECsns == 0) ;
+	psEWP->Rsns = 0 ;	// Stop EWP sensing ,vEpConfigReset() will handle EWx
+}
+
+void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
+	/* Optimal 1-Wire bus operation require that all devices (of a type) are detected
+	 * (and read) in a single bus scan. BUT, for the DS18x20 the temperature conversion
+	 * time is 750mSec (per bus or device) at normal (not overdrive) bus speed.
+	 * When we get here the psEWS structure will already having been configured with the
+	 * parameters as supplied, just check & adjust for validity & new min Tsns */
+	if (psEWS->Tsns < ds18x20T_SNS_MIN)	psEWS->Tsns = ds18x20T_SNS_MIN ;	// no, default to minimum
+	if (psEWS->Tsns < psEWP->Tsns) psEWP->Tsns = psEWS->Tsns ;	// set lowest of EWP/EWS
+	psEWS->Tsns = 0 ;									// discard EWS value
+	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
+}
+
+float ds18x20GetTemperature(epw_t * psEWx) { return psEWx->var.val.x32.f32 ; }
+
+int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) {
+	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount] ;
+	memcpy(&psDS18X20->sOW, psOW, sizeof(owdi_t)) ;
+	psDS18X20->Idx	= sFM.uCount ;
+
+	epw_t * psEWS = &psDS18X20->sEWx ;
+	memset(psEWS, 0, sizeof(epw_t)) ;
+	psEWS->var.def.cv.vf	= vfFXX ;
+	psEWS->var.def.cv.vt	= vtVALUE ;
+	psEWS->var.def.cv.vs	= vs32B ;
+	psEWS->var.def.cv.vc	= 1 ;
+	psEWS->idx				= sFM.uCount ;
+	psEWS->uri				= URI_DS18X20 ;
+	ds18x20Initialize(psDS18X20) ;
+
+	owbi_t * psOW_CI = psOWP_BusGetPointer(OWP_BusP2L(psOW)) ;
+	switch(psOW->ROM.Family) {
+	case OWFAMILY_10:	psOW_CI->ds18s20++ ;	break ;
+	case OWFAMILY_28:	psOW_CI->ds18b20++ ;	break ;
+	default:			myASSERT(0) ;
+	}
+	return 1 ;											// number of devices enumerated
+}
+
+int	ds18x20Enumerate(void) {
+	uint8_t	ds18x20NumDev = 0 ;
+	Fam10_28Count = Fam10Count + Fam28Count ;
+	IF_SL_INFO(debugDS18X20, "DS18x20 found %d devices", Fam10_28Count) ;
+	IF_SYSTIMER_INIT(debugTIMING, stDS1820A, stMILLIS, "DS1820A", 10, 1000) ;
+	IF_SYSTIMER_INIT(debugTIMING, stDS1820B, stMILLIS, "DS1820B", 1, 10) ;
+
+	// Once-off EWP initialization
+	epw_t * psEWP = &table_work[URI_DS18X20] ;
+	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP)) ;
+	psEWP->var.def.cv.pntr	= 1 ;
+	psEWP->var.def.cv.vf	= vfFXX ;
+	psEWP->var.def.cv.vs	= vs32B ;
+	psEWP->var.def.cv.vt	= vtENUM ;
+	psEWP->var.def.cv.vc	= Fam10_28Count ;
+	psEWP->var.val.px.pv	= (void *) &sDS18X20Func ;
+	psEWP->Tsns				= ds18x20T_SNS_NORM ;	// All channels read in succession
+	psEWP->Rsns				= ds18x20T_SNS_NORM ;	// with blocking I2C driver
+	psEWP->uri				= URI_DS18X20 ;			// Used in OWPlatformEndpoints()
+
+	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
+	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
+	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psaDS18X20)) ;
+	owdi_t	sOW ;
+	int	iRV = 0 ;
+	if (Fam10Count) {
+		iRV = OWP_Scan(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
+		if (iRV > 0) ds18x20NumDev += iRV ;
+	}
+	if (Fam28Count) {
+		iRV = OWP_Scan(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
+		if (iRV > 0) ds18x20NumDev += iRV ;
+	}
+	if (ds18x20NumDev == Fam10_28Count) {
+		iRV = ds18x20NumDev ;
+	} else {
+		SL_ERR("Only %d of %d enumerated!!!", ds18x20NumDev, Fam10_28Count) ;
+		iRV = erFAILURE ;
+	}
+	return iRV ;										// number of devices enumerated
+}
+
+TickType_t OWP_TempCalcDelay(ds18x20_t * psDS18X20, bool All) {
+	TickType_t tConvert = pdMS_TO_TICKS(ds18x20DELAY_CONVERT) ;
+	/* ONLY decrease delay if:
+	 * 	specific ROM is addressed AND and it is DS18B20 ; OR
+	 * 	ROM match skipped AND only DS18B20 devices on the bus */
+	owbi_t * psOWBI = psOWP_BusGetPointer(OWP_BusP2L(&psDS18X20->sOW)) ;
+	if ((All && (psOWBI->ds18s20 == 0))
+	|| ((All == 0) && (psDS18X20->sOW.ROM.Family == OWFAMILY_28))) {
+		tConvert /= (4 - psDS18X20->Res) ;
+	}
+	return tConvert ;
+}
+
+/**
+ * @brief	Trigger convert (bus at a time) then read SP, normalise RAW value & persist in EPW
+ * @param 	psEPW
+ * @return
+ */
+int	OWP_TempAllInOne(epw_t * psEWP) {
+	uint8_t	PrevBus = 0xFF ;
+	for (int i = 0; i < Fam10_28Count; ++i) {
+		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
+		if (psDS18X20->sOW.PhyBus != PrevBus) {
+			if (OWP_BusSelectAndAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) == 0) continue ;
+			if (OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, 1) == 1) {
+				PrevBus = psDS18X20->sOW.PhyBus ;
+				vTaskDelay(OWP_TempCalcDelay(psDS18X20, 1)) ;
+				OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;
+				OWP_BusRelease(&psDS18X20->sOW) ;		// keep locked for period of delay
+			}
+		}
+		if ((OWP_BusSelectAndAddress(&psDS18X20->sOW, OW_CMD_MATCHROM) == 1)
+		&& (ds18x20ReadSP(psDS18X20, 2) == 1)) {
+			ds18x20ConvertTemperature(psDS18X20) ;
+			OWP_BusRelease(&psDS18X20->sOW) ;
+		} else SL_ERR("Read/Convert failed") ;
+	}
+	return erSUCCESS ;
+}
+
+int	OWP_TempStartBus(ds18x20_t * psDS18X20, int i) {
+	if (OWP_BusSelectAndAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) == 1) {
+		OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, 1) ;
+		vTimerSetTimerID(psaDS248X[psDS18X20->sOW.DevNum].tmr, (void *) i) ;
+		xTimerStart(psaDS248X[psDS18X20->sOW.DevNum].tmr, OWP_TempCalcDelay(psDS18X20, 1)) ;
+		IF_TRACK(debugDS18X20, "Start Dev=%d Bus=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus) ;
+		return 1 ;
+	}
+	SL_ERR("Failed to start convert Dev=%d Bus=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus) ;
+	return 0 ;
+}
+
+int OWP_TempStartSample(epw_t * psEWx) {				// Stage 1 -
+	uint8_t	PrevDev = 0xFF ;
+	for (int i = 0; i < Fam10_28Count; ++i) {
+		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
+		if (psDS18X20->sOW.DevNum != PrevDev) {
+			if (OWP_TempStartBus(psDS18X20, i) == 1) PrevDev = psDS18X20->sOW.DevNum ;
+		}
+	}
+	return erSUCCESS ;
+}
+
+void OWP_TempReadSample(TimerHandle_t pxHandle) {
+	int	ThisDev = (int) pvTimerGetTimerID(pxHandle) ;
+	ds18x20_t * psDS18X20 = &psaDS18X20[ThisDev] ;
+	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;		// Set OWLevel to standard
+	int i = ThisDev ;
+	do {												// Handle all sensors on this BUS
+		psDS18X20 = &psaDS18X20[i] ;
+		OWAddress(&psDS18X20->sOW, OW_CMD_MATCHROM) ;
+		if (ds18x20ReadSP(psDS18X20, 2) == 1) ds18x20ConvertTemperature(psDS18X20) ;
+		else SL_ERR("Read/Convert failed") ;
+		++i ;
+		// no more sensors or different device - release bus, exit loop
+		if ((i == Fam10_28Count)
+		|| (psDS18X20->sOW.DevNum != psaDS18X20[i].sOW.DevNum)) {
+			OWP_BusRelease(&psDS18X20->sOW) ;
+			break ;
+		}
+		// more sensors, same device, new bus - release bus, start convert on new bus.
+		if (psDS18X20->sOW.PhyBus != psaDS18X20[i].sOW.PhyBus) {
+			OWP_BusRelease(&psDS18X20->sOW) ;
+			OWP_TempStartBus(&psaDS18X20[i], i) ;
+			break ;
+		}
+		// more sensors, same device and bus
+	} while  (i < Fam10_28Count) ;
 }

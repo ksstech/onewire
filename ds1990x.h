@@ -47,7 +47,7 @@ extern	uint8_t	Family01Count, ds1990ReadIntvl ;
 
 // ###################################### Public functions #########################################
 
-int32_t	ds1990xDetectCB(flagmask_t, onewire_t *) ;
+int32_t	ds1990xDetectCB(flagmask_t, owdi_t *) ;
 int32_t	ds1990xScanAll(epw_t * psEWP) ;
 int32_t	ds1990xConfig(void) ;
 

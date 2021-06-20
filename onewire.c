@@ -51,15 +51,7 @@
  * @return	1 if presence pulse(s) detected, device(s) reset
  *			0 if no presence pulse(s) detected
  */
-int		OWReset(onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
-	switch (psOW->BusType) {
-#if		(halHAS_DS248X > 0)
-	case owTYPE_DS248X:			return ds248xOWReset(&psaDS248X[psOW->DevNum]) ;
-#endif
-	default:	myASSERT(0) ;	return 0 ;
-	}
-}
+int		OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]) ; }
 
 /**
  * Send 1 bit of communication to the 1-Wire Net and return the
@@ -72,15 +64,7 @@ int		OWReset(onewire_t * psOW) {
  * Returns: 0:	0 bit read from sendbit
  *			 1:	1 bit read from sendbit
  */
-uint8_t OWTouchBit(onewire_t * psOW, uint8_t sendbit) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
-	switch (psOW->BusType) {
-#if		(halHAS_DS248X > 0)
-	case owTYPE_DS248X:			return ds248xOWTouchBit(&psaDS248X[psOW->DevNum], sendbit) ;
-#endif
-	default:	myASSERT(0) ;	return 0 ;
-	}
-}
+uint8_t OWTouchBit(owdi_t * psOW, uint8_t Bit) { return ds248xOWTouchBit(&psaDS248X[psOW->DevNum], Bit) ; }
 
 /**
  * Send 1 bit of communication to the 1-Wire Net.
@@ -88,14 +72,14 @@ uint8_t OWTouchBit(onewire_t * psOW, uint8_t sendbit) {
  *
  * 'sendbit' - 1 bit to send (least significant byte)
  */
-void	OWWriteBit(onewire_t * psOW, uint8_t sendbit) { OWTouchBit(psOW, sendbit); }
+void	OWWriteBit(owdi_t * psOW, uint8_t Bit) { OWTouchBit(psOW, Bit); }
 
 /**
  * Read 1 bit of communication from the 1-Wire Net and return the result
  *
  * Returns:  1 bit read from 1-Wire Net
  */
-uint8_t OWReadBit(onewire_t * psOW) { return OWTouchBit(psOW, 0x01) ; }
+uint8_t OWReadBit(owdi_t * psOW) { return OWTouchBit(psOW, 0x01) ; }
 
 /**
  * Send 8 bits of communication to the 1-Wire Net and verify that the
@@ -103,34 +87,19 @@ uint8_t OWReadBit(onewire_t * psOW) { return OWTouchBit(psOW, 0x01) ; }
  * The parameter 'sendbyte' least significant 8 bits are used.
  *
  * 'sendbyte' - 8 bits to send (least significant byte)
- * @return	erSUCCESS or erFAILURE
  */
-void	OWWriteByte(onewire_t * psOW, uint8_t sendbyte) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
-	switch (psOW->BusType) {
-#if		(halHAS_DS248X > 0)
-	case owTYPE_DS248X:
-		ds248xOWWriteByte(&psaDS248X[psOW->DevNum], sendbyte) ;
-		break ;
-#endif
-	default:
-		myASSERT(0) ;
-	}
-}
+/**
+ * @brief
+ * @param	psOW
+ * @param	Byte
+ */
+void	OWWriteByte(owdi_t * psOW, uint8_t Byte) { ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte) ; }
 
 /**
  * Reads 8 bits of communication from the 1-Wire Net
  * @return	8 bits read from 1-Wire Net
  */
-uint8_t	OWReadByte(onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
-	switch (psOW->BusType) {
-#if		(halHAS_DS248X > 0)
-	case owTYPE_DS248X:			return ds248xOWReadByte(&psaDS248X[psOW->DevNum]) ;
-#endif
-	default:	myASSERT(0) ;	return 0 ;
-	}
-}
+uint8_t	OWReadByte(owdi_t * psOW) { return ds248xOWReadByte(&psaDS248X[psOW->DevNum]) ; }
 
 /**
  * Send 8 bits of communication to the 1-Wire Net and return the
@@ -142,12 +111,12 @@ uint8_t	OWReadByte(onewire_t * psOW) {
  *
  * Returns:  8 bits read from sendbyte
  */
-uint8_t OWTouchByte(onewire_t * psOW, uint8_t sendbyte) {
-	if (sendbyte == 0xFF) {
+uint8_t OWTouchByte(owdi_t * psOW, uint8_t Byte) {
+	if (Byte == 0xFF) {
 		return OWReadByte(psOW);
 	} else {
-		OWWriteByte(psOW, sendbyte);
-		return sendbyte;
+		OWWriteByte(psOW, Byte);
+		return Byte;
 	}
 }
 
@@ -160,23 +129,35 @@ uint8_t OWTouchByte(onewire_t * psOW, uint8_t sendbyte) {
  *				  to the 1-Wire Net
  * 'tran_len' - length in bytes to transfer
  */
-void	OWBlock(onewire_t * psOW, uint8_t * tran_buf, int tran_len) {
-	for (int i = 0; i < tran_len; ++i) {
-		tran_buf[i] = OWTouchByte(psOW, tran_buf[i]) ;
+void	OWBlock(owdi_t * psOW, uint8_t * pBuf, int Len) {
+	for (int i = 0; i < Len; ++i) {
+		pBuf[i] = OWTouchByte(psOW, pBuf[i]) ;
 	}
 }
 
+// ############################## Search and Variations thereof ####################################
+
 /**
- * OWSearchTriplet() -
+ * Setup search to find the first 'family_code' device on the next call to OWNext().
+ * If no (more) devices of 'family_code' can be found return first device of next family
  */
-uint8_t	OWSearchTriplet(onewire_t * psOW, uint8_t search_direction) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
-	switch (psOW->BusType) {
-#if		(halHAS_DS248X > 0)
-	case owTYPE_DS248X:			return ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], search_direction) ;
-#endif
-	default:	myASSERT(0) ;	return 0 ;
-	}
+void	OWTargetSetup(owdi_t * psOW, uint8_t family_code) {
+	psOW->ROM.Value				= 0ULL ;				// reset all ROM fields
+	psOW->ROM.Family 			= family_code ;
+	psOW->LD		= 64 ;
+	psOW->LFD	= 0 ;
+	psOW->LDF		= 0 ;
+}
+
+/**
+ * Setup the search to skip the current device family on the next call to OWNext().
+ * Can ONLY be done after a search had been performed.
+ * Will find the first device of the next family.
+ */
+void	OWFamilySkipSetup(owdi_t * psOW) {
+	psOW->LD 		= psOW->LFD ;	// set the Last discrepancy to last family discrepancy
+	psOW->LFD = 0 ;					// clear the last family discrepancy
+	if (psOW->LD == 0) psOW->LDF = 1 ;	// check for end of list
 }
 
 /**
@@ -190,34 +171,32 @@ uint8_t	OWSearchTriplet(onewire_t * psOW, uint8_t search_direction) {
  * Using the find alarm command 0xEC will limit the search to only
  * 1-Wire devices that are in an 'alarm' state.
  *
- * Returns:	1: when a 1-Wire device was found and its
- *						  Serial Number placed in the global ROM
- *			0: when no new device was found.  Either the
- *						  last search was the last device or there
- *						  are no devices on the 1-Wire Net.
+ * Returns:	1 if 1W device was found (Serial Number placed in the global ROM)
+ *			0 if NO 1W device found. Either last search was last device or
+ *			there are no devices on the 1-Wire Net.
  */
-int 	OWSearch(onewire_t * psOW, bool alarm_only) {
+int 	OWSearch(owdi_t * psOW, bool alarm_only) {
 	bool	search_result = 0, search_direction ;
 	uint8_t	rom_byte_number = 0, last_zero = 0, id_bit_number = 1, rom_byte_mask = 1, status ;
 	psOW->crc8 = 0;
-	if (psOW->LastDeviceFlag == 0) {					// if the last call was not the last device
+	if (psOW->LDF == 0) {					// if the last call was not the last device
 		if (OWReset(psOW) == 0) {						// reset the search
-			psOW->LastDiscrepancy		= 0 ;
-			psOW->LastDeviceFlag		= 0 ;
-			psOW->LastFamilyDiscrepancy	= 0 ;
+			psOW->LD	= 0 ;
+			psOW->LDF	= 0 ;
+			psOW->LFD	= 0 ;
 			return 0 ;
 		}
 		OWWriteByte(psOW, alarm_only ? OW_CMD_SEARCHALARM : OW_CMD_SEARCHROM) ;
 		do {											// loop to do the search
 		// if this discrepancy is before the Last Discrepancy
 		// on a previous next then pick the same as last time
-			if (id_bit_number < psOW->LastDiscrepancy) {
+			if (id_bit_number < psOW->LD) {
 				search_direction = ((psOW->ROM.HexChars[rom_byte_number] & rom_byte_mask) > 0) ? 1 : 0 ;
 			} else {									// if equal to last pick 1, if not then pick 0
-				search_direction = (id_bit_number == psOW->LastDiscrepancy) ? 1 : 0 ;
+				search_direction = (id_bit_number == psOW->LD) ? 1 : 0 ;
 			}
 		// Perform a triple operation on the DS2482 which will perform 2 read bits and 1 write bit
-			status = OWSearchTriplet(psOW, search_direction) ;
+			status = ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], search_direction) ;
 		// check bit results in status byte
 			int	id_bit		= ((status & ds248xSTAT_SBR) == ds248xSTAT_SBR) ;
 			int	cmp_id_bit	= ((status & ds248xSTAT_TSB) == ds248xSTAT_TSB) ;
@@ -228,7 +207,7 @@ int 	OWSearch(onewire_t * psOW, bool alarm_only) {
 				if ((!id_bit) && (!cmp_id_bit) && (search_direction == 0)) {
 					last_zero = id_bit_number ;
 					if (last_zero < 9) {				// check for Last discrepancy in family
-						psOW->LastFamilyDiscrepancy = last_zero ;
+						psOW->LFD = last_zero ;
 					}
 				}
 				if (search_direction == 1) {			// set or clear the bit in the ROM byte rom_byte_number with mask rom_byte_mask
@@ -247,9 +226,9 @@ int 	OWSearch(onewire_t * psOW, bool alarm_only) {
 		} while(rom_byte_number < sizeof(ow_rom_t)) ;	// loop until all
 	// if the search was successful then
 		if (!((id_bit_number < 65) || (psOW->crc8 != 0))) {
-			psOW->LastDiscrepancy = last_zero;			// search successful
-			if (psOW->LastDiscrepancy == 0) {			// last device ?
-				psOW->LastDeviceFlag	= 1 ;			// yes, set flag
+			psOW->LD = last_zero;			// search successful
+			if (psOW->LD == 0) {			// last device ?
+				psOW->LDF	= 1 ;			// yes, set flag
 			}
 			search_result = 1 ;
 		}
@@ -257,9 +236,9 @@ int 	OWSearch(onewire_t * psOW, bool alarm_only) {
 
 	// if no device found then reset counters so next 'search' will be like a first
 	if (!search_result || (psOW->ROM.Family == 0)) {
-		psOW->LastDiscrepancy	= 0 ;
-		psOW->LastDeviceFlag	= 0 ;
-		psOW->LastFamilyDiscrepancy = 0 ;
+		psOW->LD	= 0 ;
+		psOW->LDF	= 0 ;
+		psOW->LFD = 0 ;
 		search_result = 0 ;
 	}
 	return search_result ;
@@ -270,10 +249,10 @@ int 	OWSearch(onewire_t * psOW, bool alarm_only) {
  * Return 1  : device found, ROM number in ROM.Number buffer
  *		  0 : no device present
  */
-int		OWFirst(onewire_t * psOW, bool alarm_only) {
-	psOW->LastDiscrepancy		= 0 ;					// reset the search state
-	psOW->LastFamilyDiscrepancy	= 0 ;
-	psOW->LastDeviceFlag		= 0 ;
+int		OWFirst(owdi_t * psOW, bool alarm_only) {
+	psOW->LD		= 0 ;					// reset the search state
+	psOW->LFD	= 0 ;
+	psOW->LDF		= 0 ;
 	return OWSearch(psOW, alarm_only) ;
 }
 
@@ -282,44 +261,26 @@ int		OWFirst(onewire_t * psOW, bool alarm_only) {
  * Return 1  : device found, ROM number in ROM.Number buffer
  *		  0 : device not found, end of search
  */
-int 	OWNext(onewire_t * psOW, bool alarm_only) { return OWSearch(psOW, alarm_only) ; }
+int 	OWNext(owdi_t * psOW, bool alarm_only) { return OWSearch(psOW, alarm_only) ; }
 
 // ################################## Extended 1-Wire operations ###################################
 
 /**
- * Set the 1-Wire Net communication speed.
- * 'new_speed' - new speed defined as
- *					 owSPEED_STANDARD	0
- *					 owSPEED_OVERDRIVE	1
- *
- * Returns:  new current 1-Wire Net speed
+ * @brief	Set the 1-Wire Net communication speed.
+ * @param	psOW
+ * @param	speed - owSPEED_STANDARD or owSPEED_OVERDRIVE
+ * @return	new current 1W speed (0 = Standard, 1= Overdrive)
  */
-int		OWSpeed(onewire_t * psOW, bool speed) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
-	switch (psOW->BusType) {
-#if		(halHAS_DS248X > 0)
-	case owTYPE_DS248X:			return ds248xOWSpeed(&psaDS248X[psOW->DevNum], speed) ;
-#endif
-	default:	myASSERT(0) ;	return 0 ;
-	}
-}
+int		OWSpeed(owdi_t * psOW, bool speed) { return ds248xOWSpeed(&psaDS248X[psOW->DevNum], speed) ; }
 
 /**
  * Set the 1-Wire Net line level pull-up to normal.
  * 'new_level' - new level defined as
- *		MODE_STANDARD	0x00
- *		MODE_STRONG		0x02
+ *		STANDARD	0
+ *		STRONG		1
  * Returns:  current 1-Wire Net level
  */
-int		OWLevel(onewire_t * psOW, bool level) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
-	switch (psOW->BusType) {
-#if		(halHAS_DS248X > 0)
-	case owTYPE_DS248X:			return ds248xOWLevel(&psaDS248X[psOW->DevNum], level) ;
-#endif
-	default:	myASSERT(0) ;	return 0 ;
-	}
-}
+int		OWLevel(owdi_t * psOW, bool level) { return ds248xOWLevel(&psaDS248X[psOW->DevNum], level) ; }
 
 /**
  * Send 1 bit of communication to the 1-Wire Net and verify that the
@@ -333,10 +294,8 @@ int		OWLevel(onewire_t * psOW, bool level) {
  * Returns:  1: bit written and response correct, strong pullup now on
  *			  0: response incorrect
  */
-int		OWReadBitPower(onewire_t * psOW, uint8_t applyPowerResponse) {
-	if (OWSetSPU(psOW) == 0) {
-		return 0 ;
-	}
+int		OWReadBitPower(owdi_t * psOW, uint8_t applyPowerResponse) {
+	if (OWSetSPU(psOW) == 0) return 0 ;
 	uint8_t rdbit = OWReadBit(psOW);
 	if (rdbit != applyPowerResponse) {					// check if response was correct
 		OWLevel(psOW, owPOWER_STANDARD);				// if not, turn off strong pull-up
@@ -348,33 +307,29 @@ int		OWReadBitPower(onewire_t * psOW, uint8_t applyPowerResponse) {
 /**
  * Send 8 bits of communication to the 1-Wire Net and verify that the
  * 8 bits read from the 1-Wire Net is the same (write operation).
- * The parameter 'sendbyte' least significant 8 bits are used.  After the
- * 8 bits are sent change the level of the 1-Wire net.
+ * The parameter 'sendbyte' least significant 8 bits are used.
+ * After the 8 bits are sent change the level of the 1-Wire net.
  *
  * 'sendbyte' - 8 bits to send (least significant bit)
  *
  * Returns:  1: bytes written and echo was the same, strong pullup now on
  *			  0: echo was not the same
  */
-int		OWWriteBytePower(onewire_t * psOW, int sendbyte) {
-	if (OWSetSPU(psOW) == 0) {
-		return 0 ;
-	}
-	OWWriteByte(psOW, sendbyte) ;
+/**
+ * @brief
+ * @param	psOW
+ * @param	Byte - value to be sent on the bus
+ * @return
+ */
+int		OWWriteBytePower(owdi_t * psOW, int Byte) {
+	if (OWSetSPU(psOW) == 0) return 0 ;
+	OWWriteByte(psOW, Byte) ;
 	return 1 ;
 }
 
 // ################################## Utility 1-Wire operations ####################################
 
-int		OWSetSPU(onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
-	switch (psOW->BusType) {
-#if		(halHAS_DS248X > 0)
-	case owTYPE_DS248X:			return ds248xOWSetSPU(&psaDS248X[psOW->DevNum]) ;
-#endif
-	default:	myASSERT(0) ;	return 0 ;
-	}
-}
+int	OWSetSPU(owdi_t * psOW) { return ds248xOWSetSPU(&psaDS248X[psOW->DevNum]) ; }
 
 /**
  * OWCheckCRC() - Checks if CRC is ok (ROM Code or Scratch PAD RAM)
@@ -384,18 +339,16 @@ int		OWSetSPU(onewire_t * psOW) {
  */
 uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
 	uint8_t data_bit, sr_lsb, fb_bit, shift_reg = 0 ;
-	for (int8_t iByte = 0; iByte < buflen; iByte++) {
-		for (int8_t iBit = 0; iBit < CHAR_BIT; iBit++) {
+	for (int iByte = 0; iByte < buflen; iByte++) {
+		for (int iBit = 0; iBit < CHAR_BIT; iBit++) {
 			data_bit	= (buf[iByte] >> iBit) & 0x01 ;
 			sr_lsb		= shift_reg & 0x01 ;
 			fb_bit		= (data_bit ^ sr_lsb) & 0x01 ;
 			shift_reg	= shift_reg >> 1 ;
-			if (fb_bit) {
-				shift_reg = shift_reg ^ 0x8c ;
-			}
+			if (fb_bit) shift_reg = shift_reg ^ 0x8c ;
 		}
 	}
-	IF_PRINT(debugCRC && shift_reg, "CRC=%x FAIL %'-+B\n", shift_reg, buflen, buf) ;
+	if (shift_reg) SL_ERR("CRC=%x FAIL %'-+B\n", shift_reg, buflen, buf) ;
 	return shift_reg ? 0 : 1 ;
 }
 
@@ -405,29 +358,13 @@ uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
  * @param	data
  * @return				Returns current crc8 value
  */
-uint8_t	OWCalcCRC8(onewire_t * psOW, uint8_t data) {
+uint8_t	OWCalcCRC8(owdi_t * psOW, uint8_t data) {
 	psOW->crc8 = psOW->crc8 ^ data;
 	for (int i = 0; i < CHAR_BIT; ++i) {
-		if (psOW->crc8 & 1) {
-			psOW->crc8 = (psOW->crc8 >> 1) ^ 0x8c;
-		} else {
-			psOW->crc8 = (psOW->crc8 >> 1);
-		}
+		if (psOW->crc8 & 1)	psOW->crc8 = (psOW->crc8 >> 1) ^ 0x8c;
+		else 				psOW->crc8 = (psOW->crc8 >> 1);
 	}
 	return psOW->crc8;
-}
-
-/**
- * OWChannelSelect() -
- */
-int		OWChannelSelect(onewire_t * psOW) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (psOW->BusType < owTYPE_MAXNUM)) ;
-	switch (psOW->BusType) {
-#if		(halHAS_DS248X > 0)
-	case owTYPE_DS248X:	return ds248xOWChannelSelect(&psaDS248X[psOW->DevNum], psOW->PhyChan) ;
-#endif
-	default:	myASSERT(0) ;	return 0 ;
-	}
 }
 
 /**
@@ -436,9 +373,8 @@ int		OWChannelSelect(onewire_t * psOW) {
  * 			Probably will fail if more than 1 device on the bus
  * @return	erFAILURE or CRC byte
  */
-int		OWReadROM(onewire_t * psOW) {
+int	OWReadROM(owdi_t * psOW) {
 	OWWriteByte(psOW, OW_CMD_READROM) ;
-
 	psOW->ROM.Value = 0ULL ;
 	int	iRV = 0 ;
 	do {
@@ -456,42 +392,24 @@ exit:
  * OWAddress() - Addresses a single or all devices on the 1-wire bus
  * @param nAddrMethod	use OW_CMD_MATCHROM to select a single
  *						device or OW_CMD_SKIPROM to select all
+ * @note	Timing is 163/860 (SKIPROM) or 1447/7740 (MATCHROM)
  */
-void	OWAddress(onewire_t * psOW, uint8_t nAddrMethod) {
-	IF_myASSERT(debugPARAM, nAddrMethod == OW_CMD_MATCHROM || nAddrMethod == OW_CMD_SKIPROM) ;
+void OWAddress(owdi_t * psOW, uint8_t nAddrMethod) {
 	OWWriteByte(psOW, nAddrMethod) ;
 	if (nAddrMethod == OW_CMD_MATCHROM) {
-		for (int i = 0; i < sizeof(ow_rom_t); ++i) {
-			OWWriteByte(psOW, psOW->ROM.HexChars[i]) ;
-		}
+		for (int i = 0; i < sizeof(ow_rom_t); OWWriteByte(psOW, psOW->ROM.HexChars[i++])) ;
 	}
 }
 
-// ############################## Search and Variations thereof ####################################
-
-/**
- * Setup search to find the first 'family_code' device on the next call to OWNext().
- * If no (more) devices of 'family_code' can be found return first device of next family
- */
-void	OWTargetSetup(onewire_t * psOW, uint8_t family_code) {
-	psOW->ROM.Value				= 0ULL ;				// reset all ROM fields
-	psOW->ROM.Family 			= family_code ;
-	psOW->LastDiscrepancy		= 64 ;
-	psOW->LastFamilyDiscrepancy	= 0 ;
-	psOW->LastDeviceFlag		= 0 ;
+int OWCommand(owdi_t * psOW, uint8_t Command, bool All) {
+	OWAddress(psOW, All ? OW_CMD_SKIPROM : OW_CMD_MATCHROM) ;
+	OWWriteByte(psOW, Command) ;
+	return 1 ;
 }
 
-/**
- * Setup the search to skip the current device family on the next call to OWNext().
- * Can ONLY be done after a search had been performed.
- * Will find the first device of the next family.
- */
-void	OWFamilySkipSetup(onewire_t * psOW) {
-	psOW->LastDiscrepancy 		= psOW->LastFamilyDiscrepancy ;	// set the Last discrepancy to last family discrepancy
-	psOW->LastFamilyDiscrepancy = 0 ;					// clear the last family discrepancy
-	if (psOW->LastDiscrepancy == 0) {					// check for end of list
-		psOW->LastDeviceFlag	= 1 ;
-	}
+int OWResetCommand(owdi_t * psOW, uint8_t Command, bool All) {
+	if (OWReset(psOW) == 0) return 0 ;
+	return OWCommand(psOW, Command, All) ;
 }
 
 /**
@@ -499,11 +417,11 @@ void	OWFamilySkipSetup(onewire_t * psOW) {
  * Return 1  : device verified present
  *		  0 : device not present
  */
-int		OWVerify(onewire_t * psOW) {
-	onewire_t	backup ;
-	memcpy((void *) &backup, (const void *) psOW, sizeof(onewire_t)) ;
-	psOW->LastDiscrepancy	= 64 ;				// set search to find the same device
-	psOW->LastDeviceFlag	= 0 ;
+int	OWVerify(owdi_t * psOW) {
+	owdi_t	backup ;
+	memcpy((void *) &backup, (const void *) psOW, sizeof(owdi_t)) ;
+	psOW->LD	= 64 ;				// set search to find the same device
+	psOW->LDF	= 0 ;
 
 	int	iRV = OWSearch(psOW, 0) ;
 	if (iRV == 1) {
@@ -514,6 +432,6 @@ int		OWVerify(onewire_t * psOW) {
 			}
 		}
 	}
-	memcpy((void *) psOW, (const void *) &backup, sizeof(onewire_t)) ;			// restore the search state
+	memcpy((void *) psOW, (const void *) &backup, sizeof(owdi_t)) ;			// restore the search state
 	return iRV ;										// return the result of the verify
 }

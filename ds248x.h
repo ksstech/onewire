@@ -13,6 +13,13 @@
 extern "C" {
 #endif
 
+// ######################################## Build macros ###########################################
+
+#define	d248xAUTO_LOCK_DIS			0
+#define	d248xAUTO_LOCK_IO			1					// un/locked on I2C access level
+#define	d248xAUTO_LOCK_BUS			2					// un/locked on Bus select level
+#define	d248xAUTO_LOCK				d248xAUTO_LOCK_BUS
+
 // ################################### DS248X 1-Wire Commands ######################################
 
 #define ds248xCMD_DRST   			0xF0				// Device Reset (525nS)
@@ -26,19 +33,33 @@ extern "C" {
 #define ds248xCMD_1WSB   			0x87				// 1-Wire Single Bit
 #define ds248xCMD_1WT				0x78				// 1-Wire Triplet
 
-// ############################################# Macros ############################################
+// ############################### Normal & Overdrive (uS) delays ##################################
 
+#if 1	// tRSTL=72/600uS  tRSTH=74/584  tSLOT=11/70
+#define	owDELAY_RST					1148U				// 600 + 584 + 0.2625
+#define	owDELAY_RB					560U				// (8 * 70) + 0.2625
+#define	owDELAY_WB					560U				// (8 * 70) + 0.2625
+#define	owDELAY_ST					210U				// (3 * 70) + 0.2625
+#define	owDELAY_SB					70U					// (1 * 70) + 0.2625
+
+#define	owDELAY_RST_OD				146U				// 72 + 74 + 0.2625
+#define	owDELAY_RB_OD				88U					// (8 * 11) + 0.2625
+#define	owDELAY_WB_OD				88U					// (8 * 11) + 0.2625
+#define	owDELAY_ST_OD				33U					// (3 * 11) + 0.2625
+#define	owDELAY_SB_OD				11U					// (1 * 11) + 0.2625
+#else
 #define	owDELAY_RST					1243U				// 630 + 613.2 + 0.2625
-#define	owDELAY_RST_OD				153U				// 75.6 + 77.7 + 0.2625
-#define	owDELAY_SB					73U					// 72.8 + 0.2625
-#define	owDELAY_SB_OD				11U					// 11 + 0.2625
 #define	owDELAY_RB					583U				// (8 * 72.8) + 0.2625
-#define	owDELAY_RB_OD				98U					// (8 * 11) + 0.2625
 #define	owDELAY_WB					583U				// (8 * 72.8) + 0.2625
-#define	owDELAY_WB_OD				98U					// (8 * 11) + 0.2625
-#define	owDELAY_ST					219					// (3 * 72.8) + 0.2625
-#define	owDELAY_ST_OD				33					// (3 * 11) + 0.2625
+#define	owDELAY_ST					219U				// (3 * 72.8) + 0.2625
+#define	owDELAY_SB					73U					// 72.8 + 0.2625
 
+#define	owDELAY_RST_OD				153U				// 75.6 + 77.7 + 0.2625
+#define	owDELAY_RB_OD				88U					// (8 * 11) + 0.2625
+#define	owDELAY_WB_OD				88U					// (8 * 11) + 0.2625
+#define	owDELAY_ST_OD				33					// (3 * 11) + 0.2625
+#define	owDELAY_SB_OD				11U					// 11 + 0.2625
+#endif
 // ######################################## Enumerations ###########################################
 
 enum {													// DS248X register numbers
@@ -66,10 +87,7 @@ enum {													// STATus register bitmap
 // See http://www.catb.org/esr/structure-packing/
 // Also http://c0x.coding-guidelines.com/6.7.2.1.html
 
-/**
- * PER DEVICE info to track DS248X devices detected and map assignment of LOG to PHY channels
- */
-typedef union ds248x_stat_t {
+typedef union __attribute__((packed)) ds248x_stat_t {
 	struct {
 /*LSB*/	uint8_t		OWB		: 1 ;					// 1-Wire Busy
 		uint8_t		PPD		: 1 ;					// Presence Pulse Detected
@@ -83,42 +101,53 @@ typedef union ds248x_stat_t {
 	uint8_t		STAT ;
 } ds248x_stat_t ;
 
+typedef union __attribute__((packed)) ds248x_conf_t {
+	struct __attribute__((packed)) {
+/*LSB*/	uint8_t		APU		: 1 ;			// Active Pull Up
+		uint8_t		PDN		: 1 ;			// Pull Down (DS2484 only)
+		uint8_t		SPU		: 1 ;			// Strong Pull Up
+		uint8_t		OWS		: 1 ;			// 1-Wire Speed
+/*MSB*/	uint8_t		RES1	: 4 ;
+	} ;
+	uint8_t		Rconf ;
+} ds248x_conf_t ;
+
 typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
-	i2c_di_t *	psI2C ;							// size = 4
+	i2c_di_t *			psI2C ;							// size = 4
 	SemaphoreHandle_t	mux ;
-	TimerHandle_t	timer ;
+	TimerHandle_t		tmr ;
 	union {												// size = 5
-		struct {
+		struct __attribute__((packed)) {
 			union {
-				struct {
-			/*LSB*/	uint8_t		OWB		: 1 ;					// 1-Wire Busy
-					uint8_t		PPD		: 1 ;					// Presence Pulse Detected
+				struct __attribute__((packed)) {
+			/*LSB*/	uint8_t		OWB		: 1 ;			// 1-Wire Busy
+					uint8_t		PPD		: 1 ;			// Presence Pulse Detected
 					uint8_t		SD		: 1 ;
-					uint8_t		LL		: 1 ;					// Link Level
-					uint8_t		RST		: 1 ;					// ReSeT
-					uint8_t		SBR		: 1 ;					// Single Bit Read
-					uint8_t		TSB		: 1 ;					//
-			/*MSB*/	uint8_t		DIR		: 1 ;					// DIRection
+					uint8_t		LL		: 1 ;			// Link Level
+					uint8_t		RST		: 1 ;			// ReSeT
+					uint8_t		SBR		: 1 ;			// Single Bit Read
+					uint8_t		TSB		: 1 ;			//
+			/*MSB*/	uint8_t		DIR		: 1 ;			// DIRection
 				};
 				uint8_t		Rstat ;
 			} ;
 			uint8_t		Rdata ;
 			uint8_t		Rchan ;							// Code read back after ChanSel
 			union {
-				struct {
-			/*LSB*/	uint8_t		APU		: 1 ;					// Active Pull Up
-					uint8_t		PDN		: 1 ;					// Pull Down (DS2484 only)
-					uint8_t		SPU		: 1 ;					// Strong Pull Up
-					uint8_t		OWS		: 1 ;					// 1-Wire Speed
+				struct __attribute__((packed)) {
+			/*LSB*/	uint8_t		APU		: 1 ;			// Active Pull Up
+					uint8_t		PDN		: 1 ;			// Pull Down (DS2484 only)
+					uint8_t		SPU		: 1 ;			// Strong Pull Up
+					uint8_t		OWS		: 1 ;			// 1-Wire Speed
 			/*MSB*/	uint8_t		RES1	: 4 ;
 				} ;
 				uint8_t		Rconf ;
 			} ;
 			union {
-				struct {
-			/*LSB*/	uint8_t		VAL		: 4 ;					// PARameter VALue
-					uint8_t		OD		: 1 ;					// OverDrive control
-			/*MSB*/	uint8_t		PAR		: 3 ;					// PARameter selector
+				struct __attribute__((packed)) {
+			/*LSB*/	uint8_t		VAL		: 4 ;			// PARameter VALue
+					uint8_t		OD		: 1 ;			// OverDrive control
+			/*MSB*/	uint8_t		PAR		: 3 ;			// PARameter selector
 				} ;
 				uint8_t		Rpadj ;
 			} ;
@@ -127,14 +156,12 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	} ;
 	uint8_t				CurChan	: 3 ;					// 0 -> 7
 	uint8_t				Rptr	: 3 ;					// 0 -> 4
-	uint8_t				Test	: 1 ;					// indicate test/identify stage
-	uint8_t				Spare	: 1 ;
+	uint8_t				Spare	: 2 ;
 	// Static info
 	uint8_t				I2Cnum	: 4 ;					// index into I2C Device Info table
 	uint8_t				NumChan	: 4 ;					// 0 / 1 / 8
 	uint8_t				Lo		: 4 ;
 	uint8_t				Hi		: 4 ;
-	// Status bits for 8 channels
 	uint8_t				PrvStat[8] ;					// previous STAT reg
 } ds248x_t ;
 DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 28) ;
@@ -169,7 +196,8 @@ void	ds248xReConfig(i2c_di_t * psI2C_DI) ;
 
 // ############################## DS248X-x00 1-Wire support functions ##############################
 
-int		ds248xOWChannelSelect(ds248x_t * psDS248X, uint8_t Chan) ;
+int		ds248xBusSelect(ds248x_t * psDS248X, uint8_t Chan) ;
+void	ds248xBusRelease(ds248x_t * psDS248X) ;
 int		ds248xOWSetSPU(ds248x_t * psDS248X) ;
 int		ds248xOWReset(ds248x_t * psDS248X) ;
 int		ds248xOWSpeed(ds248x_t * psDS248X, bool speed) ;

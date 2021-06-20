@@ -59,10 +59,10 @@ uint8_t	ds1990ReadIntvl	= ds1990READ_INTVL ;
 
 /* To avoid registering multiple reads if iButton is held in place too long we enforce a
  * period of 'x' seconds within which successive reads of the same tag will be ignored */
-int32_t	ds1990xDetectCB(flagmask_t sFM, onewire_t * psOW) {
+int32_t	ds1990xDetectCB(flagmask_t sFM, owdi_t * psOW) {
 	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
-	uint8_t		LogChan = OWPlatformChanPhy2Log(psOW) ;
-	ow_chan_info_t * psOW_CI = psOWPlatformGetInfoPointer(LogChan) ;
+	uint8_t		LogChan = OWP_BusP2L(psOW) ;
+	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan) ;
 	++Family01Count ;
 	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) && (NowRead - psOW_CI->LastRead) <= ds1990ReadIntvl) {
 		IF_PRINT(debugTRACK, "SAME iButton in %d sec, Skipped...\n", ds1990ReadIntvl) ;
@@ -75,16 +75,16 @@ int32_t	ds1990xDetectCB(flagmask_t sFM, onewire_t * psOW) {
 #if		(debugEVENTS)
 	sFM.bRT	= 1 ;
 	sFM.bNL	= 1 ;
-	OWPlatformCB_Print1W(sFM, psOW) ;
+	OWP_Print1W_CB(sFM, psOW) ;
 #endif
 	return erSUCCESS ;
 }
 
 int32_t	ds1990xScanAll(epw_t * psEWP) {
 	vShowActivity(0) ;
-	onewire_t sOW ;
+	owdi_t sOW ;
 	Family01Count = 0 ;
-	return OWPlatformScanner(OWFAMILY_01, ds1990xDetectCB, &sOW) ;
+	return OWP_Scan(OWFAMILY_01, ds1990xDetectCB, &sOW) ;
 }
 
 int32_t	ds1990xConfig(void) {
