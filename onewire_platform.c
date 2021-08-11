@@ -467,7 +467,6 @@ void OWP_DS18X20ReadSample(TimerHandle_t pxHandle) {
 	int i = ThisDev ;
 	do {												// Handle all sensors on this BUS
 		psDS18X20 = &psaDS18X20[i] ;
-		OWAddress(&psDS18X20->sOW, OW_CMD_MATCHROM) ;
 		if (ds18x20ReadSP(psDS18X20, 2) == 1) ds18x20ConvertTemperature(psDS18X20) ;
 		else SL_ERR("Read/Convert failed") ;
 		++i ;
