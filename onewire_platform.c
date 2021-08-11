@@ -58,17 +58,17 @@ owbi_t * psOWP_BusGetPointer(uint8_t LogBus) {
  */
 void OWP_BusL2P(owdi_t * psOW, uint8_t LogBus) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (LogBus < OWP_NumBus)) ;
-	memset(psOW, 0, sizeof(owdi_t)) ;
 #if		(halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
-		IF_TRACK(debugMAPPING, "Read: Ch=%d  Idx=%d  N=%d  L=%d  H=%d\n", LogBus, i, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi) ;
-		if (psDS248X->NumChan && INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi, uint8_t)) {
-			psOW->DevNum	= i ;
-			psOW->PhyBus	= LogBus - psDS248X->Lo ;
-			IF_TRACK(debugMAPPING, "Done: Ch=%d  DN=%d  N=%d  L=%d  H=%d  P=%d\n", LogBus, psOW->DevNum, psDS248X->NumChan, psDS248X->Lo, psDS248X->Hi, psOW->PhyBus) ;
+		IF_TRACK(debugMAPPING, "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
+		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi, uint8_t)) {
+			psOW->DevNum = i;
+			psOW->PhyBus = LogBus - psDS248X->Lo;
+			IF_TRACK(debugMAPPING, " -> P=%d\n", psOW->PhyBus) ;
 			return ;
 		}
+		IF_TRACK(debugMAPPING, "\n") ;
 	}
 #endif
 	SL_ERR("Invalid Logical Ch=%d", LogBus) ;
