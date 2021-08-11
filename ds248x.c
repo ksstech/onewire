@@ -480,8 +480,7 @@ uint8_t ds248xOWTouchBit(ds248x_t * psDS248X, uint8_t Bit) {
 //								Repeat until 1WB bit has changed to 0
 //  [] indicates from slave
 //  BB indicates byte containing bit value in msbit
-	IF_myASSERT(debugPARAM, Bit < 2) ;
-	uint8_t	cBuf[2] = {	ds248xCMD_1WSB, Bit ? 0x80 : 0x00 } ;
+	uint8_t	cBuf[2] = {	ds248xCMD_1WSB, Bit << 7 } ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_SB_OD : owDELAY_SB) ;
 	return psDS248X->SBR ;
