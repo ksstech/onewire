@@ -232,55 +232,6 @@ int	OWSpeed(owdi_t * psOW, bool Spd) { return ds248xOWSpeed(&psaDS248X[psOW->Dev
  *		STRONG		1
  * Returns:  current 1-Wire Net level
  */
-
-/**
- * Send 1 bit of communication to the 1-Wire Net and verify that the
- * response matches the 'applyPowerResponse' bit and apply power delivery
- * to the 1-Wire net.  Note that some implementations may apply the power
- * first and then turn it off if the response is incorrect.
- *
- * 'applyPowerResponse' - 1 bit response to check, if correct then start
- *								power delivery
- *
- * Returns:  1: bit written and response correct, strong pullup now on
- *			  0: response incorrect
- */
-int		OWReadBitPower(owdi_t * psOW, uint8_t applyPowerResponse) {
-	if (OWSetSPU(psOW) == 0) return 0 ;
-	uint8_t rdbit = OWReadBit(psOW);
-	if (rdbit != applyPowerResponse) {					// check if response was correct
-		OWLevel(psOW, owPOWER_STANDARD);				// if not, turn off strong pull-up
-		return 0 ;
-	}
-	return 1 ;
-}
-
-/**
- * Send 8 bits of communication to the 1-Wire Net and verify that the
- * 8 bits read from the 1-Wire Net is the same (write operation).
- * The parameter 'sendbyte' least significant 8 bits are used.
- * After the 8 bits are sent change the level of the 1-Wire net.
- *
- * 'sendbyte' - 8 bits to send (least significant bit)
- *
- * Returns:  1: bytes written and echo was the same, strong pullup now on
- *			  0: echo was not the same
- */
-/**
- * @brief
- * @param	psOW
- * @param	Byte - value to be sent on the bus
- * @return
- */
-int		OWWriteBytePower(owdi_t * psOW, int Byte) {
-	if (OWSetSPU(psOW) == 0) return 0 ;
-	OWWriteByte(psOW, Byte) ;
-	return 1 ;
-}
-
-// ################################## Utility 1-Wire operations ####################################
-
-int	OWSetSPU(owdi_t * psOW) { return ds248xOWSetSPU(&psaDS248X[psOW->DevNum]) ; }
 int	OWLevel(owdi_t * psOW, bool Pwr) { return ds248xOWLevel(&psaDS248X[psOW->DevNum], Pwr) ; }
 
 /**
