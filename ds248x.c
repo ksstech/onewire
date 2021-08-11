@@ -245,7 +245,7 @@ int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 		 *  CC channel value
 		 *  RR channel read back
 		 */
-		uint8_t	cBuf[2] = { ds2482CMD_CHSL, ~Bus<<4 | Bus } ;	// calculate Channel value
+		uint8_t	cBuf[2] = { ds2482CMD_CHSL, (~Bus << 4) | Bus } ;	// calculate Channel value
 		psDS248X->Rptr	= ds248xREG_CHAN ;
 		psDS248X->CurChan = Bus ;			// save in advance will auto reset if error
 		IF_SYSTIMER_START(debugTIMING, stDS248xA) ;
