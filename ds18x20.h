@@ -65,8 +65,6 @@ typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sens
 
 // ###################################### Public variables #########################################
 
-extern	ds18x20_t *	psaDS18X20 ;
-extern	uint8_t	Fam10Count, Fam28Count, Fam10_28Count ;
 
 // ###################################### Public functions #########################################
 
