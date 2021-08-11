@@ -408,16 +408,11 @@ int	ds248xConfig(i2c_di_t * psI2C_DI) {
 	}
 	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx] ;
 	psDS248X->psI2C		= psI2C_DI ;
-	switch(psI2C_DI->Type) {
-		case i2cDEV_DS2482_800:	psDS248X->NumChan = 8 ;	break ;
-		case i2cDEV_DS2482_10X:
-		case i2cDEV_DS2484:		psDS248X->NumChan = 1 ;	break ;
-	}
-	ds248xReConfig(psI2C_DI) ;
-	#if	(ds18x20BUILD_TASK == 1)
-	void OWP_TempReadSample(TimerHandle_t pxHandle) ;
-	psDS248X->tmr = xTimerCreate("ds248x", pdMS_TO_TICKS(5), pdFALSE, NULL, OWP_TempReadSample) ;
-	#endif
+	if (psI2C_DI->Type == i2cDEV_DS2482_800) psDS248X->NumChan = 1;	// 0=1Ch, 1=8Ch
+	ds248xReConfig(psI2C_DI);
+
+	void OWP_DS18X20ReadSample(TimerHandle_t) ;
+	psDS248X->tmr = xTimerCreate("ds248x", pdMS_TO_TICKS(5), pdFALSE, NULL, OWP_DS18X20ReadSample) ;
 	return erSUCCESS ;
 }
 
