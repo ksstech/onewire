@@ -326,18 +326,9 @@ uint8_t	OWCalcCRC8(owdi_t * psOW, uint8_t data) {
  * @return	erFAILURE or CRC byte
  */
 int	OWReadROM(owdi_t * psOW) {
-	OWWriteByte(psOW, OW_CMD_READROM) ;
-	psOW->ROM.Value = 0ULL ;
-	int	iRV = 0 ;
-	do {
-		for (int i = 0; i < sizeof(ow_rom_t); ++i) {
-			iRV = OWReadByte(psOW) ;					// read 8x bytes ie ROM FAM+ID+CRC
-			LT_GOTO(iRV, erSUCCESS, exit) ;
-			psOW->ROM.HexChars[i] = iRV ;
-		}
-	} while (OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) == 0) ;
-exit:
-	return iRV ;
+	OWWriteByte(psOW, OW_CMD_READROM);
+	OWReadBlock(psOW, psOW->ROM.HexChars, sizeof(ow_rom_t));
+	return OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
 }
 
 /**
@@ -346,22 +337,22 @@ exit:
  *						device or OW_CMD_SKIPROM to select all
  * @note	Timing is 163/860 (SKIPROM) or 1447/7740 (MATCHROM)
  */
-void OWAddress(owdi_t * psOW, uint8_t nAddrMethod) {
-	OWWriteByte(psOW, nAddrMethod) ;
-	if (nAddrMethod == OW_CMD_MATCHROM) {
-		for (int i = 0; i < sizeof(ow_rom_t); OWWriteByte(psOW, psOW->ROM.HexChars[i++])) ;
-	}
-}
 
 int OWCommand(owdi_t * psOW, uint8_t Command, bool All) {
 	OWAddress(psOW, All ? OW_CMD_SKIPROM : OW_CMD_MATCHROM) ;
 	OWWriteByte(psOW, Command) ;
 	return 1 ;
+void OWAddress(owdi_t * psOW, bool Skip) {
+	OWWriteByte(psOW, Skip ? OW_CMD_SKIPROM : OW_CMD_MATCHROM);
+	if (Skip == owADDR_MATCH) OWWriteBlock(psOW, psOW->ROM.HexChars, sizeof(ow_rom_t));
 }
 
-int OWResetCommand(owdi_t * psOW, uint8_t Command, bool All) {
-	if (OWReset(psOW) == 0) return 0 ;
-	return OWCommand(psOW, Command, All) ;
+int OWResetCommand(owdi_t * psOW, uint8_t Command, bool Skip, bool Pwr) {
+	if (OWReset(psOW) == 0) return 0;					// check if any device there
+	OWAddress(psOW, Skip);								// address bus or device
+	if (Pwr && (psOW->PSU == 0)) OWLevel(psOW, owPOWER_STRONG);
+	OWWriteByte(psOW, Command);							// send the command
+	return 1;
 }
 
 /**
