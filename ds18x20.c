@@ -88,21 +88,24 @@ int	ds18x20CheckPower(ds18x20_t * psDS18X20) {
  * @note	Timing is as follows
  *	OWReset		196/1348uS
  *	OWCommand	1447/7740uS
- *	OWBlock		163/860 per byte, 326/1720 for temperature, 815/4300 for all.
+ *	OWReadBlock		163/860 per byte, 326/1720 for temperature, 815/4300 for all.
  *	Total Time	1969/10808 for temperature
  */
 int	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
-	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_SP, 0) == 0) return 0 ;
-	memset(psDS18X20->RegX, 0xFF, Len) ;				// 0xFF to read
-	OWBlock(&psDS18X20->sOW, psDS18X20->RegX, Len) ;
-	if (Len == SO_MEM(ds18x20_t, RegX)) OWCheckCRC(psDS18X20->RegX, SO_MEM(ds18x20_t, RegX)) ;
-	else OWReset(&psDS18X20->sOW) ;						// terminate read
-	return 1 ;
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_SP, owADDR_MATCH, 0) == 0) return 0 ;
+	OWReadBlock(&psDS18X20->sOW, psDS18X20->RegX, Len);
+	IF_TRACK(debugSPAD, "%'-B ", Len, psDS18X20->RegX);
+	// If full SP read, verify CRC else terminate read
+	return (Len == SO_MEM(ds18x20_t, RegX))
+			? OWCheckCRC(psDS18X20->RegX, SO_MEM(ds18x20_t, RegX))
+			: OWReset(&psDS18X20->sOW) ;
 }
 
 int	ds18x20WriteSP(ds18x20_t * psDS18X20) {
-	if (OWResetCommand(&psDS18X20->sOW, DS18X20_WRITE_SP, 0) == 0) return 0 ;
-	OWBlock(&psDS18X20->sOW, (uint8_t *) &psDS18X20->Thi, psDS18X20->sOW.ROM.Family == OWFAMILY_28 ? 3 : 2) ;	// Thi, Tlo [+Conf]
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_WRITE_SP, owADDR_MATCH, 0) == 0) return 0 ;
+	int Len = (psDS18X20->sOW.ROM.Family == OWFAMILY_28) ? 3 : 2 ;	// Thi, Tlo [+Conf]
+	OWWriteBlock(&psDS18X20->sOW, (uint8_t *) &psDS18X20->Thi, Len);
+	IF_TRACK(debugSPAD, "%'-B ", Len, psDS18X20->RegX);
 	return 1 ;
 }
 
