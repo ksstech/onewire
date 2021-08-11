@@ -49,6 +49,7 @@
  */
 int	 OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]) ; }
 
+// ############################### Bit/Byte/Block Read/Write #######################################
 
 /**
  * Send 1 bit of communication to the 1-Wire Net.
@@ -85,38 +86,12 @@ void OWWriteByte(owdi_t * psOW, uint8_t Byte) { ds248xOWWriteByte(&psaDS248X[psO
  */
 uint8_t	OWReadByte(owdi_t * psOW) { return ds248xOWReadByte(&psaDS248X[psOW->DevNum]) ; }
 
-/**
- * Send 8 bits of communication to the 1-Wire Net and return the
- * result 8 bits read from the 1-Wire Net.  The parameter 'sendbyte'
- * least significant 8 bits are used and the least significant 8 bits
- * of the result is the return byte.
- *
- * 'sendbyte' - 8 bits to send (least significant byte)
- *
- * Returns:  8 bits read from sendbyte
- */
-uint8_t OWTouchByte(owdi_t * psOW, uint8_t Byte) {
-	if (Byte == 0xFF) {
-		return OWReadByte(psOW);
-	} else {
-		OWWriteByte(psOW, Byte);
-		return Byte;
-	}
+void OWWriteBlock(owdi_t * psOW, uint8_t * pBuf, int Len) {
+	for (int i = 0; i < Len; OWWriteByte(psOW, pBuf[i++])) ;
 }
 
-/**
- * The 'OWBlock' transfers a block of data to and from the
- * 1-Wire Net. The result is returned in the same buffer.
- *
- * 'tran_buf' - pointer to a block of unsigned
- *				  chars of length 'tran_len' that will be sent
- *				  to the 1-Wire Net
- * 'tran_len' - length in bytes to transfer
- */
-void	OWBlock(owdi_t * psOW, uint8_t * pBuf, int Len) {
-	for (int i = 0; i < Len; ++i) {
-		pBuf[i] = OWTouchByte(psOW, pBuf[i]) ;
-	}
+void OWReadBlock(owdi_t * psOW, uint8_t * pBuf, int Len) {
+	for (int i = 0; i < Len; pBuf[i++] = OWReadByte(psOW)) ;
 }
 
 // ############################## Search and Variations thereof ####################################
