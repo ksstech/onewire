@@ -93,8 +93,8 @@ typedef	struct __attribute__((packed)) {
 	uint8_t 	LDF		: 1 ;						// Last Device Flag
 	uint8_t		DevNum	: 2 ;						// index into 1W DevInfo table
 	uint8_t		PhyBus	: 3 ;
-	uint8_t		Spare	: 1 ;
 	uint8_t		OD		: 1 ;						// 1=OverDrive supported
+	uint8_t		PSU		: 1 ;						// 1=External Power
 } owdi_t ;
 DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12) ;
 
