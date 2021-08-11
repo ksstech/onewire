@@ -68,14 +68,14 @@ uint8_t OWTouchBit(owdi_t * psOW, uint8_t Bit) { return ds248xOWTouchBit(&psaDS2
  *
  * 'sendbit' - 1 bit to send (least significant byte)
  */
-void	OWWriteBit(owdi_t * psOW, uint8_t Bit) { OWTouchBit(psOW, Bit); }
+void OWWriteBit(owdi_t * psOW, bool Bit) { ds248xOWTouchBit(&psaDS248X[psOW->DevNum], Bit); }
 
 /**
  * Read 1 bit of communication from the 1-Wire Net and return the result
  *
  * Returns:  1 bit read from 1-Wire Net
  */
-uint8_t OWReadBit(owdi_t * psOW) { return OWTouchBit(psOW, 0x01) ; }
+bool OWReadBit(owdi_t * psOW) { return ds248xOWTouchBit(&psaDS248X[psOW->DevNum], 1) ; }
 
 /**
  * Send 8 bits of communication to the 1-Wire Net and verify that the
