@@ -286,9 +286,10 @@ int	ds248xReportStatus(uint8_t Num, ds248x_stat_t Stat) {
 int	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 	int iRV = 0 ;
 	int	Chan ;
+	if (Refresh) ds248xBusSelect(psDS248X, psDS248X->CurChan) ;
 	switch (Reg) {
 	case ds248xREG_STAT:
-		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) return 0 ;
+		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) break;
 	#if	(!defined(NDEBUG)) || defined(DEBUG)
 		for (int i = 0; i < psDS248X->NumChan; ++i)
 			iRV += ds248xReportStatus(i, (ds248x_stat_t) psDS248X->PrvStat[i]) ;
@@ -303,7 +304,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 
 	case ds248xREG_CHAN:
 		if ((psDS248X->psI2C->Type != i2cDEV_DS2482_800)
-		|| (Refresh && ds248xReadRegister(psDS248X, Reg) == 0)) return 0 ;
+		|| (Refresh && ds248xReadRegister(psDS248X, Reg) == 0)) break;
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < psDS248X->NumChan && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
 		IF_myASSERT(debugRESULT, Chan < psDS248X->NumChan && psDS248X->Rchan == ds248x_V2N[Chan]) ;
@@ -311,7 +312,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 		break ;
 
 	case ds248xREG_CONF:
-		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) return 0 ;
+		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) break;
 		iRV += printfx("CONF(3)=0x%02X  1WS=%c  SPU=%c  PDN=%c  APU=%c\n",
 				psDS248X->Rconf,
 				psDS248X->OWS	? '1' : '0',
@@ -321,8 +322,9 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 		break ;
 
 	case ds248xREG_PADJ:
-		if (Refresh == 0) return 0 ;
-		if (psDS248X->psI2C->Type != i2cDEV_DS2484 || ds248xReadRegister(psDS248X, Reg) == 0) return 0 ;
+		if ((Refresh == 0)
+		|| (psDS248X->psI2C->Type != i2cDEV_DS2484)
+		|| (ds248xReadRegister(psDS248X, Reg) == 0)) break;
 		iRV += printfx("PADJ=0x%02X  OD=%c | tRSTL=%duS | tMSP=", psDS248X->Rpadj,
 				psDS248X->OD ? '1' : '0', Trstl[psDS248X->VAL] * (psDS248X->OD ? 1 : 10)) ;
 		ds248xI2C_Read(psDS248X) ;
@@ -337,6 +339,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 		iRV += printfx(" | rWPU=%f ohm\n", (float) Rwpu[psDS248X->VAL]) ;
 		break ;
 	}
+	if (Refresh) ds248xBusRelease(psDS248X) ;
 	return iRV ;
 }
 
