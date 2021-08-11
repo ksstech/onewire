@@ -427,19 +427,6 @@ void ds248xReConfig(i2c_di_t * psI2C_DI) {
 // ################################## DS248x-x00 1-Wire functions ##################################
 
 /**
- *	WWR			100KHz	400KHz
- *				300uS	75uS
- *		uS-----+------+-------+
- *	NS	0		300		75
- *	OD	0		300		75
- */
-int	ds248xOWSetSPU(ds248x_t * psDS248X) {
-	psDS248X->SPU = 1 ;
-	int iRV = ds248xWriteConfig(psDS248X) ;
-	return psDS248X->SPU ;
-}
-
-/**
  * @brief	Reset 1W bus
  * @param	psDS248X
  * @param 	Chan
