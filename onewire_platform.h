@@ -59,7 +59,7 @@ int	OWP_PrintDS18_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) ;
 int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) ;
 int	OWP_Count_CB(flagmask_t FlagMask, owdi_t *) ;
 
-int	OWP_Scan(uint8_t, int (*)(flagmask_t, owdi_t *), owdi_t *) ;
+int	OWP_Scan(uint8_t, int (*)(flagmask_t, owdi_t *)) ;
 int	OWP_Scan2(uint8_t, int (*)(flagmask_t, void *, owdi_t *), void *, owdi_t *) ;
 int	OWP_ScanAlarmsFamily(uint8_t Family) ;
 

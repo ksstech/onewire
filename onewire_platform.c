@@ -194,36 +194,37 @@ int	OWP_ScanAlarms_CB(flagmask_t sFM, owdi_t * psOW) {
  * @param	psOW
  * @return	number of matching ROM's found (>= 0) or an error code (< 0)
  */
-int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *), owdi_t * psOW) {
+int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
+	owdi_t sOW ;
 	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
 		vShowActivity(1) ;
-		OWP_BusL2P(psOW, LogBus) ;
-		if (OWP_BusSelect(psOW)) {
+		OWP_BusL2P(&sOW, LogBus);
+		if (OWP_BusSelect(&sOW)) {
 			if (Family != 0) {
-				OWTargetSetup(psOW, Family) ;
-				iRV = OWSearch(psOW, 0) ;
-				if (iRV > 0 && psOW->ROM.Family != Family) {
+				OWTargetSetup(&sOW, Family) ;
+				iRV = OWSearch(&sOW, 0) ;
+				if (iRV > 0 && sOW.ROM.Family != Family) {
 					// Strictly speaking should never get here, iRV must be 0 if same family not found
-					IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found\n", Family, psOW->ROM.Family) ;
-					OWP_BusRelease(psOW) ;
+					IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found\n", Family, sOW.ROM.Family) ;
+					OWP_BusRelease(&sOW) ;
 					continue ;
 				}
 			} else {
-				iRV = OWFirst(psOW, 0) ;
+				iRV = OWFirst(&sOW, 0) ;
 			}
 			while (iRV) {
-				IF_EXEC_2(debugSCANNER, OWP_Print1W_CB, makeMASKFLAG(0,0,0,0,0,0,0,0,0,0,0,0,LogBus), psOW) ;
-				iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
+				IF_EXEC_2(debugSCANNER, OWP_Print1W_CB, makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,LogBus), &sOW) ;
+				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 				IF_myASSERT(debugRESULT, iRV == 1) ;
-				iRV = Handler((flagmask_t) uCount, psOW) ;
+				iRV = Handler((flagmask_t) uCount, &sOW) ;
 				if (iRV < erSUCCESS) break ;
 				if (iRV > 0) ++uCount ;
-				iRV = OWNext(psOW, 0) ;						// try to find next device (if any)
+				iRV = OWNext(&sOW, 0) ;						// try to find next device (if any)
 			}
-			OWP_BusRelease(psOW) ;
+			OWP_BusRelease(&sOW) ;
 			if (iRV < erSUCCESS) break ;
 		}
 	}
@@ -262,10 +263,7 @@ int	OWP_Scan2(uint8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), voi
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
-int	OWP_ScanAlarmsFamily(uint8_t Family) {
-	owdi_t	sOW ;
-	return OWP_Scan(Family, OWP_ScanAlarms_CB, &sOW) ;
-}
+int	OWP_ScanAlarmsFamily(uint8_t Family) { return OWP_Scan(Family, OWP_ScanAlarms_CB); }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
 
@@ -293,8 +291,7 @@ int	OWP_Config(void) {
 		psaOWBI = malloc(OWP_NumBus * sizeof(owbi_t)) ;	// initialize the logical channel structures
 		memset(psaOWBI, 0, OWP_NumBus * sizeof(owbi_t)) ;
 		// enumerate any/all physical devices (possibly) (permanently) attached to individual channel(s)
-		owdi_t	sOW ;
-		int	iRV = OWP_Scan(0, OWP_Count_CB, &sOW) ;
+		int	iRV = OWP_Scan(0, OWP_Count_CB) ;
 		if (iRV > 0) OWP_NumDev += iRV ;
 
 #if		(halHAS_DS1990X > 0)
@@ -408,14 +405,13 @@ int	ds18x20Enumerate(void) {
 	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
 	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
 	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psaDS18X20)) ;
-	owdi_t	sOW ;
 	int	iRV = 0 ;
 	if (Fam10Count) {
-		iRV = OWP_Scan(OWFAMILY_10, ds18x20EnumerateCB, &sOW) ;
+		iRV = OWP_Scan(OWFAMILY_10, ds18x20EnumerateCB) ;
 		if (iRV > 0) ds18x20NumDev += iRV ;
 	}
 	if (Fam28Count) {
-		iRV = OWP_Scan(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
+		iRV = OWP_Scan(OWFAMILY_28, ds18x20EnumerateCB) ;
 		if (iRV > 0) ds18x20NumDev += iRV ;
 	}
 	if (ds18x20NumDev == Fam10_28Count) iRV = ds18x20NumDev ;
