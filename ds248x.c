@@ -291,8 +291,8 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 	case ds248xREG_STAT:
 		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) break;
 	#if	(!defined(NDEBUG)) || defined(DEBUG)
-		for (int i = 0; i < psDS248X->NumChan; ++i)
-			iRV += ds248xReportStatus(i, (ds248x_stat_t) psDS248X->PrvStat[i]) ;
+		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i)
+			iRV += ds248xReportStatus(i, (ds248x_stat_t) psDS248X->PrvStat[i]);
 	#else
 		iRV += ds248xReportStatus(0, (ds248x_stat_t) psDS248X->Rstat) ;
 	#endif
@@ -306,8 +306,8 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
 		if ((psDS248X->psI2C->Type != i2cDEV_DS2482_800)
 		|| (Refresh && ds248xReadRegister(psDS248X, Reg) == 0)) break;
 		// Channel, start by finding the matching Channel #
-		for (Chan = 0; Chan < psDS248X->NumChan && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
-		IF_myASSERT(debugRESULT, Chan < psDS248X->NumChan && psDS248X->Rchan == ds248x_V2N[Chan]) ;
+		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
+		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]) ;
 		iRV = printfx("CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
 		break ;
 
