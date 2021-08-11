@@ -142,17 +142,24 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 		} ;
 		uint8_t			RegX[5] ;
 	} ;
-	uint8_t				CurChan	: 3 ;					// 0 -> 7
-	uint8_t				Rptr	: 3 ;					// 0 -> 4
-	uint8_t				Spare	: 2 ;
-	// Static info
-	uint8_t				I2Cnum	: 4 ;					// index into I2C Device Info table
-	uint8_t				NumChan	: 4 ;					// 0 / 1 / 8
-	uint8_t				Lo		: 4 ;
-	uint8_t				Hi		: 4 ;
-	uint8_t				PrvStat[8] ;					// previous STAT reg
+	uint8_t		CurChan	: 3 ;					// 0 -> 7
+	uint8_t		Rptr	: 3 ;					// 0 -> 4
+	uint8_t		NumChan	: 1 ;					// 0 / 1 / 8
+	uint8_t		Sp1		: 1 ;
+	uint8_t		I2Cnum	: 4 ;					// index into I2C Device Info table
+	uint8_t		Lo		: 4 ;
+	uint8_t		Hi		: 4 ;
+	uint8_t		Sp2		: 4 ;
+#if		(!defined(NDEBUG)) || defined(DEBUG)
+	uint8_t		PrvStat[8] ;					// previous STAT reg
+	uint8_t		PrvConf[8] ;
+#endif
 } ds248x_t ;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 28) ;
+#if		(!defined(NDEBUG)) || defined(DEBUG)
+	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 36) ;
+#else
+	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 20) ;
+#endif
 
 // #################################### Public Data structures #####################################
 
@@ -201,7 +208,7 @@ uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
  *
  * Returns � The DS248x status byte result from the triplet command
  */
-uint8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, uint8_t search_direction) ;
+bool ds248xOWSearchTriplet(ds248x_t * psDS248X, bool bDir) ;
 
 #ifdef __cplusplus
 }
