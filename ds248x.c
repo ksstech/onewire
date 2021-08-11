@@ -468,7 +468,6 @@ int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed) {
  *	OD	0		300		75
  */
 int	ds248xOWLevel(ds248x_t * psDS248X, bool level) {
-	if (level == owPOWER_STRONG) return psDS248X->SPU ;	// DS248X only allow STANDARD
 	psDS248X->SPU = level;
 	ds248xWriteConfig(psDS248X);
 	return psDS248X->SPU;
