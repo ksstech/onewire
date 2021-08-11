@@ -536,7 +536,7 @@ uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) {
 	return psDS248X->Rdata;
 }
 
-uint8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, uint8_t search_direction) {
+bool ds248xOWSearchTriplet(ds248x_t * psDS248X, bool bDir) {
 // 1-Wire Triplet (Case B)
 //	S AD,0 [A] 1WT [A] SS [A] Sr AD,1 [A] [Status] A [Status] A\ P
 //							  \--------/
