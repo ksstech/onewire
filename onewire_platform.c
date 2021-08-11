@@ -40,8 +40,17 @@
 owbi_t * psaOWBI = NULL ;
 ow_flags_t	OWflags ;
 
-static uint8_t	OWP_NumBus = 0 ;
-static uint8_t	OWP_NumDev = 0 ;
+ds18x20_t *	psaDS18X20	= NULL ;
+uint8_t	Fam10Count = 0, Fam28Count = 0, Fam10_28Count = 0 ;
+
+static uint8_t	OWP_NumBus = 0, OWP_NumDev = 0 ;
+
+/* In order to avoid multiple successive reads of the same iButton on the same OW channel
+ * we filter reads based on the value of the iButton read and time expired since the last
+ * successful read. If the same ID is read on the same channel within 'x' seconds, skip it */
+
+uint8_t	ds1990ReadIntvl	= ds1990READ_INTVL ;
+uint8_t	Family01Count = 0 ;
 
 // ################################# Application support functions #################################
 
@@ -431,7 +440,7 @@ int	OWP_DS18X20Ai1(epw_t * psEWP) {
 		if ((OWP_BusSelect(&psDS18X20->sOW) == 1)
 		&& (ds18x20ReadSP(psDS18X20, 2) == 1)) {
 			ds18x20ConvertTemperature(psDS18X20) ;
-			OWP_BusRelease(&psDS18X20->sOW) ;
+			OWP_BusRelease(&psDS18X20->sOW) ;			// TODO maybe simplify Release ?
 		} else SL_ERR("Read/Convert failed") ;
 	}
 	return erSUCCESS ;
