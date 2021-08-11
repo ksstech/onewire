@@ -280,9 +280,9 @@ int	OWP_Config(void) {
 #if		(halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
-		psDS248X->Lo	= OWP_NumBus ;
-		psDS248X->Hi	= OWP_NumBus + psDS248X->NumChan - 1 ;
-		OWP_NumBus		+= psDS248X->NumChan ;
+		psDS248X->Lo = OWP_NumBus ;
+		psDS248X->Hi = OWP_NumBus + (psDS248X->NumChan ? 7 : 0);
+		OWP_NumBus	+= (psDS248X->NumChan ? 8 : 1) ;
 	}
 #endif
 
