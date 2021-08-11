@@ -449,15 +449,15 @@ int	OWP_DS18X20Ai1(epw_t * psEWP) {
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
 		if (psDS18X20->sOW.PhyBus != PrevBus) {
-			if (OWP_BusSelectAndAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) == 0) continue ;
-			if (OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, 1) == 1) {
+			if (OWP_BusSelect(&psDS18X20->sOW) == 0) continue ;
+			if (OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, owADDR_SKIP, 1) == 1) {
 				PrevBus = psDS18X20->sOW.PhyBus ;
 				vTaskDelay(OWP_DS18X20CalcDelay(psDS18X20, 1)) ;
 				OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;
 				OWP_BusRelease(&psDS18X20->sOW) ;		// keep locked for period of delay
 			}
 		}
-		if ((OWP_BusSelectAndAddress(&psDS18X20->sOW, OW_CMD_MATCHROM) == 1)
+		if ((OWP_BusSelect(&psDS18X20->sOW) == 1)
 		&& (ds18x20ReadSP(psDS18X20, 2) == 1)) {
 			ds18x20ConvertTemperature(psDS18X20) ;
 			OWP_BusRelease(&psDS18X20->sOW) ;
@@ -466,9 +466,9 @@ int	OWP_DS18X20Ai1(epw_t * psEWP) {
 	return erSUCCESS ;
 }
 
-	if (OWP_BusSelectAndAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) == 1) {
-		OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, 1) ;
 int	OWP_DS18X20StartBus(ds18x20_t * psDS18X20, int i) {
+	if (OWP_BusSelect(&psDS18X20->sOW) == 1) {
+		OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, owADDR_SKIP, 1);
 		vTimerSetTimerID(psaDS248X[psDS18X20->sOW.DevNum].tmr, (void *) i);
 		xTimerStart(psaDS248X[psDS18X20->sOW.DevNum].tmr, OWP_DS18X20CalcDelay(psDS18X20, 1));
 		IF_TRACK(debugDS18X20, "Start Dev=%d Bus=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus);
