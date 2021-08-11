@@ -107,9 +107,9 @@ int	ds18x20WriteSP(ds18x20_t * psDS18X20) {
 }
 
 int	ds18x20WriteEE(ds18x20_t * psDS18X20) {
-	if (OWResetCommand(&psDS18X20->sOW, DS18X20_COPY_SP, 0) == 0) return 0 ;
-	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_SP_COPY)) ;
-	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_COPY_SP, owADDR_MATCH, 1) == 0) return 0 ;
+	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_SP_COPY));
+	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD);
 	return 1 ;
 }
 
