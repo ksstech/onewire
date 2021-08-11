@@ -140,12 +140,6 @@ int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSiz
 	return 0 ;
 }
 
-void ds248xPrintConfig(ds248x_t * psDS248X, uint8_t Reg) {
-	halI2C_DeviceReport((void *) ((uint32_t) psDS248X->I2Cnum)) ;
-	printfx("1-W:  NumCh=%d  Cur#=%d  Rptr=%d (%s)  Reg=0x%02X\n",
-		psDS248X->NumChan, psDS248X->CurChan, psDS248X->Rptr, RegNames[psDS248X->Rptr], Reg) ;
-}
-
 /**
  * @brief	reset device, read & store status
  * @return	status of RST bit ie 1 or 0
@@ -215,8 +209,8 @@ int	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 	int iRV ;
 	if ((Reg == ds248xREG_CHAN && psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
 		(Reg == ds248xREG_PADJ && psDS248X->psI2C->Type != i2cDEV_DS2484)) {
-		ds248xPrintConfig(psDS248X, Reg) ;
-		printfx("Invalid register combination!!!\n") ;
+		halI2C_DeviceReport((void *) ((uint32_t) psDS248X->I2Cnum)) ;
+		printfx("Invalid device/register combo Reg=%d (%s)",Reg, RegNames[Reg]) ;
 		iRV = 0 ;
 	} else {
 		psDS248X->Rptr	= Reg ;
