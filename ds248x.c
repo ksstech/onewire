@@ -507,11 +507,6 @@ void ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t Byte) {
 	IF_SYSTIMER_STOP(debugTIMING, stDS248xD) ;
 }
 
-int		ds248xOWWriteBytePower(ds248x_t * psDS248X, uint8_t Byte) {
-	if (ds248xOWSetSPU(psDS248X)) ds248xOWWriteByte(psDS248X, Byte) ;
-	return psDS248X->SPU ;
-}
-
 /**
  *	WRDWWR		100KHz	400KHz
  *				500uS	125uS
