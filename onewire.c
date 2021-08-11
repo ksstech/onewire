@@ -49,18 +49,6 @@
  */
 int	 OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]) ; }
 
-/**
- * Send 1 bit of communication to the 1-Wire Net and return the
- * result 1 bit read from the 1-Wire Net.  The parameter 'sendbit'
- * least significant bit is used and the least significant bit
- * of the result is the return bit.
- *
- * 'sendbit' - the least significant bit is the bit to send
- *
- * Returns: 0:	0 bit read from sendbit
- *			 1:	1 bit read from sendbit
- */
-uint8_t OWTouchBit(owdi_t * psOW, uint8_t Bit) { return ds248xOWTouchBit(&psaDS248X[psOW->DevNum], Bit) ; }
 
 /**
  * Send 1 bit of communication to the 1-Wire Net.
