@@ -122,14 +122,14 @@ int	ds18x20TempRead(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psDS18X20, 2) 
 // ###################################### IRMACOS support ##########################################
 
 int	ds18x20Initialize(ds18x20_t * psDS18X20) {
-	if (ds18x20ReadSP(psDS18X20, SO_MEM(ds18x20_t, RegX))) return 0 ;
+	if (ds18x20ReadSP(psDS18X20, SO_MEM(ds18x20_t, RegX)) == 0) return 0;
+	ds18x20CheckPower(psDS18X20);
 	psDS18X20->Res	= (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
-					? (psDS18X20->fam28.Conf >> 5)
-					: owFAM28_RES9B ;
-	psDS18X20->Pwr = ds18x20CheckPower(psDS18X20) ;
-	ds18x20ConvertTemperature(psDS18X20) ;
-#if		(debugCONFIG)
-	OWP_PrintDS18_CB(makeMASKFLAG(1,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
+					? psDS18X20->fam28.Conf >> 5
+					: owFAM28_RES9B;
+	ds18x20ConvertTemperature(psDS18X20);
+#if		(debugCONFIG && !debugCONVERT)
+	OWP_PrintDS18_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
 #endif
 	return 1 ;
 }

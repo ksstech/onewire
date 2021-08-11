@@ -58,9 +58,7 @@ typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sens
 	} ;
 	uint8_t	Idx		: 3 ;								// Endpoint index (0->7) of this specific device
 	uint8_t	Res		: 2 ;								// Resolution 0=9b 1=10b 2=11b 3=12b
-	uint8_t	Pwr		: 1 ;								// Power  0=Parasitic  1=External
-	uint8_t	OD		: 1 ;								// OverDrive 0=Disabled 1=Enabled
-	uint8_t	SBits	: 1 ;
+	uint8_t	SBits	: 3 ;
 } ds18x20_t ;
 
 // ###################################### Public variables #########################################
@@ -71,7 +69,7 @@ typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sens
 /**
  * ds18x20CheckPower() - Read the power supply type (parasitic or external)
  */
-int	ds18x20CheckPower(ds18x20_t * psDS18X20) ;
+bool	ds18x20CheckPower(ds18x20_t * psDS18X20) ;
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) ;
 
 int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) ;
