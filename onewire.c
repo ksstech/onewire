@@ -134,8 +134,8 @@ void OWFamilySkipSetup(owdi_t * psOW) {
  *			0 if NO 1W device found. Either last search was last device or
  *			there are no devices on the 1-Wire Net.
  */
-	bool	search_result = 0, search_direction ;
 int OWSearch(owdi_t * psOW, bool alarm_only) {
+	bool	bRV = 0, bDir ;
 	uint8_t	rom_byte_number = 0, last_zero = 0, id_bit_number = 1, rom_byte_mask = 1, status ;
 	psOW->crc8 = 0;
 	if (psOW->LDF == 0) {					// if the last call was not the last device
@@ -150,30 +150,25 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 		// if this discrepancy is before the Last Discrepancy
 		// on a previous next then pick the same as last time
 			if (id_bit_number < psOW->LD) {
-				search_direction = ((psOW->ROM.HexChars[rom_byte_number] & rom_byte_mask) > 0) ? 1 : 0 ;
+				bDir = ((psOW->ROM.HexChars[rom_byte_number] & rom_byte_mask) > 0) ? 1 : 0 ;
 			} else {									// if equal to last pick 1, if not then pick 0
-				search_direction = (id_bit_number == psOW->LD) ? 1 : 0 ;
+				bDir = (id_bit_number == psOW->LD) ? 1 : 0 ;
 			}
 		// Perform a triple operation on the DS2482 which will perform 2 read bits and 1 write bit
-			status = ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], search_direction) ;
+			status = ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], bDir) ;
 		// check bit results in status byte
 			int	id_bit		= ((status & ds248xSTAT_SBR) == ds248xSTAT_SBR) ;
 			int	cmp_id_bit	= ((status & ds248xSTAT_TSB) == ds248xSTAT_TSB) ;
-			search_direction	= ((status & ds248xSTAT_DIR) == ds248xSTAT_DIR) ? 1 : 0 ;
-			if ((id_bit) && (cmp_id_bit)) {				// check for no devices on 1-Wire
+			bDir = ((status & ds248xSTAT_DIR) == ds248xSTAT_DIR) ? 1 : 0 ;
+			if (id_bit && cmp_id_bit) {				// check for no devices on 1-Wire
 				break ;
 			} else {
-				if ((!id_bit) && (!cmp_id_bit) && (search_direction == 0)) {
+				if ((!id_bit) && (!cmp_id_bit) && (bDir == 0)) {
 					last_zero = id_bit_number ;
-					if (last_zero < 9) {				// check for Last discrepancy in family
-						psOW->LFD = last_zero ;
-					}
+					if (last_zero < 9) psOW->LFD = last_zero ;
 				}
-				if (search_direction == 1) {			// set or clear the bit in the ROM byte rom_byte_number with mask rom_byte_mask
-					psOW->ROM.HexChars[rom_byte_number] |= rom_byte_mask ;
-				} else {
-					psOW->ROM.HexChars[rom_byte_number] &= ~rom_byte_mask ;
-				}
+				if (bDir == 1) psOW->ROM.HexChars[rom_byte_number] |= rom_byte_mask ;
+				else psOW->ROM.HexChars[rom_byte_number] &= ~rom_byte_mask;
 				++id_bit_number ;						// increment the byte counter id_bit_number & shift the mask rom_byte_mask
 				rom_byte_mask <<= 1 ;
 				if (rom_byte_mask == 0) {				// if the mask is 0 then go to new SerialNum byte rom_byte_number and reset mask
@@ -192,13 +187,13 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 	}
 
 	// if no device found then reset counters so next 'search' will be like a first
-		search_result = 0 ;
 	if ((bRV == 0) || (psOW->ROM.Family == 0)) {
 		psOW->LD = 0;
 		psOW->LDF = 0;
 		psOW->LFD = 0;
+		bRV = 0;
 	}
-	return search_result ;
+	return bRV ;
 }
 
 /**
