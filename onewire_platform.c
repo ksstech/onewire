@@ -87,21 +87,6 @@ int	OWP_BusP2L(owdi_t * psOW) {
  * @param	psOW
  * @return	1 if selected, 0 if error
  */
-/**
- * @brief	Select [& address] bus (SKIPROM) or device (MATCHROM)
- * @note	NOT an All-In-One function, bus MUST be released after completion
- * @param	psOW
- * @param	u8AddrMethod (SKIPROM or MATCHROM)
- * @return	1 if successful else 0
- */
-int	OWP_BusSelectAndAddress(owdi_t * psOW, uint8_t u8AddrMethod) {
-	if (OWP_BusSelect(psOW) == 0) return 0 ;
-	IF_SYSTIMER_START(debugTIMING,stOW2) ;
-	if (psOW->OD && (OWSpeed(psOW, owSPEED_ODRIVE) != owSPEED_ODRIVE)) SL_ERR("Overdrive failed!!!") ;
-	OWAddress(psOW, u8AddrMethod) ;
-	IF_SYSTIMER_STOP(debugTIMING,stOW2) ;
-	return 1 ;
-}
 int	OWP_BusSelect(owdi_t * psOW) { return ds248xBusSelect(&psaDS248X[psOW->DevNum], psOW->PhyBus); }
 
 void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]) ; }

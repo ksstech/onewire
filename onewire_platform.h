@@ -49,7 +49,6 @@ owbi_t * psOWP_BusGetPointer(uint8_t) ;
 void OWP_BusL2P(owdi_t *, uint8_t) ;
 int	OWP_BusP2L(owdi_t *) ;
 int	OWP_BusSelect(owdi_t *) ;
-int	OWP_BusSelectAndAddress(owdi_t *, uint8_t) ;
 void OWP_BusRelease(owdi_t *) ;
 
 // Common callback handlers
