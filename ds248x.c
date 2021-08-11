@@ -59,31 +59,48 @@ int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 
 int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 	int iRV = 1 ;
-	if (psDS248X->Rptr == ds248xREG_STAT) {
-#if		(!defined(NDEBUG)) || defined(DEBUG)
-		const uint8_t DS248Xmask[4] = { 0b00000111, 0b00011111, 0b00111111, 0b11111111 } ;
-		uint8_t Mask = DS248Xmask[OWflags.Level] ;
-		uint8_t StatX = psDS248X->PrvStat[psDS248X->CurChan] ;
-		if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
-			char * pcBuf = pcBitMapDecodeChanges(StatX, psDS248X->Rstat, 0x000000FF, StatNames) ;
-			printfx("I2C=%d  OW=%u  Stat=0x%02X->0x%02X : %s\n", psDS248X->psI2C->DevIdx,
+	if (psDS248X->Rptr == ds248xREG_STAT) {		// STATus register
+		if (psDS248X->OWB) {					// Check for error if not blocking in I2C task
+			iRV = ds248xLogError(psDS248X, "OWB") ;
+		} else {
+			#if	(!defined(NDEBUG) || defined(DEBUG))
+			const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
+			const uint8_t DS248Xmask[4] = { 0b00000111, 0b00011111, 0b00111111, 0b11111111 } ;
+			uint8_t Mask = DS248Xmask[OWflags.Level] ;
+			uint8_t StatX = psDS248X->PrvStat[psDS248X->CurChan] ;
+			if (ioB1GET(ioB1_0) && ((psDS248X->Rstat & Mask) != (StatX & Mask))) {
+				char * pcBuf = pcBitMapDecodeChanges(StatX, psDS248X->Rstat, 0x000000FF, StatNames) ;
+				printfx("D=%d C=%u x%02X->x%02X %s\n", psDS248X->psI2C->DevIdx,
 					psDS248X->CurChan, StatX, psDS248X->Rstat, pcBuf) ;
-			free(pcBuf) ;
+				free(pcBuf) ;
+			}
+			psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat ;
+			#endif
 		}
-		psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat ;
-#endif
-		// XXX Check if causing error if not blocking in I2C task
-		if (psDS248X->OWB) return ds248xLogError(psDS248X, "OWB") ;
-
-	} else if (psDS248X->Rptr == ds248xREG_CONF) {
+	} else if (psDS248X->Rptr == ds248xREG_CONF) {		// CONFiguration register
+		if (Value == 0xC3) return iRV ;					// Just read CONF, no change
+		Value &= 0x0F ;
 		if (Value != psDS248X->Rconf) {
-			char caBuf[18] ;
 			ds248x_conf_t sConf = { .Rconf = Value } ;
-			char * pcMess	= (psDS248X->APU != sConf.OWS) ? "OWS"
+			char caBuf[18] ;
+			char * pcMess	= (psDS248X->OWS != sConf.OWS) ? "OWS"
 							: (psDS248X->SPU != sConf.SPU) ? "SPU"
-							: (psDS248X->SPU != sConf.SPU) ? "PDN": "APU" ;
-			snprintfx(caBuf, sizeof(caBuf), "W=x%02X R=x%02X (%s)", pcMess) ;
-			return ds248xLogError(psDS248X, pcMess) ;
+							: ((psDS248X->psI2C->Type == i2cDEV_DS2484) && (psDS248X->PDN != sConf.PDN)) ? "PDN"
+							: (psDS248X->APU != sConf.APU) ? "APU" : "???" ;
+			snprintfx(caBuf, sizeof(caBuf), "W=x%02X R=x%02X (%s)", Value, psDS248X->Rconf, pcMess) ;
+			iRV = ds248xLogError(psDS248X, caBuf) ;
+		} else {
+			#if	(!defined(NDEBUG) || defined(DEBUG))
+			if (ioB1GET(ioB1_0) && (psDS248X->Rconf != psDS248X->PrvConf[psDS248X->CurChan])) {
+				const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" } ;
+				uint8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan] ;
+				char * pcBuf = pcBitMapDecodeChanges(ConfX, psDS248X->Rconf, 0x0000000F, ConfNames) ;
+				printfx("D=%d C=%u x%02X->x%02X %s\n", psDS248X->psI2C->DevIdx,
+					psDS248X->CurChan, ConfX, psDS248X->Rconf, pcBuf) ;
+				free(pcBuf) ;
+				psDS248X->PrvConf[psDS248X->CurChan] = psDS248X->Rconf ;
+			}
+			#endif
 		}
 	} else if (psDS248X->Rptr == ds248xREG_CHAN && psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan]) {
 		iRV = ds248xLogError(psDS248X, "CHAN") ;
@@ -103,7 +120,7 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
 	#if (d248xAUTO_LOCK == 1)
 	xRtosSemaphoreGive(&psDS248X->mux) ;
 	#endif
-	if (iRV == erSUCCESS) return ds248xCheckRead(psDS248X, 0) ;
+	if (iRV == erSUCCESS) return ds248xCheckRead(psDS248X, 0xFF) ;
 	return 0 ;
 }
 
@@ -119,7 +136,7 @@ int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSiz
 	#if (d248xAUTO_LOCK == 1)
 	xRtosSemaphoreGive(&psDS248X->mux) ;
 	#endif
-	if (iRV == erSUCCESS) return ds248xCheckRead(psDS248X, pTxBuf[1]) ;
+	if (iRV == erSUCCESS) return ds248xCheckRead(psDS248X, (TxSize > 1) ? pTxBuf[1] : 0xFF) ;
 	return 0 ;
 }
 
