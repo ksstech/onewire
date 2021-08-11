@@ -515,3 +515,36 @@ void OWP_TempReadSample(TimerHandle_t pxHandle) {
 		// more sensors, same device and bus
 	} while  (i < Fam10_28Count) ;
 }
+
+// ###################################### DS1990X support ##########################################
+
+/* To avoid registering multiple reads if iButton is held in place too long we enforce a
+ * period of 'x' seconds within which successive reads of the same tag will be ignored */
+int	OWP_DS1990ScanCB(flagmask_t sFM, owdi_t * psOW) {
+	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
+	uint8_t		LogChan = OWP_BusP2L(psOW) ;
+	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan) ;
+	++Family01Count ;
+	if ((psOW_CI->LastROM.Value == psOW->ROM.Value)
+	&& ((NowRead - psOW_CI->LastRead) <= ds1990ReadIntvl)) {
+		IF_PRINT(debugTRACK, "SAME iButton in %d sec, Skipped...\n", ds1990ReadIntvl) ;
+		return erSUCCESS ;
+	}
+	psOW_CI->LastROM.Value	= psOW->ROM.Value ;
+	psOW_CI->LastRead		= NowRead ;
+	xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits) ;
+	portYIELD() ;
+#if		(debugEVENTS)
+	sFM.bRT	= 1 ;
+	sFM.bNL	= 1 ;
+	OWP_Print1W_CB(sFM, psOW) ;
+#endif
+	return erSUCCESS ;
+}
+
+int	OWP_DS1990ScanAll(epw_t * psEWP) {
+	vShowActivity(0) ;
+	Family01Count = 0;
+	return OWP_Scan(OWFAMILY_01, OWP_DS1990ScanCB) ;
+}
+

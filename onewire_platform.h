@@ -14,6 +14,7 @@ extern "C" {
 
 // ############################################# Macros ############################################
 
+#define	ds1990READ_INTVL			5					// successive read interval, avoid duplicates
 
 // ######################################## Enumerations ###########################################
 
@@ -68,6 +69,9 @@ int	OWP_TempAllInOne(struct epw_t * psEPW) ;
 
 int	OWP_Config(void) ;
 void OWP_Report(void) ;
+
+int	OWP_DS1990ScanCB(flagmask_t, owdi_t *) ;
+int	OWP_DS1990ScanAll(epw_t * psEWP) ;
 
 #ifdef __cplusplus
 }

@@ -37,39 +37,8 @@
  * successful read. If the same ID is read on the same channel within 'x' seconds, skip it */
 
 uint8_t	Family01Count 	= 0 ;
-uint8_t	ds1990ReadIntvl	= ds1990READ_INTVL ;
 
 // ################################# Application support functions #################################
-
-/* To avoid registering multiple reads if iButton is held in place too long we enforce a
- * period of 'x' seconds within which successive reads of the same tag will be ignored */
-int32_t	ds1990xDetectCB(flagmask_t sFM, owdi_t * psOW) {
-	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
-	uint8_t		LogChan = OWP_BusP2L(psOW) ;
-	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan) ;
-	++Family01Count ;
-	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) && (NowRead - psOW_CI->LastRead) <= ds1990ReadIntvl) {
-		IF_PRINT(debugTRACK, "SAME iButton in %d sec, Skipped...\n", ds1990ReadIntvl) ;
-		return erSUCCESS ;
-	}
-	psOW_CI->LastROM.Value	= psOW->ROM.Value ;
-	psOW_CI->LastRead		= NowRead ;
-	xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits) ;
-	portYIELD() ;
-#if		(debugEVENTS)
-	sFM.bRT	= 1 ;
-	sFM.bNL	= 1 ;
-	OWP_Print1W_CB(sFM, psOW) ;
-#endif
-	return erSUCCESS ;
-}
-
-int32_t	ds1990xScanAll(epw_t * psEWP) {
-	vShowActivity(0) ;
-	owdi_t sOW ;
-	Family01Count = 0 ;
-	return OWP_Scan(OWFAMILY_01, ds1990xDetectCB, &sOW) ;
-}
 
 int	ds1990xConfig(void) {
 	epw_t * psEWP = &table_work[URI_DS1990X] ;
