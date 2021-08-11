@@ -1,8 +1,5 @@
 /*
  * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
- */
-
-/*
  * ds18x20.h
  */
 
@@ -16,15 +13,11 @@
 
 // ############################################# Macros ############################################
 
-#define	ds18x20SINGLE_DEVICE				0
-#define	ds18x20TRIGGER_GLOBAL				0
-#define	ds18x20DELAY_CONVERT				750
-#define	ds18x20DELAY_SP_COPY				11
+#define	ds18x20DELAY_CONVERT				750		// mSec
+#define	ds18x20DELAY_SP_COPY				11		// mSec
 
 #define	ds18x20T_SNS_MIN					1000
 #define	ds18x20T_SNS_NORM					60000
-
-#define	ds18x20BUILD_TASK					1
 
 // ################################## DS18X20 1-Wire Commands ######################################
 
@@ -44,12 +37,13 @@
 // Also http://c0x.coding-guidelines.com/6.7.2.1.html
 
 typedef	struct __attribute__((packed)) fam10 { uint8_t Res0, Res1, Remain, Count ; } fam10 ;
+DUMB_STATIC_ASSERT(sizeof(fam10) == 4) ;
 typedef	struct __attribute__((packed)) fam28 { uint8_t Conf, Res1, Res2, Res3 ; } fam28 ;
-DUMB_STATIC_ASSERT(sizeof(fam10) == sizeof(fam28)) ;
+DUMB_STATIC_ASSERT(sizeof(fam28) == 4) ;
 
-typedef struct __attribute__((packed)) ds18x20_s {		// DS1820/S20/B20 9/12 bit Temp sensors
+typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sensors
 	owdi_t	sOW ;										// address of enumerated sensor (size = 12)
-	epw_t		sEWx ;
+	epw_t	sEWx ;
 	union {												// Scratchpad
 		struct __attribute__((packed)) {
 			uint8_t	Tlsb, Tmsb ;						// last RAM sample
@@ -82,7 +76,7 @@ extern	uint8_t	Fam10Count, Fam28Count, Fam10_28Count ;
 int	ds18x20CheckPower(ds18x20_t * psDS18X20) ;
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) ;
 
-int	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) ;
+int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) ;
 int	ds18x20WriteSP(ds18x20_t * psDS18X20) ;
 int	ds18x20WriteEE(ds18x20_t * psDS18X20) ;
 

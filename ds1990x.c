@@ -1,34 +1,17 @@
 /*
- * Copyright 2020 AM Maree/KSS Technologies (Pty) Ltd.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
- * and associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- */
-
-/*
- * onewire_platform.c
+ * Copyright 2020-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * ds1990x.c
  */
 
 #include	"hal_variables.h"
 #include	"onewire_platform.h"
 #include	"task_events.h"
 #include	"endpoints.h"
+
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
+
 #include	"x_errors_events.h"
 #include	"x_utilities.h"								// vShowActivity
 
@@ -37,6 +20,7 @@
 #define	debugFLAG					0xE001
 
 #define	debugEVENTS					(debugFLAG & 0x0001)
+#define	debugCONFIG					(debugFLAG & 0x0002)
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -87,7 +71,7 @@ int32_t	ds1990xScanAll(epw_t * psEWP) {
 	return OWP_Scan(OWFAMILY_01, ds1990xDetectCB, &sOW) ;
 }
 
-int32_t	ds1990xConfig(void) {
+int	ds1990xConfig(void) {
 	epw_t * psEWP = &table_work[URI_DS1990X] ;
 	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP)) ;
 	psEWP->var.def.cv.vc	= 1 ;
@@ -97,5 +81,6 @@ int32_t	ds1990xConfig(void) {
 	psEWP->Tsns				= ds1990xT_SNS_NORM ;
 	psEWP->Rsns				= ds1990xT_SNS_NORM ;
 	psEWP->uri				= URI_DS1990X ;				// Used in OWPlatformEndpoints()
+	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990", 10, 1000) ;
 	return erSUCCESS ;
 }

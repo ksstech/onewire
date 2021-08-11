@@ -1,22 +1,19 @@
 /*
  * Copyright 2020-2021 Andre M. Maree/KSS Technologies (Pty) Ltd.
- */
-
-/*
  * onewire_platform.c
  */
 
-#include	"hal_config.h"
-
-#include	"endpoint_struct.h"
-#include	"endpoint_id.h"
-#include	"printfx.h"
-#include	"syslog.h"
-#include	"systiming.h"								// timing debugging
-#include	"x_errors_events.h"
+#include	"hal_variables.h"
 
 #include	"onewire_platform.h"
 #include	"task_events.h"
+#include	"endpoints.h"
+
+#include	"printfx.h"
+#include	"syslog.h"
+#include	"systiming.h"								// timing debugging
+
+#include	"x_errors_events.h"
 #include	"x_utilities.h"								// vShowActivity
 
 #include	<string.h>
@@ -316,30 +313,29 @@ int	OWP_Config(void) {
 }
 
 void OWP_Report(void) {
-	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
-		OWP_PrintChan_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,LogBus), &psaOWBI[LogBus]) ;
-	}
 #if 	(halHAS_DS248X > 0)
 	ds248xReportAll(1) ;
 #endif
 #if 	(halHAS_DS18X20 > 0)
 	ds18x20ReportAll() ;
 #endif
+	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus)
+		OWP_PrintChan_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,LogBus), &psaOWBI[LogBus]) ;
 }
 
 // ###################################### DS18X20 support ##########################################
 
 epw_t * ds18x20GetWork(int32_t x) ;
-void	ds18x20SetDefault(epw_t * psEWP, epw_t *psEWS) ;
-void	ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) ;
-float	ds18x20GetTemperature(epw_t * psEWx) ;
+void ds18x20SetDefault(epw_t * psEWP, epw_t *psEWS) ;
+void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) ;
+float ds18x20GetTemperature(epw_t * psEWx) ;
 
 const vt_enum_t	sDS18X20Func = {
 	.work	= ds18x20GetWork,
 	.reset	= ds18x20SetDefault,
 	.sense	= ds18x20SetSense,
 	.get	= ds18x20GetTemperature,
-} ;
+};
 
 epw_t * ds18x20GetWork(int32_t x) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS18X20) && x < Fam10_28Count) ;
@@ -363,43 +359,43 @@ void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
 }
 
-float ds18x20GetTemperature(epw_t * psEWx) { return psEWx->var.val.x32.f32 ; }
+float ds18x20GetTemperature(epw_t * psEWx) { return psEWx->var.val.x32.f32; }
 
 int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) {
-	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount] ;
-	memcpy(&psDS18X20->sOW, psOW, sizeof(owdi_t)) ;
-	psDS18X20->Idx	= sFM.uCount ;
+	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount];
+	memcpy(&psDS18X20->sOW, psOW, sizeof(owdi_t));
+	psDS18X20->Idx = sFM.uCount;
 
-	epw_t * psEWS = &psDS18X20->sEWx ;
-	memset(psEWS, 0, sizeof(epw_t)) ;
-	psEWS->var.def.cv.vf	= vfFXX ;
-	psEWS->var.def.cv.vt	= vtVALUE ;
-	psEWS->var.def.cv.vs	= vs32B ;
-	psEWS->var.def.cv.vc	= 1 ;
-	psEWS->idx				= sFM.uCount ;
-	psEWS->uri				= URI_DS18X20 ;
-	ds18x20Initialize(psDS18X20) ;
+	epw_t * psEWS = &psDS18X20->sEWx;
+	memset(psEWS, 0, sizeof(epw_t));
+	psEWS->var.def.cv.vf	= vfFXX;
+	psEWS->var.def.cv.vt	= vtVALUE;
+	psEWS->var.def.cv.vs	= vs32B;
+	psEWS->var.def.cv.vc	= 1;
+	psEWS->idx	= sFM.uCount;
+	psEWS->uri	= URI_DS18X20;
+	ds18x20Initialize(psDS18X20);
 
-	owbi_t * psOW_CI = psOWP_BusGetPointer(OWP_BusP2L(psOW)) ;
+	owbi_t * psOW_CI = psOWP_BusGetPointer(OWP_BusP2L(psOW));
 	switch(psOW->ROM.Family) {
-	case OWFAMILY_10:	psOW_CI->ds18s20++ ;	break ;
-	case OWFAMILY_28:	psOW_CI->ds18b20++ ;	break ;
-	default:			myASSERT(0) ;
+	case OWFAMILY_10: psOW_CI->ds18s20++;	break;
+	case OWFAMILY_28: psOW_CI->ds18b20++;	break;
+	default: myASSERT(0);
 	}
 	return 1 ;											// number of devices enumerated
 }
 
 int	ds18x20Enumerate(void) {
-	uint8_t	ds18x20NumDev = 0 ;
-	Fam10_28Count = Fam10Count + Fam28Count ;
+	uint8_t	ds18x20NumDev = 0;
+	Fam10_28Count = Fam10Count + Fam28Count;
 	IF_SL_INFO(debugDS18X20, "DS18x20 found %d devices", Fam10_28Count) ;
 	IF_SYSTIMER_INIT(debugTIMING, stDS1820A, stMILLIS, "DS1820A", 10, 1000) ;
 	IF_SYSTIMER_INIT(debugTIMING, stDS1820B, stMILLIS, "DS1820B", 1, 10) ;
 
 	// Once-off EWP initialization
-	epw_t * psEWP = &table_work[URI_DS18X20] ;
-	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP)) ;
-	psEWP->var.def.cv.pntr	= 1 ;
+	epw_t * psEWP = &table_work[URI_DS18X20];
+	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP));
+	psEWP->var.def.cv.pntr	= 1;
 	psEWP->var.def.cv.vf	= vfFXX ;
 	psEWP->var.def.cv.vs	= vs32B ;
 	psEWP->var.def.cv.vt	= vtENUM ;
@@ -422,9 +418,8 @@ int	ds18x20Enumerate(void) {
 		iRV = OWP_Scan(OWFAMILY_28, ds18x20EnumerateCB, &sOW) ;
 		if (iRV > 0) ds18x20NumDev += iRV ;
 	}
-	if (ds18x20NumDev == Fam10_28Count) {
-		iRV = ds18x20NumDev ;
-	} else {
+	if (ds18x20NumDev == Fam10_28Count) iRV = ds18x20NumDev ;
+	else {
 		SL_ERR("Only %d of %d enumerated!!!", ds18x20NumDev, Fam10_28Count) ;
 		iRV = erFAILURE ;
 	}
@@ -474,9 +469,9 @@ int	OWP_TempAllInOne(epw_t * psEWP) {
 int	OWP_TempStartBus(ds18x20_t * psDS18X20, int i) {
 	if (OWP_BusSelectAndAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) == 1) {
 		OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, 1) ;
-		vTimerSetTimerID(psaDS248X[psDS18X20->sOW.DevNum].tmr, (void *) i) ;
-		xTimerStart(psaDS248X[psDS18X20->sOW.DevNum].tmr, OWP_TempCalcDelay(psDS18X20, 1)) ;
-		IF_TRACK(debugDS18X20, "Start Dev=%d Bus=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus) ;
+		vTimerSetTimerID(psaDS248X[psDS18X20->sOW.DevNum].tmr, (void *) i);
+		xTimerStart(psaDS248X[psDS18X20->sOW.DevNum].tmr, OWP_DS18X20CalcDelay(psDS18X20, 1));
+		IF_TRACK(debugDS18X20, "Start Dev=%d Bus=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus);
 		return 1 ;
 	}
 	SL_ERR("Failed to start convert Dev=%d Bus=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus) ;
@@ -491,7 +486,7 @@ int OWP_TempStartSample(epw_t * psEWx) {				// Stage 1 -
 			if (OWP_TempStartBus(psDS18X20, i) == 1) PrevDev = psDS18X20->sOW.DevNum ;
 		}
 	}
-	return erSUCCESS ;
+	return erSUCCESS;
 }
 
 void OWP_TempReadSample(TimerHandle_t pxHandle) {

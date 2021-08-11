@@ -6,15 +6,11 @@
 #include	"onewire_platform.h"
 
 #include	"endpoint_id.h"
+
 #include	"printfx.h"
 #include	"syslog.h"
-#include	"x_errors_events.h"
 
-#ifdef	ESP_PLATFORM
-	#include	"esp32/rom/crc.h"					// ESP32 ROM routine
-#else
-	#include	"crc-barr.h"						// Barr group CRC
-#endif
+#include	"x_errors_events.h"
 
 #include	<string.h>
 #include	<limits.h>
@@ -51,7 +47,7 @@
  * @return	1 if presence pulse(s) detected, device(s) reset
  *			0 if no presence pulse(s) detected
  */
-int		OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]) ; }
+int	 OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]) ; }
 
 /**
  * Send 1 bit of communication to the 1-Wire Net and return the
@@ -93,7 +89,7 @@ uint8_t OWReadBit(owdi_t * psOW) { return OWTouchBit(psOW, 0x01) ; }
  * @param	psOW
  * @param	Byte
  */
-void	OWWriteByte(owdi_t * psOW, uint8_t Byte) { ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte) ; }
+void OWWriteByte(owdi_t * psOW, uint8_t Byte) { ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte) ; }
 
 /**
  * Reads 8 bits of communication from the 1-Wire Net
@@ -141,7 +137,7 @@ void	OWBlock(owdi_t * psOW, uint8_t * pBuf, int Len) {
  * Setup search to find the first 'family_code' device on the next call to OWNext().
  * If no (more) devices of 'family_code' can be found return first device of next family
  */
-void	OWTargetSetup(owdi_t * psOW, uint8_t family_code) {
+void OWTargetSetup(owdi_t * psOW, uint8_t family_code) {
 	psOW->ROM.Value				= 0ULL ;				// reset all ROM fields
 	psOW->ROM.Family 			= family_code ;
 	psOW->LD		= 64 ;
@@ -154,8 +150,8 @@ void	OWTargetSetup(owdi_t * psOW, uint8_t family_code) {
  * Can ONLY be done after a search had been performed.
  * Will find the first device of the next family.
  */
-void	OWFamilySkipSetup(owdi_t * psOW) {
-	psOW->LD 		= psOW->LFD ;	// set the Last discrepancy to last family discrepancy
+void OWFamilySkipSetup(owdi_t * psOW) {
+	psOW->LD = psOW->LFD ;			// set the Last discrepancy to last family discrepancy
 	psOW->LFD = 0 ;					// clear the last family discrepancy
 	if (psOW->LD == 0) psOW->LDF = 1 ;	// check for end of list
 }
@@ -175,8 +171,8 @@ void	OWFamilySkipSetup(owdi_t * psOW) {
  *			0 if NO 1W device found. Either last search was last device or
  *			there are no devices on the 1-Wire Net.
  */
-int 	OWSearch(owdi_t * psOW, bool alarm_only) {
 	bool	search_result = 0, search_direction ;
+int OWSearch(owdi_t * psOW, bool alarm_only) {
 	uint8_t	rom_byte_number = 0, last_zero = 0, id_bit_number = 1, rom_byte_mask = 1, status ;
 	psOW->crc8 = 0;
 	if (psOW->LDF == 0) {					// if the last call was not the last device
@@ -226,20 +222,18 @@ int 	OWSearch(owdi_t * psOW, bool alarm_only) {
 		} while(rom_byte_number < sizeof(ow_rom_t)) ;	// loop until all
 	// if the search was successful then
 		if (!((id_bit_number < 65) || (psOW->crc8 != 0))) {
-			psOW->LD = last_zero;			// search successful
-			if (psOW->LD == 0) {			// last device ?
-				psOW->LDF	= 1 ;			// yes, set flag
-			}
-			search_result = 1 ;
+			psOW->LD = last_zero;						// search successful
+			if (psOW->LD == 0) psOW->LDF = 1;			// last device? set flag
+			bRV = 1 ;
 		}
 	}
 
 	// if no device found then reset counters so next 'search' will be like a first
-	if (!search_result || (psOW->ROM.Family == 0)) {
-		psOW->LD	= 0 ;
-		psOW->LDF	= 0 ;
-		psOW->LFD = 0 ;
 		search_result = 0 ;
+	if ((bRV == 0) || (psOW->ROM.Family == 0)) {
+		psOW->LD = 0;
+		psOW->LDF = 0;
+		psOW->LFD = 0;
 	}
 	return search_result ;
 }
@@ -249,10 +243,10 @@ int 	OWSearch(owdi_t * psOW, bool alarm_only) {
  * Return 1  : device found, ROM number in ROM.Number buffer
  *		  0 : no device present
  */
-int		OWFirst(owdi_t * psOW, bool alarm_only) {
-	psOW->LD		= 0 ;					// reset the search state
+int	OWFirst(owdi_t * psOW, bool alarm_only) {
+	psOW->LD	= 0 ;					// reset the search state
 	psOW->LFD	= 0 ;
-	psOW->LDF		= 0 ;
+	psOW->LDF	= 0 ;
 	return OWSearch(psOW, alarm_only) ;
 }
 
@@ -261,9 +255,9 @@ int		OWFirst(owdi_t * psOW, bool alarm_only) {
  * Return 1  : device found, ROM number in ROM.Number buffer
  *		  0 : device not found, end of search
  */
-int 	OWNext(owdi_t * psOW, bool alarm_only) { return OWSearch(psOW, alarm_only) ; }
+int OWNext(owdi_t * psOW, bool alarm_only) { return OWSearch(psOW, alarm_only) ; }
 
-// ################################## Extended 1-Wire operations ###################################
+// ################################## Utility 1-Wire operations ####################################
 
 /**
  * @brief	Set the 1-Wire Net communication speed.
@@ -271,7 +265,7 @@ int 	OWNext(owdi_t * psOW, bool alarm_only) { return OWSearch(psOW, alarm_only) 
  * @param	speed - owSPEED_STANDARD or owSPEED_OVERDRIVE
  * @return	new current 1W speed (0 = Standard, 1= Overdrive)
  */
-int		OWSpeed(owdi_t * psOW, bool speed) { return ds248xOWSpeed(&psaDS248X[psOW->DevNum], speed) ; }
+int	OWSpeed(owdi_t * psOW, bool Spd) { return ds248xOWSpeed(&psaDS248X[psOW->DevNum], Spd) ; }
 
 /**
  * Set the 1-Wire Net line level pull-up to normal.
@@ -280,7 +274,6 @@ int		OWSpeed(owdi_t * psOW, bool speed) { return ds248xOWSpeed(&psaDS248X[psOW->
  *		STRONG		1
  * Returns:  current 1-Wire Net level
  */
-int		OWLevel(owdi_t * psOW, bool level) { return ds248xOWLevel(&psaDS248X[psOW->DevNum], level) ; }
 
 /**
  * Send 1 bit of communication to the 1-Wire Net and verify that the
@@ -330,6 +323,7 @@ int		OWWriteBytePower(owdi_t * psOW, int Byte) {
 // ################################## Utility 1-Wire operations ####################################
 
 int	OWSetSPU(owdi_t * psOW) { return ds248xOWSetSPU(&psaDS248X[psOW->DevNum]) ; }
+int	OWLevel(owdi_t * psOW, bool Pwr) { return ds248xOWLevel(&psaDS248X[psOW->DevNum], Pwr) ; }
 
 /**
  * OWCheckCRC() - Checks if CRC is ok (ROM Code or Scratch PAD RAM)

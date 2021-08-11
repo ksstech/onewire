@@ -93,8 +93,8 @@ typedef	struct __attribute__((packed)) {
 	uint8_t 	LDF		: 1 ;						// Last Device Flag
 	uint8_t		DevNum	: 2 ;						// index into 1W DevInfo table
 	uint8_t		PhyBus	: 3 ;
-	uint8_t		OD		: 1 ;
 	uint8_t		Spare	: 1 ;
+	uint8_t		OD		: 1 ;						// 1=OverDrive supported
 } owdi_t ;
 DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12) ;
 
@@ -105,27 +105,18 @@ typedef struct ow_flags_s {
 
 // ################################ Generic 1-Wire LINK API's ######################################
 
-int		OWSetSPU(owdi_t * psOW) ;
 int		OWReset(owdi_t * psOW) ;
-int		OWSpeed(owdi_t * psOW, bool speed) ;
-int		OWLevel(owdi_t * psOW, bool level) ;
-uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) ;
-uint8_t	OWCalcCRC8(owdi_t * psOW, uint8_t data) ;
-uint8_t	OWSearchTriplet(owdi_t * psOW, uint8_t search_direction) ;
 
-// ################################## Bit/Byte Read/Write ##########################################
+// ############################### Bit/Byte/Block Read/Write #######################################
 
-uint8_t OWTouchBit(owdi_t * psOW, uint8_t sendbit) ;
-void	OWWriteBit(owdi_t * psOW, uint8_t sendbit) ;
-uint8_t OWReadBit(owdi_t * psOW) ;
-void	OWWriteByte(owdi_t * psOW, uint8_t sendbyte) ;
-int		OWWriteBytePower(owdi_t * psOW, int sendbyte) ;
-int		OWReadBitPower(owdi_t * psOW, uint8_t applyPowerResponse) ;
+void OWWriteBit(owdi_t * psOW, bool Bit) ;
+bool OWReadBit(owdi_t * psOW) ;
+
+void OWWriteByte(owdi_t * psOW, uint8_t sendbyte) ;
 uint8_t	OWReadByte(owdi_t * psOW) ;
-uint8_t OWTouchByte(owdi_t * psOW, uint8_t sendbyte) ;
-void	OWBlock(owdi_t * psOW, uint8_t * tran_buf, int32_t tran_len) ;
-int		OWReadROM(owdi_t * psOW) ;
-void	OWAddress(owdi_t * psOW, uint8_t nAddrMethod) ;
+
+void OWWriteBlock(owdi_t * psOW, uint8_t * pBuf, int Len);
+void OWReadBlock(owdi_t * psOW, uint8_t * pBuf, int Len);
 
 // ############################## Search and Variations thereof ####################################
 
@@ -134,9 +125,18 @@ void OWFamilySkipSetup(owdi_t * psOW) ;
 int	OWSearch(owdi_t * psOW, bool alarm_only) ;
 int OWFirst(owdi_t * psOW, bool alarm_only) ;
 int OWNext(owdi_t * psOW, bool alarm_only) ;
+
+// ############################## Utility 1-Wire operations ########################################
+
+int	OWSpeed(owdi_t * psOW, bool speed) ;
+int	OWLevel(owdi_t * psOW, bool level) ;
+uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) ;
+uint8_t	OWCalcCRC8(owdi_t * psOW, uint8_t data) ;
+
+int	OWReadROM(owdi_t * psOW) ;
+void OWAddress(owdi_t * psOW, bool Skip) ;
+int OWResetCommand(owdi_t * psOW, uint8_t Command, bool Skip, bool Pwr) ;
 int	OWVerify(owdi_t * psOW) ;
-int OWCommand(owdi_t * psOW, uint8_t Command, bool All) ;
-int OWResetCommand(owdi_t * psOW, uint8_t Command, bool All) ;
 
 #ifdef __cplusplus
 }

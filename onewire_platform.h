@@ -24,8 +24,8 @@ extern "C" {
  * Used to avoid re-reading a device (primarily DS1990X type) too regularly.
  */
 typedef struct __attribute__((packed)) owbi_t {
-	ow_rom_t			LastROM ;
-	seconds_t			LastRead ;
+	ow_rom_t	LastROM ;
+	seconds_t	LastRead ;
 	union {
 		struct __attribute__((packed)) {
 			uint8_t		ds18b20	: 4 ;
@@ -40,7 +40,7 @@ DUMB_STATIC_ASSERT(sizeof(owbi_t) == 14) ;
 // #################################### Public Data structures #####################################
 
 extern	owbi_t * psaOWBI ;
-extern	ow_flags_t	OWflags ;
+extern ow_flags_t OWflags;
 
 // ###################################### Public functions #########################################
 

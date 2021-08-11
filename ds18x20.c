@@ -5,20 +5,23 @@
 #include	"hal_variables.h"
 #include	"onewire_platform.h"
 #include	"endpoints.h"
+
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"					// timing debugging
+
 #include	"x_errors_events.h"
 
 #include	<string.h>
-#include	<stdint.h>
 
-#define	debugFLAG					0xF001
+#define	debugFLAG					0xF000
 
 #define	debugCONFIG					(debugFLAG & 0x0001)
 #define	debugREAD					(debugFLAG & 0x0002)
 #define	debugCONVERT				(debugFLAG & 0x0004)
 #define	debugPOWER					(debugFLAG & 0x0008)
+
+#define	debugSPAD					(debugFLAG & 0x0010)
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -34,10 +37,10 @@
  * 		happens reasonably slowly (up to 750mS)
  * 		can be triggered to execute in parallel for all "equivalent" devices on a bus
  *	To optimise operation, this driver is based on the following decisions/constraints:
- *		Tsns is specified at device type (psEWP level) for ALL /ow/ds18x20 devices
+ *		Tsns is specified at device type (psEWP level) for ALL /ow/ds18x20 devices and will
  *		always trigger a sample+convert operation for ALL devices on a bus at same time.
- *		maintains Tsns at a value equal to lowest Tsns specified for any one ds18x20 device
- *		maintain a minimum Tsns of 1000mSec to be bigger than the ~750mS standard.
+ *		EWP Tsns kept at a value equal to lowest of all EWS Tsns values
+ *		Maintain a minimum Tsns of 1000mSec to be bigger than the ~750mS standard.
  * 	Test parasitic power
  * 	Test & benchmark overdrive speed
  * 	Implement and test ALARM scan and over/under alarm status scan
@@ -136,11 +139,11 @@ int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 }
 
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
-	const uint8_t	u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
+	const uint8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
 	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
-#if		(debugCONVERT)
-	OWP_PrintDS18_CB(makeMASKFLAG(1,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
+#if		(debugCONVERT && !debugCONFIG)
+	OWP_PrintDS18_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
 #endif
 	return 1 ;
 }
@@ -182,8 +185,8 @@ int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 
 int	ds18x20ConfigMode (struct rule_t * psRule) {
 	if (psaDS18X20 == NULL) {
-		SET_ERRINFO("No DS18x20 enumerated") ;
-		return erSCRIPT_INV_OPERATION ;
+		SET_ERRINFO("No DS18x20 enumerated");
+		return erSCRIPT_INV_OPERATION;
 	}
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	uint8_t	AI = psRule->ActIdx ;
@@ -192,14 +195,16 @@ int	ds18x20ConfigMode (struct rule_t * psRule) {
 	px.pu32 = (uint32_t *) &psRule->para.u32[AI][0] ;
 	int	Xcur = *px.pu32++ ;
 	int Xmax = psEW->var.def.cv.vc ;
-	if (Xcur == 255) {									// non-specific total count ?
-		Xcur = Xmax ;									// yes, set to actual count.
-	} else if (Xcur > Xmax) {
-		SET_ERRINFO("Invalid EP Index") ;
-		return erSCRIPT_INV_INDEX ;
+
+	if (Xcur == 255) Xcur = Xmax ;						// set to actual count.
+	else if (Xcur > Xmax) {
+		SET_ERRINFO("Invalid EP Index");
+		return erSCRIPT_INV_INDEX;
 	}
+
 	if (Xcur == Xmax) Xcur = 0 ; 						// range 0 -> Xmax
 	else Xmax = Xcur ;									// single Xcur
+
 	uint32_t lo	= *px.pu32++ ;
 	uint32_t hi	= *px.pu32++ ;
 	uint32_t res = *px.pu32++ ;
@@ -227,12 +232,9 @@ int	ds18x20ConfigMode (struct rule_t * psRule) {
 	return iRV ;
 }
 
-// ################################## Platform enumeration support #################################
-
 // ######################################### Reporting #############################################
 
-void	ds18x20ReportAll(void) {
+void ds18x20ReportAll(void) {
 	for (int i = 0; i < Fam10_28Count; ++i)
 		OWP_PrintDS18_CB(makeMASKFLAG(0,1,0,0,0,1,1,1,1,1,1,1,i), &psaDS18X20[i]) ;
 }
-
