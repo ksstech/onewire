@@ -292,7 +292,7 @@ int	OWLevel(owdi_t * psOW, bool Pwr) { return ds248xOWLevel(&psaDS248X[psOW->Dev
 uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
 	uint8_t data_bit, sr_lsb, fb_bit, shift_reg = 0 ;
 	for (int iByte = 0; iByte < buflen; iByte++) {
-		for (int iBit = 0; iBit < CHAR_BIT; iBit++) {
+		for (int iBit = 0; iBit < BITS_IN_BYTE; iBit++) {
 			data_bit	= (buf[iByte] >> iBit) & 0x01 ;
 			sr_lsb		= shift_reg & 0x01 ;
 			fb_bit		= (data_bit ^ sr_lsb) & 0x01 ;
@@ -312,7 +312,7 @@ uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
  */
 uint8_t	OWCalcCRC8(owdi_t * psOW, uint8_t data) {
 	psOW->crc8 = psOW->crc8 ^ data;
-	for (int i = 0; i < CHAR_BIT; ++i) {
+	for (int i = 0; i < BITS_IN_BYTE; ++i) {
 		if (psOW->crc8 & 1)	psOW->crc8 = (psOW->crc8 >> 1) ^ 0x8c;
 		else 				psOW->crc8 = (psOW->crc8 >> 1);
 	}
