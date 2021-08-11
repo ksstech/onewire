@@ -71,11 +71,10 @@
  * @param	psDS18X20
  * @return	Power status
  */
-int	ds18x20CheckPower(ds18x20_t * psDS18X20) {
-	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_PSU, 1) == 0) return 0 ;
-	psDS18X20->Pwr = OWReadBit(&psDS18X20->sOW) ;					// return status 0=parasitic 1=external
-	IF_PRINT(debugPOWER, "PSU=%s\n", psDS18X20->Pwr ? "Ext" : "Para") ;
-	return psDS18X20->Pwr ;
+bool ds18x20CheckPower(ds18x20_t * psDS18X20) {
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_PSU, owADDR_SKIP, 0) == 0) return 0 ;
+	psDS18X20->sOW.PSU = OWReadBit(&psDS18X20->sOW) ;	// 0=parasitic 1=external
+	return psDS18X20->sOW.PSU ;
 }
 
 // ###################################### scratchpad support #######################################
