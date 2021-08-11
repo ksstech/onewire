@@ -87,13 +87,6 @@ int	OWP_BusP2L(owdi_t * psOW) {
  * @param	psOW
  * @return	1 if selected, 0 if error
  */
-int	 OWP_BusSelect(owdi_t * psOW) {
-	IF_SYSTIMER_START(debugTIMING,stOW1) ;
-	int iRV = ds248xBusSelect(&psaDS248X[psOW->DevNum], psOW->PhyBus) ;
-	IF_SYSTIMER_STOP(debugTIMING,stOW1) ;
-	return iRV ;
-}
-
 /**
  * @brief	Select [& address] bus (SKIPROM) or device (MATCHROM)
  * @note	NOT an All-In-One function, bus MUST be released after completion
@@ -109,6 +102,7 @@ int	OWP_BusSelectAndAddress(owdi_t * psOW, uint8_t u8AddrMethod) {
 	IF_SYSTIMER_STOP(debugTIMING,stOW2) ;
 	return 1 ;
 }
+int	OWP_BusSelect(owdi_t * psOW) { return ds248xBusSelect(&psaDS248X[psOW->DevNum], psOW->PhyBus); }
 
 void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]) ; }
 
