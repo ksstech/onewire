@@ -44,6 +44,15 @@
  * 	Test parasitic power
  * 	Test & benchmark overdrive speed
  * 	Implement and test ALARM scan and over/under alarm status scan
+ *
+ * 	Optimisation:
+ * 	If more than 1 DS248XZ present Tsns will trigger convert on 1st bus of each DS248x device (parallelism)
+ * 	Each device will start a timer to call handler to read and convert all DS18X20's on the bus
+ * 	Handler will loop and read each sensor on the current bus.
+ * 	If more than 1 bus on the device (DS2482-800) handler will release current bus.
+ * 	The next bus will be selected and convert trigger triggered.
+ * 	Logic will ONLY trigger convert on bus if 1 or more ds18x20 were discovered at boot.
+ *
  */
 
 // ################################ Forward function declaration ###################################
@@ -150,17 +159,14 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 
 int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
-		uint8_t u8Res = ((Res - 9) << 5) | 0x1F ;
-		if (psDS18X20->fam28.Conf != u8Res) {
-			IF_PRINT(debugCONFIG, "SP Res:0x%02X -> 0x%02X (%d -> %d)\n",
-					psDS18X20->fam28.Conf, u8Res, psDS18X20->Res + 9, Res) ;
-			psDS18X20->fam28.Conf = Res ;
-			psDS18X20->Res = Res - 9 ;
-			ds18x20WriteSP(psDS18X20) ;
-			return 1 ;
-		}
-		// Not written, config already the same
-		return 0 ;
+		Res -= 9 ;
+		uint8_t u8Res = (Res << 5) | 0x1F ;
+		IF_PRINT(debugCONFIG, "SP Res x%02X->x%02X (%d->%d)\n",
+				psDS18X20->fam28.Conf, u8Res, psDS18X20->Res, Res) ;
+		if (psDS18X20->fam28.Conf == u8Res) return 0;	// nothing changed
+		psDS18X20->fam28.Conf = u8Res;
+		psDS18X20->Res = Res ;
+		return 1 ;										// changed, must write
 	}
 	SET_ERRINFO("Invalid Family/Resolution") ;
 	return erSCRIPT_INV_VALUE ;
@@ -168,14 +174,11 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 
 int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	if (INRANGE(-128, Lo, 127, int) && INRANGE(-128, Hi, 127, int)) {
-		if (psDS18X20->Tlo != Lo || psDS18X20->Thi != Hi) {
-			IF_PRINT(debugCONFIG, "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
-			psDS18X20->Tlo = Lo ;
-			psDS18X20->Thi = Hi ;
-			ds18x20WriteSP(psDS18X20) ;
-			return 1 ;									// new config written
-		}
-		return 0 ;										// Not written, config already the same
+		IF_PRINT(debugCONFIG, "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
+		if (psDS18X20->Tlo == Lo && psDS18X20->Thi == Hi) return 0 ;
+		psDS18X20->Tlo = Lo ;
+		psDS18X20->Thi = Hi ;
+		return 1 ;										// changed, must write
 	}
 	SET_ERRINFO("Invalid Lo/Hi alarm limits") ;
 	return erSCRIPT_INV_VALUE ;
