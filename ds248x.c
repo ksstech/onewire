@@ -473,7 +473,7 @@ int	ds248xOWLevel(ds248x_t * psDS248X, bool level) {
 	return psDS248X->SPU;
 }
 
-uint8_t ds248xOWTouchBit(ds248x_t * psDS248X, uint8_t Bit) {
+bool ds248xOWTouchBit(ds248x_t * psDS248X, bool Bit) {
 // 1-Wire bit (Case B)
 //	S AD,0 [A] 1WSB [A] BB [A] Sr AD,1 [A] [Status] A [Status] A\ P
 //										   \--------/
