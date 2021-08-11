@@ -33,11 +33,6 @@
 
 // ################################# Platform related variables ####################################
 
-/* In order to avoid multiple successive reads of the same iButton on the same OW channel
- * we filter reads based on the value of the iButton read and time expired since the last
- * successful read. If the same ID is read on the same channel within 'x' seconds, skip it */
-
-uint8_t	Family01Count 	= 0 ;
 
 // ################################# Application support functions #################################
 
