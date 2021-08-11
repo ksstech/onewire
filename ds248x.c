@@ -452,12 +452,13 @@ int	ds248xOWSetSPU(ds248x_t * psDS248X) {
  *	OD	146		346		196
  */
 int	ds248xOWReset(ds248x_t * psDS248X) {
+	// DS2482-800 datasheet page 7 para 2
+	if (psDS248X->SPU == owPOWER_STRONG) ds248xOWLevel(psDS248X, owPOWER_STANDARD);
 // 1-Wire reset (Case B)
 //	S AD,0 [A] 1WRS [A] Sr AD,1 [A] [Status] A [Status] A\ P
 //									\--------/
 //						Repeat until 1WB bit has changed to 0
 //  [] indicates from slave
-	// No SPU == 0 checking, will be reset by itself...
 	uint8_t	cChr = ds248xCMD_1WRS ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	IF_SYSTIMER_START(debugTIMING, stDS248xB) ;
