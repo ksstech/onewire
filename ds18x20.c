@@ -211,26 +211,33 @@ int	ds18x20ConfigMode (struct rule_t * psRule) {
 	uint32_t res = *px.pu32++ ;
 	uint32_t wr	= *px.pu32 ;
 	IF_PRINT(debugCONFIG, "DS18X20 Mode Xcur=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, lo, hi, res, wr) ;
-	int iRV = 0 ;
+	int iRV1, iRV2 ;
 	if (wr == 0 || wr == 1) {							// if parameter omitted, do not persist
 		do {
+			iRV1 = erFAILURE ;
+			iRV2 = erFAILURE ;
 			ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
 			if (OWP_BusSelect(&psDS18X20->sOW) == 1) {
 				// Do resolution 1st since small range (9-12) a good test for valid parameter
-				iRV = ds18x20SetResolution(psDS18X20, res) ;
-				if (iRV >= erSUCCESS) {
-					iRV = ds18x20SetAlarms(psDS18X20, lo, hi) ;
-					if (iRV >= erSUCCESS && wr == 1) iRV = ds18x20WriteSP(psDS18X20) ;
+				iRV1 = ds18x20SetResolution(psDS18X20, res) ;
+				if (iRV1 > erFAILURE) {
+					iRV2 = ds18x20SetAlarms(psDS18X20, lo, hi)  ;
+					if (iRV2 > erFAILURE) {
+						if (iRV1 == 1 || iRV2 == 1) {
+							iRV1 = ds18x20WriteSP(psDS18X20) ;
+							if (wr == 1) ds18x20WriteEE(psDS18X20);
+						}
+					}
 				}
 				OWP_BusRelease(&psDS18X20->sOW) ;
 			}
-			if (iRV < erSUCCESS) break ;
+			if (iRV2 < erSUCCESS) break ;
 		} while (++Xcur < Xmax) ;
 	} else {
 		SET_ERRINFO("Invalid persist flag, not 0/1") ;
-		iRV = erSCRIPT_INV_MODE ;
+		iRV2 = erSCRIPT_INV_MODE ;
 	}
-	return iRV ;
+	return iRV2 ;
 }
 
 // ######################################### Reporting #############################################
