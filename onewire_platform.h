@@ -40,8 +40,9 @@ DUMB_STATIC_ASSERT(sizeof(owbi_t) == 14) ;
 
 // #################################### Public Data structures #####################################
 
-extern	owbi_t * psaOWBI ;
 extern ow_flags_t OWflags;
+extern ds18x20_t * psaDS18X20;
+extern uint8_t Fam10_28Count;
 
 // ###################################### Public functions #########################################
 
