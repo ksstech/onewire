@@ -473,6 +473,13 @@ int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed) {
 	return psDS248X->OWS;
 }
 
+/**
+ *	WWR			100KHz	400KHz
+ *				300uS	75uS
+ *		uS-----+------+-------+
+ *	NS	0		300		75
+ *	OD	0		300		75
+ */
 int	ds248xOWLevel(ds248x_t * psDS248X, bool level) {
 	if (level == owPOWER_STRONG) return psDS248X->SPU ;	// DS248X only allow STANDARD
 	psDS248X->SPU = level;
