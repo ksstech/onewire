@@ -337,11 +337,6 @@ int	OWReadROM(owdi_t * psOW) {
  *						device or OW_CMD_SKIPROM to select all
  * @note	Timing is 163/860 (SKIPROM) or 1447/7740 (MATCHROM)
  */
-
-int OWCommand(owdi_t * psOW, uint8_t Command, bool All) {
-	OWAddress(psOW, All ? OW_CMD_SKIPROM : OW_CMD_MATCHROM) ;
-	OWWriteByte(psOW, Command) ;
-	return 1 ;
 void OWAddress(owdi_t * psOW, bool Skip) {
 	OWWriteByte(psOW, Skip ? OW_CMD_SKIPROM : OW_CMD_MATCHROM);
 	if (Skip == owADDR_MATCH) OWWriteBlock(psOW, psOW->ROM.HexChars, sizeof(ow_rom_t));
