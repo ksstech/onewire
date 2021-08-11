@@ -543,8 +543,7 @@ bool ds248xOWSearchTriplet(ds248x_t * psDS248X, bool bDir) {
 //				Repeat until 1WB bit has changed to 0
 //  [] indicates from slave
 //  SS indicates byte containing search direction bit value in msbit
-	IF_myASSERT(debugPARAM, search_direction < 2) ;
-	uint8_t	cBuf[2] = { ds248xCMD_1WT, search_direction ? 0x80 : 0x00 } ;
+	uint8_t	cBuf[2] = { ds248xCMD_1WT, bDir ? 0x80 : 0x00 } ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	IF_SYSTIMER_START(debugTIMING, stDS248xF) ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_ST_OD : owDELAY_ST) ;
