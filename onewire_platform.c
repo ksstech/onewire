@@ -463,7 +463,6 @@ int OWP_DS18X20StartSample(epw_t * psEWx) {				// Stage 1 -
 void OWP_DS18X20ReadSample(TimerHandle_t pxHandle) {
 	int	ThisDev = (int) pvTimerGetTimerID(pxHandle) ;
 	ds18x20_t * psDS18X20 = &psaDS18X20[ThisDev] ;
-	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;		// Set OWLevel to standard
 	int i = ThisDev ;
 	do {												// Handle all sensors on this BUS
 		psDS18X20 = &psaDS18X20[i] ;
