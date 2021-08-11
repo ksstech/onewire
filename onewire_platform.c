@@ -294,16 +294,12 @@ int	OWP_Config(void) {
 		int	iRV = OWP_Scan(0, OWP_Count_CB) ;
 		if (iRV > 0) OWP_NumDev += iRV ;
 
-#if		(halHAS_DS1990X > 0)
-		IF_SL_INFO(debugCONFIG && Family01Count, "DS1990x found %d devices", Family01Count) ;
-		iRV = ds1990xConfig() ;				// cannot enumerate, simple config
-		IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990", 10, 1000) ;
+#if		(halHAS_DS18X20 > 0)
+		if (Fam10Count || Fam28Count) ds18x20Enumerate(); // enumerate & config individually
 #endif
 
-#if		(halHAS_DS18X20 > 0)
-		if (Fam10Count || Fam28Count) {
-			iRV = ds18x20Enumerate() ;		// enumerate & config individually
-		}
+#if		(halHAS_DS1990X > 0)
+		ds1990xConfig() ;								// cannot enumerate, simple config
 #endif
 	}
 	return OWP_NumDev ;
