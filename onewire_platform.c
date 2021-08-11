@@ -426,7 +426,7 @@ int	ds18x20Enumerate(void) {
 	return iRV ;										// number of devices enumerated
 }
 
-TickType_t OWP_TempCalcDelay(ds18x20_t * psDS18X20, bool All) {
+TickType_t OWP_DS18X20CalcDelay(ds18x20_t * psDS18X20, bool All) {
 	TickType_t tConvert = pdMS_TO_TICKS(ds18x20DELAY_CONVERT) ;
 	/* ONLY decrease delay if:
 	 * 	specific ROM is addressed AND and it is DS18B20 ; OR
@@ -444,7 +444,7 @@ TickType_t OWP_TempCalcDelay(ds18x20_t * psDS18X20, bool All) {
  * @param 	psEPW
  * @return
  */
-int	OWP_TempAllInOne(epw_t * psEWP) {
+int	OWP_DS18X20Ai1(epw_t * psEWP) {
 	uint8_t	PrevBus = 0xFF ;
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
@@ -452,7 +452,7 @@ int	OWP_TempAllInOne(epw_t * psEWP) {
 			if (OWP_BusSelectAndAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) == 0) continue ;
 			if (OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, 1) == 1) {
 				PrevBus = psDS18X20->sOW.PhyBus ;
-				vTaskDelay(OWP_TempCalcDelay(psDS18X20, 1)) ;
+				vTaskDelay(OWP_DS18X20CalcDelay(psDS18X20, 1)) ;
 				OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;
 				OWP_BusRelease(&psDS18X20->sOW) ;		// keep locked for period of delay
 			}
@@ -466,9 +466,9 @@ int	OWP_TempAllInOne(epw_t * psEWP) {
 	return erSUCCESS ;
 }
 
-int	OWP_TempStartBus(ds18x20_t * psDS18X20, int i) {
 	if (OWP_BusSelectAndAddress(&psDS18X20->sOW, OW_CMD_SKIPROM) == 1) {
 		OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, 1) ;
+int	OWP_DS18X20StartBus(ds18x20_t * psDS18X20, int i) {
 		vTimerSetTimerID(psaDS248X[psDS18X20->sOW.DevNum].tmr, (void *) i);
 		xTimerStart(psaDS248X[psDS18X20->sOW.DevNum].tmr, OWP_DS18X20CalcDelay(psDS18X20, 1));
 		IF_TRACK(debugDS18X20, "Start Dev=%d Bus=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus);
@@ -478,18 +478,18 @@ int	OWP_TempStartBus(ds18x20_t * psDS18X20, int i) {
 	return 0 ;
 }
 
-int OWP_TempStartSample(epw_t * psEWx) {				// Stage 1 -
+int OWP_DS18X20StartSample(epw_t * psEWx) {				// Stage 1 -
 	uint8_t	PrevDev = 0xFF ;
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[i] ;
 		if (psDS18X20->sOW.DevNum != PrevDev) {
-			if (OWP_TempStartBus(psDS18X20, i) == 1) PrevDev = psDS18X20->sOW.DevNum ;
+			if (OWP_DS18X20StartBus(psDS18X20, i) == 1) PrevDev = psDS18X20->sOW.DevNum ;
 		}
 	}
 	return erSUCCESS;
 }
 
-void OWP_TempReadSample(TimerHandle_t pxHandle) {
+void OWP_DS18X20ReadSample(TimerHandle_t pxHandle) {
 	int	ThisDev = (int) pvTimerGetTimerID(pxHandle) ;
 	ds18x20_t * psDS18X20 = &psaDS18X20[ThisDev] ;
 	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;		// Set OWLevel to standard
@@ -509,7 +509,7 @@ void OWP_TempReadSample(TimerHandle_t pxHandle) {
 		// more sensors, same device, new bus - release bus, start convert on new bus.
 		if (psDS18X20->sOW.PhyBus != psaDS18X20[i].sOW.PhyBus) {
 			OWP_BusRelease(&psDS18X20->sOW) ;
-			OWP_TempStartBus(&psaDS18X20[i], i) ;
+			OWP_DS18X20StartBus(&psaDS18X20[i], i) ;
 			break ;
 		}
 		// more sensors, same device and bus

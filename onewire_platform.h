@@ -64,8 +64,8 @@ int	OWP_Scan2(uint8_t, int (*)(flagmask_t, void *, owdi_t *), void *, owdi_t *) 
 int	OWP_ScanAlarmsFamily(uint8_t Family) ;
 
 struct epw_t ;
-int	OWP_TempStartSample(epw_t * psEWP) ;
-int	OWP_TempAllInOne(struct epw_t * psEPW) ;
+int	OWP_DS18X20StartSample(epw_t * psEWP) ;
+int	OWP_DS18X20Ai1(struct epw_t * psEPW) ;
 
 int	OWP_Config(void) ;
 void OWP_Report(void) ;
