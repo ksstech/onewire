@@ -110,17 +110,16 @@ int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 
 int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
 	int iRV = OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
-	iRV += printfx("  Dev=%d  Log=%d  Phy=%d", psOW->DevNum, OWP_BusP2L(psOW), psOW->PhyBus) ;
+	iRV += printfx(" Log=%d Dev=%d Phy=%d PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
 	if (FlagMask.bNL) iRV += printfx("\n") ;
 	return iRV ;
 }
 
 int	OWP_PrintDS18_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	int iRV = OWP_Print1W_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
-	iRV += printfx(" Traw=0x%04X/%.4fC Tlo=%d Thi=%d", psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
-		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi) ;
-	iRV += printfx(" Res=%d PSU=%s", psDS18X20->Res + 9, psDS18X20->Pwr ? "Ext" : "Para") ;
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) iRV += printfx(" Conf=0x%02X %s",
+	iRV += printfx(" Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d", psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
+		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9) ;
+	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) iRV += printfx(" Conf=x%02X %s",
 		psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "") ;
 	if (FlagMask.bNL) iRV += printfx("\n") ;
 	return iRV ;
@@ -207,7 +206,7 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 			if (iRV < erSUCCESS) break ;
 		}
 	}
-	IF_SL_ERR(iRV < erSUCCESS, "Handler error=%d", iRV) ;
+	if (iRV < erSUCCESS) SL_ERR("Handler error=%d", iRV) ;
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
