@@ -179,6 +179,7 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 	owdi_t sOW ;
 	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
 		vShowActivity(1) ;
+		memset(&sOW, 0, sizeof(owdi_t));
 		OWP_BusL2P(&sOW, LogBus);
 		if (OWP_BusSelect(&sOW)) {
 			if (Family != 0) {
