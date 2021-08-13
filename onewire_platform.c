@@ -204,7 +204,7 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 				iRV = OWFirst(&sOW, 0) ;
 			}
 			while (iRV) {
-				IF_EXEC_2(debugSCANNER, OWP_Print1W_CB, makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,LogBus), &sOW) ;
+				IF_EXEC_2(debugSCANNER, OWP_Print1W_CB, makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &sOW) ;
 				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 				IF_myASSERT(debugRESULT, iRV == 1) ;
 				iRV = Handler((flagmask_t) uCount, &sOW) ;
@@ -301,7 +301,7 @@ void OWP_Report(void) {
 	ds18x20ReportAll() ;
 #endif
 	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus)
-		OWP_PrintChan_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,LogBus), &psaOWBI[LogBus]) ;
+		OWP_PrintChan_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &psaOWBI[LogBus]) ;
 }
 
 // ###################################### DS18X20 support ##########################################

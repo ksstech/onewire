@@ -246,5 +246,5 @@ int	ds18x20ConfigMode (struct rule_t * psRule) {
 
 void ds18x20ReportAll(void) {
 	for (int i = 0; i < Fam10_28Count; ++i)
-		OWP_PrintDS18_CB(makeMASKFLAG(0,1,0,0,0,1,1,1,1,1,1,1,i), &psaDS18X20[i]) ;
+		OWP_PrintDS18_CB(makeMASKFLAG(0,1,1,1,1,1,1,1,1,i), &psaDS18X20[i]) ;
 }
