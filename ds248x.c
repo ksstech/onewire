@@ -91,6 +91,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 			iRV = ds248xLogError(psDS248X, caBuf) ;
 		} else {
 			#if	(!defined(NDEBUG) || defined(DEBUG))
+			IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 			if (ioB1GET(ioB1_0) && (psDS248X->Rconf != psDS248X->PrvConf[psDS248X->CurChan])) {
 				const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" } ;
 				uint8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan] ;
@@ -422,6 +423,7 @@ void ds248xReConfig(i2c_di_t * psI2C_DI) {
 	psDS248X->Rconf	= 0;
 	psDS248X->APU	= 1;								// LSBit
 	ds248xWriteConfig(psDS248X) ;
+	IF_myASSERT(debugRESULT, psDS248X->APU == 1) ;
 }
 
 // ################################## DS248x-x00 1-Wire functions ##################################
