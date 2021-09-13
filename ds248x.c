@@ -72,7 +72,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 				char * pcBuf = pcBitMapDecodeChanges(StatX, psDS248X->Rstat, 0x000000FF, StatNames) ;
 				printfx("D=%d C=%u x%02X->x%02X %s\n", psDS248X->psI2C->DevIdx,
 					psDS248X->CurChan, StatX, psDS248X->Rstat, pcBuf) ;
-				free(pcBuf) ;
+				vRtosFree(pcBuf) ;
 			}
 			psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat ;
 			#endif
@@ -98,7 +98,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 				char * pcBuf = pcBitMapDecodeChanges(ConfX, psDS248X->Rconf, 0x0000000F, ConfNames) ;
 				printfx("D=%d C=%u x%02X->x%02X %s\n", psDS248X->psI2C->DevIdx,
 					psDS248X->CurChan, ConfX, psDS248X->Rconf, pcBuf) ;
-				free(pcBuf) ;
+				vRtosFree(pcBuf) ;
 				psDS248X->PrvConf[psDS248X->CurChan] = psDS248X->Rconf ;
 			}
 			#endif
@@ -398,7 +398,7 @@ int	ds248xIdentify(i2c_di_t * psI2C_DI) {
 int	ds248xConfig(i2c_di_t * psI2C_DI) {
 	if (psaDS248X == NULL) {							// 1st time here...
 		IF_myASSERT(debugPARAM, psI2C_DI->DevIdx == 0) ;
-		psaDS248X = malloc(ds248xCount * sizeof(ds248x_t)) ;
+		psaDS248X = pvRtosMalloc(ds248xCount * sizeof(ds248x_t)) ;
 		memset(psaDS248X, 0, ds248xCount * sizeof(ds248x_t)) ;
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xA, stMICROS, "DS248xA", 100, 1000) ;
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xB, stMICROS, "DS248xB", 200, 2000) ;

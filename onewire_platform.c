@@ -276,7 +276,7 @@ int	OWP_Config(void) {
 
 	// When all technologies & devices individually enumerated
 	if (OWP_NumBus) {
-		psaOWBI = malloc(OWP_NumBus * sizeof(owbi_t)) ;	// initialize the logical channel structures
+		psaOWBI = pvRtosMalloc(OWP_NumBus * sizeof(owbi_t)) ;	// initialize the logical channel structures
 		memset(psaOWBI, 0, OWP_NumBus * sizeof(owbi_t)) ;
 		// enumerate any/all physical devices (possibly) (permanently) attached to individual channel(s)
 		int	iRV = OWP_Scan(0, OWP_Count_CB) ;
@@ -386,7 +386,7 @@ int	ds18x20Enumerate(void) {
 	psEWP->Rsns				= ds18x20T_SNS_NORM ;	// with blocking I2C driver
 	psEWP->uri				= URI_DS18X20 ;			// Used in OWPlatformEndpoints()
 
-	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t)) ;
+	psaDS18X20 = pvRtosMalloc(Fam10_28Count * sizeof(ds18x20_t)) ;
 	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
 	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psaDS18X20)) ;
 	int	iRV = 0 ;
