@@ -193,7 +193,9 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 				IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &sOW) ;
 				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 				IF_myASSERT(debugRESULT, iRV == 1) ;
-				iRV = Handler((flagmask_t) uCount, &sOW) ;
+				flagmask_t sFM;
+				sFM.uCount = uCount;
+				iRV = Handler(sFM, &sOW) ;
 				if (iRV < erSUCCESS) break ;
 				if (iRV > 0) ++uCount ;
 				iRV = OWNext(&sOW, 0) ;						// try to find next device (if any)
