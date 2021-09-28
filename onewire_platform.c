@@ -118,7 +118,7 @@ int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
 	return iRV ;
 }
 
-int	 OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
+int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
 	int iRV = printfx("OW ch=%d  ", FlagMask.uCount) ;
 	if (psCI->LastRead) iRV += printfx("%r  ", psCI->LastRead) ;
 	if (psCI->LastROM.Family) iRV += OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
@@ -178,7 +178,7 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 			if (Family != 0) {
 				OWTargetSetup(&sOW, Family) ;
 				iRV = OWSearch(&sOW, 0) ;
-				if (iRV > 0 && sOW.ROM.Family != Family) {
+				if (iRV > 0 && (sOW.ROM.Family != Family)) {
 					// Strictly speaking should never get here, iRV must be 0 if same family not found
 					IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found\n", Family, sOW.ROM.Family) ;
 					OWP_BusRelease(&sOW) ;

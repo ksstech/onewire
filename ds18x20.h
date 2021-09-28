@@ -38,12 +38,13 @@
 
 typedef	struct __attribute__((packed)) fam10 { uint8_t Res0, Res1, Remain, Count ; } fam10 ;
 DUMB_STATIC_ASSERT(sizeof(fam10) == 4) ;
+
 typedef	struct __attribute__((packed)) fam28 { uint8_t Conf, Res1, Res2, Res3 ; } fam28 ;
 DUMB_STATIC_ASSERT(sizeof(fam28) == 4) ;
 
 typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sensors
 	owdi_t	sOW ;										// address of enumerated sensor (size = 12)
-	epw_t	sEWx ;
+	epw_t	sEWx ;										// size = 36
 	union {												// Scratchpad
 		struct __attribute__((packed)) {
 			uint8_t	Tlsb, Tmsb ;						// last RAM sample
@@ -60,6 +61,7 @@ typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sens
 	uint8_t	Res		: 2 ;								// Resolution 0=9b 1=10b 2=11b 3=12b
 	uint8_t	SBits	: 3 ;
 } ds18x20_t ;
+DUMB_STATIC_ASSERT(sizeof(ds18x20_t) == 58) ;
 
 // ###################################### Public variables #########################################
 
@@ -70,7 +72,7 @@ extern uint8_t Fam10Count, Fam28Count;
 /**
  * ds18x20CheckPower() - Read the power supply type (parasitic or external)
  */
-bool	ds18x20CheckPower(ds18x20_t * psDS18X20) ;
+bool ds18x20CheckPower(ds18x20_t * psDS18X20) ;
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) ;
 
 int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) ;
@@ -84,9 +86,9 @@ void ds18x20ReportAll(void) ;
 // ##################################### I2C Task support ##########################################
 
 struct rule_t ;
-int32_t	ds18x20ConfigMode (struct rule_t * psRule) ;
-int32_t	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) ;
-int32_t	ds18x20Enumerate(void)  ;
+int	ds18x20ConfigMode (struct rule_t * psRule);
+int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW);
+int	ds18x20Enumerate(void);
 
 int	ds18x20Print_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20);
 

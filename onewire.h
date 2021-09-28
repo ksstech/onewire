@@ -89,8 +89,8 @@ enum { owFAM28_RES9B, owFAM28_RES10B, owFAM28_RES11B, owFAM28_RES12B } ;
 typedef	struct __attribute__((packed)) {
 	ow_rom_t	ROM ;								// size = 1+6+1
 	uint8_t 	crc8 ;
-	uint8_t 	LD ;								// LD
-	uint8_t 	LFD ;								// LFD
+	int8_t 		LD ;								// Last Discrepancy (bit #)
+	int8_t 		LFD ;								// Last Family Discrepancy (bit #)
 	uint8_t 	LDF		: 1 ;						// Last Device Flag
 	uint8_t		DevNum	: 2 ;						// index into 1W DevInfo table
 	uint8_t		PhyBus	: 3 ;
@@ -106,7 +106,7 @@ typedef struct ow_flags_s {
 
 // ################################ Generic 1-Wire LINK API's ######################################
 
-int		OWReset(owdi_t * psOW) ;
+int OWReset(owdi_t * psOW) ;
 
 // ############################### Bit/Byte/Block Read/Write #######################################
 
@@ -123,7 +123,7 @@ void OWReadBlock(owdi_t * psOW, uint8_t * pBuf, int Len);
 
 void OWTargetSetup(owdi_t * psOW, uint8_t family_code) ;
 void OWFamilySkipSetup(owdi_t * psOW) ;
-int	OWSearch(owdi_t * psOW, bool alarm_only) ;
+int OWSearch(owdi_t * psOW, bool alarm_only) ;
 int OWFirst(owdi_t * psOW, bool alarm_only) ;
 int OWNext(owdi_t * psOW, bool alarm_only) ;
 

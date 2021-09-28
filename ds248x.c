@@ -3,7 +3,8 @@
  */
 
 #include	"hal_variables.h"
-#include	"onewire_platform.h"
+#include	"ds248x.h"
+#include	"onewire.h"
 
 #include	"FreeRTOS_Support.h"
 #include	"printfx.h"
@@ -238,8 +239,7 @@ int	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
  */
 int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 	int iRV = 1 ;
-	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800)
-	&& (psDS248X->CurChan != Bus))	{					// optimise to avoid unnecessary IO
+	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800) && (psDS248X->CurChan != Bus))	{					// optimise to avoid unnecessary IO
 		/* Channel Select (Case A)
 		 *	S AD,0 [A] CHSL [A] CC [A] Sr AD,1 [A] [RR] A\ P
 		 *  [] indicates from slave
@@ -384,7 +384,8 @@ int	ds248xIdentify(i2c_di_t * psI2C_DI) {
 				psI2C_DI->DevIdx = ds248xCount++ ;		// valid 2482-10x
 			} else if (sDS248X.Rchan == ds248x_V2N[0]) {// CHAN=0 default
 				psI2C_DI->DevIdx = ds248xCount++ ;		// valid 2482-800
-			} else psI2C_DI->Type = i2cDEV_UNDEF ;		// not successful, undefined
+			} else
+				psI2C_DI->Type = i2cDEV_UNDEF ;			// not successful, undefined
 		}
 	}
 	psI2C_DI->Test	= 0 ;
@@ -407,15 +408,23 @@ int	ds248xConfig(i2c_di_t * psI2C_DI) {
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xST, stMICROS, "DS248xST", 500, 4400) ;
 	}
 	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx] ;
-	psDS248X->psI2C		= psI2C_DI ;
-	if (psI2C_DI->Type == i2cDEV_DS2482_800) psDS248X->NumChan = 1;	// 0=1Ch, 1=8Ch
+	psDS248X->psI2C = psI2C_DI ;
+	if (psI2C_DI->Type == i2cDEV_DS2482_800)
+		psDS248X->NumChan = 1;							// 0=1Ch, 1=8Ch
 	ds248xReConfig(psI2C_DI);
 
-	void OWP_DS18X20ReadSample(TimerHandle_t) ;
-	psDS248X->tmr = xTimerCreate("ds248x", pdMS_TO_TICKS(5), pdFALSE, NULL, OWP_DS18X20ReadSample) ;
+	void ds18x20StepThreeRead(TimerHandle_t) ;
+	psDS248X->tmr = xTimerCreate("ds248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead) ;
 	return erSUCCESS ;
 }
 
+/**
+ * Sets default device config
+ *	1-Wire speed (c1WS) = standard (0)
+ *	Strong pull-up (cSPU) = off (0)
+ *	Presence pulse masking (cPPM) = off (0)		[Discontinued, support removed]
+ *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
+ */
 void ds248xReConfig(i2c_di_t * psI2C_DI) {
 	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx] ;
 	ds248xReset(psDS248X) ;

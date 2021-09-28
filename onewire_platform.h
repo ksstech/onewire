@@ -5,8 +5,6 @@
 #pragma		once
 
 #include	"onewire.h"
-#include	"ds1990x.h"
-#include	"ds18x20.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,7 +50,6 @@ void OWP_BusRelease(owdi_t *) ;
 // Common callback handlers
 int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psROM) ;
 int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) ;
-int	OWP_PrintDS18_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) ;
 int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) ;
 int	OWP_Count_CB(flagmask_t FlagMask, owdi_t *) ;
 

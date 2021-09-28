@@ -150,7 +150,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	uint8_t		Lo		: 4 ;
 	uint8_t		Hi		: 4 ;
 	uint8_t		Sp2		: 4 ;
-#if		(!defined(NDEBUG)) || defined(DEBUG)
+#if	(!defined(NDEBUG)) || defined(DEBUG)
 	uint8_t		PrvStat[8] ;					// previous STAT reg
 	uint8_t		PrvConf[8] ;
 #endif
@@ -179,16 +179,9 @@ void ds248xReportAll(bool Refresh) ;
 
 // ############################### Identify, test and configure ####################################
 
-int	ds248xIdentify(i2c_di_t * psI2C_DI) ;
-/**
- * ds248xDriverConfig() - sets default device config
- *	1-Wire speed (c1WS) = standard (0)
- *	Strong pull-up (cSPU) = off (0)
- *	Presence pulse masking (cPPM) = off (0)		[Discontinued, support removed]
- *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
- */
-int	ds248xConfig(i2c_di_t * psI2C_DI) ;
-void ds248xReConfig(i2c_di_t * psI2C_DI) ;
+int	ds248xIdentify(i2c_di_t * psI2C_DI);
+int	ds248xConfig(i2c_di_t * psI2C_DI);
+void ds248xReConfig(i2c_di_t * psI2C_DI);
 
 // ############################## DS248X-x00 1-Wire support functions ##############################
 

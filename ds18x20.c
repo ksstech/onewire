@@ -3,7 +3,11 @@
  */
 
 #include	"hal_variables.h"
+
 #include	"onewire_platform.h"
+#include	"onewire.h"
+#include	"ds248x.h"
+#include	"ds18x20.h"
 #include	"endpoints.h"
 
 #include	"printfx.h"
@@ -92,7 +96,7 @@ bool ds18x20CheckPower(ds18x20_t * psDS18X20) {
  *	OWReadBlock		163/860 per byte, 326/1720 for temperature, 815/4300 for all.
  *	Total Time	1969/10808 for temperature
  */
-int	ds18x20ReadSP(ds18x20_t * psDS18X20, int32_t Len) {
+int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) {
 	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_SP, owADDR_MATCH, 0) == 0) return 0 ;
 	OWReadBlock(&psDS18X20->sOW, psDS18X20->RegX, Len);
 	IF_TRACK(debugSPAD, "%'-B ", Len, psDS18X20->RegX);
@@ -189,10 +193,7 @@ int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 }
 
 int	ds18x20ConfigMode (struct rule_t * psRule) {
-	if (psaDS18X20 == NULL) {
-		SET_ERRINFO("No DS18x20 enumerated");
-		return erSCRIPT_INV_OPERATION;
-	}
+	if (psaDS18X20 == NULL) { SET_ERRINFO("No DS18x20 enumerated"); return erSCRIPT_INV_OPERATION; }
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	uint8_t	AI = psRule->ActIdx ;
 	epw_t * psEW = &table_work[psRule->actPar0[AI]] ;

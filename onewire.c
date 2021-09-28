@@ -101,11 +101,11 @@ void OWReadBlock(owdi_t * psOW, uint8_t * pBuf, int Len) {
  * If no (more) devices of 'family_code' can be found return first device of next family
  */
 void OWTargetSetup(owdi_t * psOW, uint8_t family_code) {
-	psOW->ROM.Value				= 0ULL ;				// reset all ROM fields
-	psOW->ROM.Family 			= family_code ;
-	psOW->LD		= 64 ;
-	psOW->LFD	= 0 ;
-	psOW->LDF		= 0 ;
+	psOW->ROM.Value	= 0ULL ;				// reset all ROM fields
+	psOW->ROM.Family = family_code ;
+	psOW->LD = 64 ;
+	psOW->LFD = 0 ;
+	psOW->LDF = 0 ;
 }
 
 /**
@@ -145,8 +145,8 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 			psOW->LFD	= 0 ;
 			return 0 ;
 		}
-		OWWriteByte(psOW, alarm_only ? OW_CMD_SEARCHALARM : OW_CMD_SEARCHROM) ;
-		do {											// loop to do the search
+		OWWriteByte(psOW, alarm_only ? OW_CMD_SEARCHALARM : OW_CMD_SEARCHROM);
+		do {
 		// if this discrepancy is before the Last Discrepancy
 		// on a previous next then pick the same as last time
 			if (id_bit_number < psOW->LD) {
