@@ -40,9 +40,8 @@
 
 // ################################# Platform related variables ####################################
 
-owbi_t * psaOWBI = NULL ;
-
-static uint8_t	OWP_NumBus = 0, OWP_NumDev = 0 ;
+owbi_t * psaOWBI = NULL;
+static uint8_t	OWP_NumBus = 0, OWP_NumDev = 0;
 
 /* In order to avoid multiple successive reads of the same iButton on the same OW channel
  * we filter reads based on the value of the iButton read and time expired since the last
