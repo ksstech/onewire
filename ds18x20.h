@@ -63,6 +63,7 @@ typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sens
 
 // ###################################### Public variables #########################################
 
+extern uint8_t Fam10Count, Fam28Count;
 
 // ###################################### Public functions #########################################
 
@@ -86,6 +87,12 @@ struct rule_t ;
 int32_t	ds18x20ConfigMode (struct rule_t * psRule) ;
 int32_t	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) ;
 int32_t	ds18x20Enumerate(void)  ;
+
+int	ds18x20Print_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20);
+
+struct epw_t ;
+int	ds18x20StepOneStart(epw_t * psEWP) ;
+int	ds18x20StartAllInOne(struct epw_t * psEPW) ;
 
 #ifdef __cplusplus
 	}

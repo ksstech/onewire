@@ -63,6 +63,8 @@
 
 // ###################################### Local variables ##########################################
 
+ds18x20_t *	psaDS18X20 = NULL;
+uint8_t	Fam10Count = 0, Fam28Count = 0, Fam10_28Count = 0;
 
 // #################################### Local ONLY functions #######################################
 
@@ -288,4 +290,203 @@ int	CmndDS18(cli_t * psCLI) {
 	return iRV ;
 }
 #endif
+
+// #################################### 1W Platform support ########################################
+
+epw_t * ds18x20GetWork(int32_t x) ;
+void ds18x20SetDefault(epw_t * psEWP, epw_t *psEWS) ;
+void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) ;
+float ds18x20GetTemperature(epw_t * psEWx) ;
+
+const vt_enum_t	sDS18X20Func = {
+	.work	= ds18x20GetWork,
+	.reset	= ds18x20SetDefault,
+	.sense	= ds18x20SetSense,
+	.get	= ds18x20GetTemperature,
+};
+
+epw_t * ds18x20GetWork(int x) {
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS18X20) && (x < Fam10_28Count));
+	return &psaDS18X20[x].sEWx ;
+}
+
+void ds18x20SetDefault(epw_t * psEWP, epw_t * psEWS) {
+	IF_myASSERT(debugPARAM, psEWP->fSECsns == 0) ;
+	psEWP->Rsns = 0 ;	// Stop EWP sensing ,vEpConfigReset() will handle EWx
+}
+
+void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
+	/* Optimal 1-Wire bus operation require that all devices (of a type) are detected
+	 * (and read) in a single bus scan. BUT, for the DS18x20 the temperature conversion
+	 * time is 750mSec (per bus or device) at normal (not overdrive) bus speed.
+	 * When we get here the psEWS structure will already having been configured with the
+	 * parameters as supplied, just check & adjust for validity & new min Tsns */
+	if (psEWS->Tsns < ds18x20T_SNS_MIN)	psEWS->Tsns = ds18x20T_SNS_MIN ;	// no, default to minimum
+	if (psEWS->Tsns < psEWP->Tsns) psEWP->Tsns = psEWS->Tsns ;	// set lowest of EWP/EWS
+	psEWS->Tsns = 0 ;									// discard EWS value
+	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
+}
+
+float ds18x20GetTemperature(epw_t * psEWx) { return psEWx->var.val.x32.f32; }
+
+int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) {
+	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount];
+	memcpy(&psDS18X20->sOW, psOW, sizeof(owdi_t));
+	psDS18X20->Idx = sFM.uCount;
+
+	epw_t * psEWS = &psDS18X20->sEWx;
+	memset(psEWS, 0, sizeof(epw_t));
+	psEWS->var.def.cv.vf = vfFXX;
+	psEWS->var.def.cv.vt = vtVALUE;
+	psEWS->var.def.cv.vs = vs32B;
+	psEWS->var.def.cv.vc = 1;
+	psEWS->idx = sFM.uCount;
+	psEWS->uri = URI_DS18X20;
+	ds18x20Initialize(psDS18X20);
+
+	owbi_t * psOW_CI = psOWP_BusGetPointer(OWP_BusP2L(psOW));
+	switch(psOW->ROM.Family) {
+	case OWFAMILY_10: psOW_CI->ds18s20++;	break;
+	case OWFAMILY_28: psOW_CI->ds18b20++;	break;
+	default: IF_myASSERT(debugRESULT, 0);
+	}
+	return 1 ;											// number of devices enumerated
+}
+
+int	ds18x20Enumerate(void) {
+	uint8_t	ds18x20NumDev = 0;
+	Fam10_28Count = Fam10Count + Fam28Count;
+	IF_SL_INFO(debugOWP, "DS18x20 found %d devices", Fam10_28Count) ;
+	IF_SYSTIMER_INIT(debugTIMING, stDS1820A, stMILLIS, "DS1820A", 10, 1000) ;
+	IF_SYSTIMER_INIT(debugTIMING, stDS1820B, stMILLIS, "DS1820B", 1, 10) ;
+
+	// Init primary EWP endpoint (leave fSecSNS = 0 to force parallel sensing
+	epw_t * psEWP = &table_work[URI_DS18X20];
+	psEWP->var.def.cv.pntr	= 1;
+	psEWP->var.def.cv.vf	= vfFXX ;
+	psEWP->var.def.cv.vs	= vs32B ;
+	psEWP->var.def.cv.vt	= vtENUM ;
+	psEWP->var.def.cv.vc	= Fam10_28Count ;
+	psEWP->var.val.px.pv	= (void *) &sDS18X20Func ;
+	psEWP->Tsns				= ds18x20T_SNS_NORM ;	// All channels read in succession
+	psEWP->Rsns				= ds18x20T_SNS_NORM ;	// with blocking I2C driver
+	psEWP->uri				= URI_DS18X20 ;			// Used in OWPlatformEndpoints()
+
+	psaDS18X20 = pvRtosMalloc(Fam10_28Count * sizeof(ds18x20_t)) ;
+	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
+	int	iRV = 0 ;
+	if (Fam10Count) {
+		iRV = OWP_Scan(OWFAMILY_10, ds18x20EnumerateCB) ;
+		if (iRV > 0) ds18x20NumDev += iRV ;
+	}
+	if (Fam28Count) {
+		iRV = OWP_Scan(OWFAMILY_28, ds18x20EnumerateCB) ;
+		if (iRV > 0) ds18x20NumDev += iRV ;
+	}
+	if (ds18x20NumDev == Fam10_28Count) iRV = ds18x20NumDev ;
+	else {
+		SL_ERR("Only %d of %d enumerated!!!", ds18x20NumDev, Fam10_28Count) ;
+		iRV = erFAILURE ;
+	}
+	return iRV ;										// number of devices enumerated
+}
+
+int	ds18x20Print_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
+	int iRV = OWP_Print1W_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
+	iRV += printfx(" Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
+		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
+		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9) ;
+	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) iRV += printfx(" Conf=x%02X %s",
+		psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "") ;
+	if (FlagMask.bNL) iRV += printfx("\n") ;
+	return iRV ;
+}
+
+TickType_t ds18x20CalcDelay(ds18x20_t * psDS18X20, bool All) {
+	TickType_t tConvert = pdMS_TO_TICKS(ds18x20DELAY_CONVERT) ;
+	/* ONLY decrease delay if:
+	 * 	specific ROM is addressed AND and it is DS18B20 ; OR
+	 * 	ROM match skipped AND only DS18B20 devices on the bus */
+	owbi_t * psOWBI = psOWP_BusGetPointer(OWP_BusP2L(&psDS18X20->sOW)) ;
+	if (((All == 1) && (psOWBI->ds18s20 == 0)) ||
+		((All == 0) && (psDS18X20->sOW.ROM.Family == OWFAMILY_28))) {
+		tConvert /= (4 - psDS18X20->Res) ;
+	}
+	return tConvert ;
+}
+
+/**
+ * @brief	Trigger convert (bus at a time) then read SP, normalise RAW value & persist in EPW
+ * @param 	psEPW
+ * @return
+ */
+int	ds18x20StartAllInOne(epw_t * psEWP) {
+	uint8_t	PrevBus = 0xFF ;
+	for (int i = 0; i < Fam10_28Count; ++i) {
+		ds18x20_t * psDS18X20 = &psaDS18X20[i];
+		if (psDS18X20->sOW.PhyBus != PrevBus) {
+			if (OWP_BusSelect(&psDS18X20->sOW) == 0) continue ;
+			if (OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, owADDR_SKIP, 1) == 1) {
+				PrevBus = psDS18X20->sOW.PhyBus ;
+				vTaskDelay(ds18x20CalcDelay(psDS18X20, 1)) ;
+				OWLevel(&psDS18X20->sOW, owPOWER_STANDARD) ;
+				OWP_BusRelease(&psDS18X20->sOW) ;		// keep locked for period of delay
+			}
+		}
+		if ((OWP_BusSelect(&psDS18X20->sOW) == 1) && (ds18x20ReadSP(psDS18X20, 2) == 1)) {
+			ds18x20ConvertTemperature(psDS18X20) ;
+			OWP_BusRelease(&psDS18X20->sOW) ;			// TODO maybe simplify Release ?
+		} else SL_ERR("Read/Convert failed") ;
+	}
+	return erSUCCESS ;
+}
+
+int	ds18x20StepTwoBusConvert(ds18x20_t * psDS18X20, int i) {
+	if (OWP_BusSelect(&psDS18X20->sOW) == 1) {
+		OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, owADDR_SKIP, 1);
+		vTimerSetTimerID(psaDS248X[psDS18X20->sOW.DevNum].tmr, (void *) i);
+		xTimerStart(psaDS248X[psDS18X20->sOW.DevNum].tmr, ds18x20CalcDelay(psDS18X20, 1));
+//		IF_PRINT(debugOWP, "Start Dev=%d Bus=%d\n", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus);
+		return 1 ;
+	}
+	SL_ERR("Failed to start convert Dev=%d Bus=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus) ;
+	return 0 ;
+}
+
+int ds18x20StepOneStart(epw_t * psEWx) {			// Step 1: Start CONVERT on each physical bus
+	uint8_t	PrevDev = 0xFF ;						// where 1+ DS18x20 has been enumerated on.
+	for (int i = 0; i < Fam10_28Count; ++i) {		// Although sense is configured on primary level,
+		ds18x20_t * psDS18X20 = &psaDS18X20[i];		// log can be different for each instance
+		if (psDS18X20->sOW.DevNum != PrevDev) {
+			if (ds18x20StepTwoBusConvert(psDS18X20, i) == 1) {
+//				TRACK("DevNum=%d\n", psDS18X20->sOW.DevNum);
+				PrevDev = psDS18X20->sOW.DevNum;
+			}
+		}
+	}
+	return erSUCCESS;
+}
+
+void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
+	int	i = (int) pvTimerGetTimerID(pxHandle);
+	do {												// Handle all sensors on this BUS
+		ds18x20_t * psDS18X20 = &psaDS18X20[i];
+		if (ds18x20ReadSP(psDS18X20, 2) == 1) ds18x20ConvertTemperature(psDS18X20);
+		else SL_ERR("Read/Convert failed");
+		++i ;
+		// no more sensors or different device - release bus, exit loop
+		if ((i == Fam10_28Count) || (psDS18X20->sOW.DevNum != psaDS18X20[i].sOW.DevNum)) {
+//			TRACK("i=%d  DevNum=%d\n", i, psDS18X20->sOW.DevNum);
+			OWP_BusRelease(&psDS18X20->sOW);
+			break;
+		}
+		// more sensors, same device but new bus - release bus, start convert on new bus.
+		if (psDS18X20->sOW.PhyBus != psaDS18X20[i].sOW.PhyBus) {
+//			TRACK("i=%d  DevNum=%d\n", i, psDS18X20->sOW.DevNum);
+			OWP_BusRelease(&psDS18X20->sOW);
+			ds18x20StepTwoBusConvert(&psaDS18X20[i], i);
+			break;
+		}
+		// more sensors, same device and same bus
+	} while  (i < Fam10_28Count) ;
 }

@@ -41,8 +41,6 @@ DUMB_STATIC_ASSERT(sizeof(owbi_t) == 14) ;
 // #################################### Public Data structures #####################################
 
 extern ow_flags_t OWflags;
-extern ds18x20_t * psaDS18X20;
-extern uint8_t Fam10_28Count;
 
 // ###################################### Public functions #########################################
 
@@ -62,10 +60,6 @@ int	OWP_Count_CB(flagmask_t FlagMask, owdi_t *) ;
 int	OWP_Scan(uint8_t, int (*)(flagmask_t, owdi_t *)) ;
 int	OWP_Scan2(uint8_t, int (*)(flagmask_t, void *, owdi_t *), void *, owdi_t *) ;
 int	OWP_ScanAlarmsFamily(uint8_t Family) ;
-
-struct epw_t ;
-int	OWP_DS18X20StartSample(epw_t * psEWP) ;
-int	OWP_DS18X20Ai1(struct epw_t * psEPW) ;
 
 int	OWP_Config(void) ;
 void OWP_Report(void) ;
