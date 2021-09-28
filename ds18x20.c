@@ -255,7 +255,8 @@ int	ds18x20ConfigMode (struct rule_t * psR) {
 
 void ds18x20ReportAll(void) {
 	for (int i = 0; i < Fam10_28Count; ++i)
-		OWP_PrintDS18_CB(makeMASKFLAG(0,1,1,1,1,1,1,1,1,i), &psaDS18X20[i]) ;
+		ds18x20Print_CB(makeMASKFLAG(0,1,1,1,1,1,1,1,1,i), &psaDS18X20[i]) ;
+}
 
 #if (cliUSE_TABLE == 1)
 int	CmndDS18RDSP(cli_t * psCLI) {
