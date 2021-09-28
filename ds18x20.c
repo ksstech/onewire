@@ -205,30 +205,23 @@ int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	return erSCRIPT_INV_VALUE ;
 }
 
-int	ds18x20ConfigMode (struct rule_t * psRule) {
+int	ds18x20ConfigMode (struct rule_t * psR) {
 	if (psaDS18X20 == NULL) { SET_ERRINFO("No DS18x20 enumerated"); return erSCRIPT_INV_OPERATION; }
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
-	uint8_t	AI = psRule->ActIdx ;
-	epw_t * psEW = &table_work[psRule->actPar0[AI]] ;
-	px_t	px ;
-	px.pu32 = (uint32_t *) &psRule->para.u32[AI][0] ;
-	int	Xcur = *px.pu32++ ;
-	int Xmax = psEW->var.def.cv.vc ;
+	uint8_t	AI = psR->ActIdx ;
+	int EI	= psR->actPar0[AI] ;						// get sensor epURI
+	int Xmax = table_work[EI].var.def.cv.vc ;
+	int Xcur = psR->actPar1[AI]; 						// get # of selected end-point(s)
+	if (Xcur == 255) Xcur = 0;							// full range requested?, start from 0
+	else if (Xcur >= Xmax) { SET_ERRINFO("Invalid EP Index"); return erSCRIPT_INV_INDEX; }
+	else Xmax = Xcur ;									// only do the specific endpoint
 
-	if (Xcur == 255) Xcur = Xmax ;						// set to actual count.
-	else if (Xcur > Xmax) {
-		SET_ERRINFO("Invalid EP Index");
-		return erSCRIPT_INV_INDEX;
-	}
+	uint32_t lo	= psR->para.x32[AI][0].u32;
+	uint32_t hi	= psR->para.x32[AI][1].u32;
+	uint32_t res = psR->para.x32[AI][2].u32;
+	uint32_t wr	= psR->para.x32[AI][3].u32;
 	IF_PRINT(debugTRACK && ioB1GET(ioMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, Xmax, lo, hi, res, wr);
 
-	if (Xcur == Xmax) Xcur = 0 ; 						// range 0 -> Xmax
-	else Xmax = Xcur ;									// single Xcur
-
-	uint32_t lo	= *px.pu32++ ;
-	uint32_t hi	= *px.pu32++ ;
-	uint32_t res = *px.pu32++ ;
-	uint32_t wr	= *px.pu32 ;
 	int iRV1, iRV2 ;
 	if (wr == 0 || wr == 1) {							// if parameter omitted, do not persist
 		do {
