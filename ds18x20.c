@@ -247,4 +247,45 @@ int	ds18x20ConfigMode (struct rule_t * psRule) {
 void ds18x20ReportAll(void) {
 	for (int i = 0; i < Fam10_28Count; ++i)
 		OWP_PrintDS18_CB(makeMASKFLAG(0,1,1,1,1,1,1,1,1,i), &psaDS18X20[i]) ;
+
+#if (cliUSE_TABLE == 1)
+int	CmndDS18RDSP(cli_t * psCLI) {
+	do ds18x20ReadSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++], 9) ; while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
+	return erSUCCESS ;
+}
+
+int	CmndDS18WRSP(cli_t * psCLI) {
+	do ds18x20WriteSP(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ; while (psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
+	return erSUCCESS ;
+}
+
+int	CmndDS18WREE(cli_t * psCLI) {
+	do ds18x20WriteEE(&psaDS18X20[psCLI->z64Var.x64.x8[0].u8++]) ; while(psCLI->z64Var.x64.x8[0].u8 < psCLI->z64Var.x64.x8[1].u8) ;
+	return erSUCCESS ;
+}
+
+cmnd_t saDS18Cmnd[] = {
+	{ "RDSP",	CmndDS18RDSP },
+	{ "WRSP",	CmndDS18WRSP },
+	{ "WREE",	CmndDS18WREE },
+} ;
+
+int	CmndDS18(cli_t * psCLI) {
+	int iRV = erFAILURE ;
+	psCLI->pasList	= saDS18Cmnd ;
+	psCLI->u8LSize	= NO_MEM(saDS18Cmnd) ;
+	psCLI->pcParse	+= xStringSkipDelim(psCLI->pcParse, sepSPACE_COMMA, psCLI->pcStore - psCLI->pcParse ) ;
+	int	i32SC = xCLImatch(psCLI) ;
+	if (i32SC >= 0) {
+		char * pTmp = pcStringParseValueRange(psCLI->pcParse, (px_t) &psCLI->z64Var.x64.x32[0].u32, vfUXX, vs32B, sepSPACE_LF, (x32_t) 0, (x32_t) ((uint32_t) Fam10_28Count)) ;
+		if (pTmp != pcFAILURE) {
+			psCLI->pcParse = pTmp ;
+			psCLI->z64Var.x64.x8[0].u8 = (psCLI->z64Var.x64.x32[0].u32 == Fam10_28Count) ? 0 : psCLI->z64Var.x64.x32[0].u32 ;
+			psCLI->z64Var.x64.x8[1].u8 = (psCLI->z64Var.x64.x32[0].u32 == Fam10_28Count) ? psCLI->z64Var.x64.x32[0].u32 : psCLI->z64Var.x64.x8[0].u8 ;
+			iRV = psCLI->pasList[i32SC].hdlr(psCLI) ;
+		}
+	}
+	return iRV ;
+}
+#endif
 }
