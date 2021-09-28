@@ -60,6 +60,22 @@
  *
  */
 
+// ############################################# Macros ############################################
+
+#define	ds18x20DELAY_CONVERT		750		// mSec
+#define	ds18x20DELAY_SP_COPY		11		// mSec
+#define	ds18x20T_SNS_MIN			1000
+#define	ds18x20T_SNS_NORM			60000
+
+// ################################## DS18X20 1-Wire Commands ######################################
+
+#define	DS18X20_CONVERT				0x44
+#define	DS18X20_COPY_SP				0x48
+#define	DS18X20_WRITE_SP			0x4E
+#define	DS18X20_READ_PSU			0xB4
+#define	DS18X20_RECALL_EE			0xB8
+#define	DS18X20_READ_SP				0xBE
+
 // ################################ Forward function declaration ###################################
 
 

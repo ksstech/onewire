@@ -36,6 +36,33 @@
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
+// ##################################### Local structures ##########################################
+
+typedef union __attribute__((packed)) {
+	struct {
+/*LSB*/	uint8_t		OWB		: 1 ;					// 1-Wire Busy
+		uint8_t		PPD		: 1 ;					// Presence Pulse Detected
+		uint8_t		SD		: 1 ;
+		uint8_t		LL		: 1 ;					// Link Level
+		uint8_t		RST		: 1 ;					// ReSeT
+		uint8_t		SBR		: 1 ;					// Single Bit Read
+		uint8_t		TSB		: 1 ;					//
+/*MSB*/	uint8_t		DIR		: 1 ;					// DIRection
+	} ;
+	uint8_t		STAT ;
+} ds248x_stat_t ;
+
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+/*LSB*/	uint8_t		APU		: 1 ;			// Active Pull Up
+		uint8_t		PDN		: 1 ;			// Pull Down (DS2484 only)
+		uint8_t		SPU		: 1 ;			// Strong Pull Up
+		uint8_t		OWS		: 1 ;			// 1-Wire Speed
+/*MSB*/	uint8_t		RES1	: 4 ;
+	} ;
+	uint8_t		Rconf ;
+} ds248x_conf_t ;
+
 // ###################################### Local variables ##########################################
 
 const char * const RegNames[ds248xREG_NUM] = {"Stat", "Data", "Chan", "Conf", "Port" } ;
