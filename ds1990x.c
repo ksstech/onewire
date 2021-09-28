@@ -17,7 +17,7 @@
 
 #include	<string.h>
 
-#define	debugFLAG					0xE001
+#define	debugFLAG					0xF001
 
 #define	debugEVENTS					(debugFLAG & 0x0001)
 #define	debugCONFIG					(debugFLAG & 0x0002)
@@ -46,6 +46,8 @@ int	ds1990xConfig(void) {
 	psEWP->Tsns				= ds1990xT_SNS_NORM ;
 	psEWP->Rsns				= ds1990xT_SNS_NORM ;
 	psEWP->uri				= URI_DS1990X ;				// Used in OWPlatformEndpoints()
-	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990", 10, 1000) ;
+	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990x", 1, 100) ;
 	return erSUCCESS ;
 }
+	IF_SYSTIMER_START(debugTIMING, stDS1990) ;
+	IF_SYSTIMER_STOP(debugTIMING, stDS1990) ;

@@ -158,9 +158,9 @@ int ds248xReset(ds248x_t * psDS248X) {
 	//  SS status byte to read to verify state
 	uint8_t	cChr 	= ds248xCMD_DRST ;
 	psDS248X->Rptr	= ds248xREG_STAT ;					// After ReSeT pointer set to STATus register
-	IF_SYSTIMER_START(debugTIMING, stDS248xA) ;
+	IF_SYSTIMER_START(debugTIMING, stDS248xIO) ;
 	ds248xI2C_WriteDelayRead(psDS248X, &cChr, sizeof(cChr), 0) ;
-	IF_SYSTIMER_STOP(debugTIMING, stDS248xA) ;
+	IF_SYSTIMER_STOP(debugTIMING, stDS248xIO) ;
 	psDS248X->Rdata		= 0 ;
 	psDS248X->Rconf		= 0 ;							// all bits cleared (default) config
 	psDS248X->CurChan	= 0 ;
@@ -188,9 +188,9 @@ int	ds248xWriteConfig(ds248x_t * psDS248X) {
 	uint8_t	config	= psDS248X->Rconf & 0x0F ;
 	uint8_t	cBuf[2] = { ds248xCMD_WCFG , (~config << 4) | config } ;
 	psDS248X->Rptr = ds248xREG_CONF ;
-	IF_SYSTIMER_START(debugTIMING, stDS248xA) ;
+	IF_SYSTIMER_START(debugTIMING, stDS248xIO) ;
 	int iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0) ;
-	IF_SYSTIMER_STOP(debugTIMING, stDS248xA) ;
+	IF_SYSTIMER_STOP(debugTIMING, stDS248xIO) ;
 	return iRV ;
 }
 
@@ -216,9 +216,9 @@ int	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 	} else {
 		psDS248X->Rptr	= Reg ;
 		uint8_t	cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg } ;
-		IF_SYSTIMER_START(debugTIMING, stDS248xA) ;
+		IF_SYSTIMER_START(debugTIMING, stDS248xIO) ;
 		iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0) ;
-		IF_SYSTIMER_STOP(debugTIMING, stDS248xA) ;
+		IF_SYSTIMER_STOP(debugTIMING, stDS248xIO) ;
 	}
 	return iRV ;
 }
@@ -249,9 +249,9 @@ int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 		uint8_t	cBuf[2] = { ds2482CMD_CHSL, (~Bus << 4) | Bus } ;	// calculate Channel value
 		psDS248X->Rptr	= ds248xREG_CHAN ;
 		psDS248X->CurChan = Bus ;			// save in advance will auto reset if error
-		IF_SYSTIMER_START(debugTIMING, stDS248xA) ;
+		IF_SYSTIMER_START(debugTIMING, stDS248xIO) ;
 		iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0) ;
-		IF_SYSTIMER_STOP(debugTIMING, stDS248xA) ;
+		IF_SYSTIMER_STOP(debugTIMING, stDS248xIO) ;
 	}
 #if (d248xAUTO_LOCK == 2)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
@@ -400,12 +400,11 @@ int	ds248xConfig(i2c_di_t * psI2C_DI) {
 		IF_myASSERT(debugPARAM, psI2C_DI->DevIdx == 0) ;
 		psaDS248X = pvRtosMalloc(ds248xCount * sizeof(ds248x_t)) ;
 		memset(psaDS248X, 0, ds248xCount * sizeof(ds248x_t)) ;
-		IF_SYSTIMER_INIT(debugTIMING, stDS248xA, stMICROS, "DS248xA", 100, 1000) ;
-		IF_SYSTIMER_INIT(debugTIMING, stDS248xB, stMICROS, "DS248xB", 200, 2000) ;
-		IF_SYSTIMER_INIT(debugTIMING, stDS248xC, stMICROS, "DS248xC", 10, 100) ;
-		IF_SYSTIMER_INIT(debugTIMING, stDS248xD, stMICROS, "DS248xD", 300, 3000) ;
-		IF_SYSTIMER_INIT(debugTIMING, stDS248xE, stMICROS, "DS248xE", 300, 3000) ;
-		IF_SYSTIMER_INIT(debugTIMING, stDS248xF, stMICROS, "DS248xF", 300, 3000) ;
+		IF_SYSTIMER_INIT(debugTIMING, stDS248xIO, stMICROS, "DS248xIO", 300, 2700) ;
+		IF_SYSTIMER_INIT(debugTIMING, stDS248x1R, stMICROS, "DS248x1R", 1400, 18000) ;
+		IF_SYSTIMER_INIT(debugTIMING, stDS248xWR, stMICROS, "DS248xWR", 900, 4000) ;
+		IF_SYSTIMER_INIT(debugTIMING, stDS248xRD, stMICROS, "DS248xRD", 300, 3000) ;
+		IF_SYSTIMER_INIT(debugTIMING, stDS248xST, stMICROS, "DS248xST", 500, 4400) ;
 	}
 	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx] ;
 	psDS248X->psI2C		= psI2C_DI ;
@@ -450,9 +449,9 @@ int	ds248xOWReset(ds248x_t * psDS248X) {
 //  [] indicates from slave
 	uint8_t	cChr = ds248xCMD_1WRS ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
-	IF_SYSTIMER_START(debugTIMING, stDS248xB) ;
+	IF_SYSTIMER_START(debugTIMING, stDS248x1R) ;
 	ds248xI2C_WriteDelayRead(psDS248X, &cChr, sizeof(cChr), psDS248X->OWS ? owDELAY_RST_OD : owDELAY_RST) ;
-	IF_SYSTIMER_STOP(debugTIMING, stDS248xB) ;
+	IF_SYSTIMER_STOP(debugTIMING, stDS248x1R) ;
 	return psDS248X->PPD ;
 }
 
@@ -504,9 +503,9 @@ void ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t Byte) {
 //  DD data to write
 	uint8_t	cBuf[2] = { ds248xCMD_1WWB, Byte } ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
-	IF_SYSTIMER_START(debugTIMING, stDS248xD) ;
+	IF_SYSTIMER_START(debugTIMING, stDS248xWR) ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_WB_OD : owDELAY_WB) ;
-	IF_SYSTIMER_STOP(debugTIMING, stDS248xD) ;
+	IF_SYSTIMER_STOP(debugTIMING, stDS248xWR) ;
 }
 
 /**
@@ -526,9 +525,9 @@ uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) {
  *  DD data read	*/
 	uint8_t	cBuf = ds248xCMD_1WRB;
 	psDS248X->Rptr = ds248xREG_STAT;
-	IF_SYSTIMER_START(debugTIMING, stDS248xE);
+	IF_SYSTIMER_START(debugTIMING, stDS248xRD);
 	ds248xI2C_WriteDelayRead(psDS248X, &cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_RB_OD : owDELAY_RB);
-	IF_SYSTIMER_STOP(debugTIMING, stDS248xE);
+	IF_SYSTIMER_STOP(debugTIMING, stDS248xRD);
 	ds248xReadRegister(psDS248X, ds248xREG_DATA);
 	return psDS248X->Rdata;
 }
@@ -542,8 +541,8 @@ bool ds248xOWSearchTriplet(ds248x_t * psDS248X, bool bDir) {
 //  SS indicates byte containing search direction bit value in msbit
 	uint8_t	cBuf[2] = { ds248xCMD_1WT, bDir ? 0x80 : 0x00 } ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
-	IF_SYSTIMER_START(debugTIMING, stDS248xF) ;
+	IF_SYSTIMER_START(debugTIMING, stDS248xST) ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_ST_OD : owDELAY_ST) ;
-	IF_SYSTIMER_STOP(debugTIMING, stDS248xF) ;
+	IF_SYSTIMER_STOP(debugTIMING, stDS248xST) ;
 	return psDS248X->Rstat ;
 }
