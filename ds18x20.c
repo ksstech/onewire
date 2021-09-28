@@ -150,8 +150,7 @@ int	ds18x20Initialize(ds18x20_t * psDS18X20) {
 	psDS18X20->Res	= (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
 					? psDS18X20->fam28.Conf >> 5
 					: owFAM28_RES9B;
-	ds18x20ConvertTemperature(psDS18X20);
-	return 1 ;
+	return ds18x20ConvertTemperature(psDS18X20);
 }
 
 /**
