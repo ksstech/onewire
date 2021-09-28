@@ -180,7 +180,7 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 				iRV = OWSearch(&sOW, 0) ;
 				if (iRV > 0 && (sOW.ROM.Family != Family)) {
 					// Strictly speaking should never get here, iRV must be 0 if same family not found
-					IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found\n", Family, sOW.ROM.Family) ;
+					IF_PRINT(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\n", Family, sOW.ROM.Family) ;
 					OWP_BusRelease(&sOW) ;
 					continue ;
 				}
@@ -188,7 +188,7 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 				iRV = OWFirst(&sOW, 0) ;
 			}
 			while (iRV) {
-				IF_EXEC_2(debugSCANNER, OWP_Print1W_CB, makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &sOW) ;
+				IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &sOW) ;
 				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 				IF_myASSERT(debugRESULT, iRV == 1) ;
 				iRV = Handler((flagmask_t) uCount, &sOW) ;

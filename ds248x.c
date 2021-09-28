@@ -7,6 +7,7 @@
 #include	"onewire.h"
 
 #include	"FreeRTOS_Support.h"
+#include	"options.h"
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
@@ -67,9 +68,9 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 			#if	(!defined(NDEBUG) || defined(DEBUG))
 			const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
 			const uint8_t DS248Xmask[4] = { 0b00000111, 0b00011111, 0b00111111, 0b11111111 } ;
-			uint8_t Mask = DS248Xmask[OWflags.Level] ;
+			uint8_t Mask = DS248Xmask[ioB2GET(ioDS248Xdbg)] ;
 			uint8_t StatX = psDS248X->PrvStat[psDS248X->CurChan] ;
-			if (ioB1GET(ioB1_0) && ((psDS248X->Rstat & Mask) != (StatX & Mask))) {
+			if (ioB1GET(ioDS248Xstat) && ((psDS248X->Rstat & Mask) != (StatX & Mask))) {
 				char * pcBuf = pcBitMapDecodeChanges(StatX, psDS248X->Rstat, 0x000000FF, StatNames) ;
 				printfx("D=%d C=%u x%02X->x%02X %s\n", psDS248X->psI2C->DevIdx,
 					psDS248X->CurChan, StatX, psDS248X->Rstat, pcBuf) ;
@@ -93,7 +94,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 		} else {
 			#if	(!defined(NDEBUG) || defined(DEBUG))
 			IF_myASSERT(debugRESULT, psDS248X->APU == 1);
-			if (ioB1GET(ioB1_0) && (psDS248X->Rconf != psDS248X->PrvConf[psDS248X->CurChan])) {
+			if (ioB1GET(ioDS248Xstat) && (psDS248X->Rconf != psDS248X->PrvConf[psDS248X->CurChan])) {
 				const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" } ;
 				uint8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan] ;
 				char * pcBuf = pcBitMapDecodeChanges(ConfX, psDS248X->Rconf, 0x0000000F, ConfNames) ;

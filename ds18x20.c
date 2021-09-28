@@ -10,6 +10,7 @@
 #include	"ds18x20.h"
 #include	"endpoints.h"
 
+#include	"options.h"
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"					// timing debugging
@@ -20,12 +21,12 @@
 
 #define	debugFLAG					0xF000
 
-#define	debugCONFIG					(debugFLAG & 0x0001)
-#define	debugREAD					(debugFLAG & 0x0002)
-#define	debugCONVERT				(debugFLAG & 0x0004)
-#define	debugPOWER					(debugFLAG & 0x0008)
+#define	debugREAD					(debugFLAG & 0x0001)
+#define	debugCONVERT				(debugFLAG & 0x0002)
+#define	debugPOWER					(debugFLAG & 0x0004)
+#define	debugSPAD					(debugFLAG & 0x0008)
 
-#define	debugSPAD					(debugFLAG & 0x0010)
+#define	debugOWP					(debugFLAG & 0x0008)
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -134,9 +135,6 @@ int	ds18x20Initialize(ds18x20_t * psDS18X20) {
 					? psDS18X20->fam28.Conf >> 5
 					: owFAM28_RES9B;
 	ds18x20ConvertTemperature(psDS18X20);
-#if		(debugCONFIG && !debugCONVERT)
-	OWP_PrintDS18_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
-#endif
 	return 1 ;
 }
 
@@ -157,10 +155,9 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const uint8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
 	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
-#if		(debugCONVERT && !debugCONFIG)
-	OWP_PrintDS18_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20) ;
-#endif
-	return 1 ;
+	if (debugTRACK && ioB1GET(ioDS18x20))
+		ds18x20Print_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20);
+	return 1;
 }
 
 // ################################ Rules configuration support ####################################
@@ -169,7 +166,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
 		Res -= 9 ;
 		uint8_t u8Res = (Res << 5) | 0x1F ;
-		IF_PRINT(debugCONFIG, "SP Res x%02X->x%02X (%d->%d)\n",
+		IF_PRINT(debugTRACK && ioB1GET(ioMode), "SP Res x%02X->x%02X (%d->%d)\n",
 				psDS18X20->fam28.Conf, u8Res, psDS18X20->Res, Res) ;
 		if (psDS18X20->fam28.Conf == u8Res) return 0;	// nothing changed
 		psDS18X20->fam28.Conf = u8Res;
@@ -182,7 +179,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 
 int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	if (INRANGE(-128, Lo, 127, int) && INRANGE(-128, Hi, 127, int)) {
-		IF_PRINT(debugCONFIG, "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
+		IF_PRINT(debugTRACK && ioB1GET(ioMode), "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
 		if (psDS18X20->Tlo == Lo && psDS18X20->Thi == Hi) return 0 ;
 		psDS18X20->Tlo = Lo ;
 		psDS18X20->Thi = Hi ;
@@ -207,6 +204,7 @@ int	ds18x20ConfigMode (struct rule_t * psRule) {
 		SET_ERRINFO("Invalid EP Index");
 		return erSCRIPT_INV_INDEX;
 	}
+	IF_PRINT(debugTRACK && ioB1GET(ioMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, Xmax, lo, hi, res, wr);
 
 	if (Xcur == Xmax) Xcur = 0 ; 						// range 0 -> Xmax
 	else Xmax = Xcur ;									// single Xcur
@@ -215,7 +213,6 @@ int	ds18x20ConfigMode (struct rule_t * psRule) {
 	uint32_t hi	= *px.pu32++ ;
 	uint32_t res = *px.pu32++ ;
 	uint32_t wr	= *px.pu32 ;
-	IF_PRINT(debugCONFIG, "DS18X20 Mode Xcur=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, lo, hi, res, wr) ;
 	int iRV1, iRV2 ;
 	if (wr == 0 || wr == 1) {							// if parameter omitted, do not persist
 		do {
