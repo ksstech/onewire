@@ -1,5 +1,5 @@
 # ONEWIRE
-set( srcs "onewire.c" "onewire_platform.c" "ds18x20.c" "ds18x20_cmds.c" "ds1990x.c" "ds248x.c" )
+set( srcs "onewire.c" "onewire_platform.c" "ds18x20.c" "ds1990x.c" "ds248x.c" )
 set( include_dirs "." )
 set( requires common endpoints hal_esp32 )
 set( priv_requires commands irmacos printfx rtos-support stringsX syslog systiming )
