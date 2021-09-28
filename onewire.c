@@ -135,8 +135,8 @@ void OWFamilySkipSetup(owdi_t * psOW) {
  *			there are no devices on the 1-Wire Net.
  */
 int OWSearch(owdi_t * psOW, bool alarm_only) {
-	bool	bRV = 0, bDir ;
-	uint8_t	rom_byte_number = 0, last_zero = 0, id_bit_number = 1, rom_byte_mask = 1, status ;
+	uint8_t u8SrcDir, u8Status, u8ByteMask = 1;
+	int8_t i8SrcRes = 0, i8IdBitNum = 1, i8LastZero = 0, i8ByteNum = 0;
 	psOW->crc8 = 0;
 	if (psOW->LDF == 0) {					// if the last call was not the last device
 		if (OWReset(psOW) == 0) {						// reset the search
@@ -149,51 +149,53 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 		do {
 		// if this discrepancy is before the Last Discrepancy
 		// on a previous next then pick the same as last time
-			if (id_bit_number < psOW->LD) {
-				bDir = ((psOW->ROM.HexChars[rom_byte_number] & rom_byte_mask) > 0) ? 1 : 0 ;
+			if (i8IdBitNum < psOW->LD) {
+				u8SrcDir = ((psOW->ROM.HexChars[i8ByteNum] & u8ByteMask) > 0) ? 1 : 0 ;
 			} else {									// if equal to last pick 1, if not then pick 0
-				bDir = (id_bit_number == psOW->LD) ? 1 : 0 ;
+				u8SrcDir = (i8IdBitNum == psOW->LD) ? 1 : 0 ;
 			}
-		// Perform a triple operation on the DS2482 which will perform 2 read bits and 1 write bit
-			status = ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], bDir) ;
-		// check bit results in status byte
-			int	id_bit		= ((status & ds248xSTAT_SBR) == ds248xSTAT_SBR) ;
-			int	cmp_id_bit	= ((status & ds248xSTAT_TSB) == ds248xSTAT_TSB) ;
-			bDir = ((status & ds248xSTAT_DIR) == ds248xSTAT_DIR) ? 1 : 0 ;
-			if (id_bit && cmp_id_bit) {				// check for no devices on 1-Wire
+			u8Status = ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], u8SrcDir) ;
+			int8_t i8IdBit		= ((u8Status & ds248xSTAT_SBR) == ds248xSTAT_SBR) ;
+			int8_t i8IdBitCmp	= ((u8Status & ds248xSTAT_TSB) == ds248xSTAT_TSB) ;
+			u8SrcDir = ((u8Status & ds248xSTAT_DIR) == ds248xSTAT_DIR) ? 1 : 0 ;
+			if (i8IdBit && i8IdBitCmp) {				// check for no devices on 1-Wire
 				break ;
 			} else {
-				if ((!id_bit) && (!cmp_id_bit) && (bDir == 0)) {
-					last_zero = id_bit_number ;
-					if (last_zero < 9) psOW->LFD = last_zero ;
+				if ((!i8IdBit) && (!i8IdBitCmp) && (u8SrcDir == 0)) {
+					i8LastZero = i8IdBitNum ;
+					if (i8LastZero < 9)
+						psOW->LFD = i8LastZero ;
 				}
-				if (bDir == 1) psOW->ROM.HexChars[rom_byte_number] |= rom_byte_mask ;
-				else psOW->ROM.HexChars[rom_byte_number] &= ~rom_byte_mask;
-				++id_bit_number ;						// increment the byte counter id_bit_number & shift the mask rom_byte_mask
-				rom_byte_mask <<= 1 ;
-				if (rom_byte_mask == 0) {				// if the mask is 0 then go to new SerialNum byte rom_byte_number and reset mask
-					OWCalcCRC8(psOW, psOW->ROM.HexChars[rom_byte_number]);  // accumulate the CRC
-					++rom_byte_number ;
-					rom_byte_mask = 1 ;
+				if (u8SrcDir == 1)
+					psOW->ROM.HexChars[i8ByteNum] |= u8ByteMask ;
+				else
+					psOW->ROM.HexChars[i8ByteNum] &= ~u8ByteMask;
+				++i8IdBitNum ;						// increment the byte counter id_bit_number
+				u8ByteMask <<= 1 ;					// adjust mask for next bit
+				if (u8ByteMask == 0) {				// if mask is 0 byte is done
+					OWCalcCRC8(psOW, psOW->ROM.HexChars[i8ByteNum]);  // Accumulate CRC
+					++i8ByteNum ;					// Next ROM byte
+					u8ByteMask = 1 ;					// Reset the mask
 				}
 			}
-		} while(rom_byte_number < sizeof(ow_rom_t)) ;	// loop until all
-	// if the search was successful then
-		if (!((id_bit_number < 65) || (psOW->crc8 != 0))) {
-			psOW->LD = last_zero;						// search successful
-			if (psOW->LD == 0) psOW->LDF = 1;			// last device? set flag
-			bRV = 1 ;
+		} while(i8ByteNum < sizeof(ow_rom_t));	// loop till 8 bytes done
+
+		if (!((i8IdBitNum < 65) || (psOW->crc8 != 0))) {// search successful ?
+			psOW->LD = i8LastZero;						// yes
+			if (psOW->LD == 0) 							// last discrepancy?
+				psOW->LDF = 1;							// set flag
+			i8SrcRes = 1 ;								// status = FOUND !!!
 		}
 	}
 
 	// if no device found then reset counters so next 'search' will be like a first
-	if ((bRV == 0) || (psOW->ROM.Family == 0)) {
+	if ((i8SrcRes == 0) || (psOW->ROM.Family == 0)) {
 		psOW->LD = 0;
 		psOW->LDF = 0;
 		psOW->LFD = 0;
-		bRV = 0;
+		i8SrcRes = 0;
 	}
-	return bRV ;
+	return i8SrcRes ;
 }
 
 /**
