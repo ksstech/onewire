@@ -75,7 +75,7 @@ bool OWReadBit(owdi_t * psOW) { return ds248xOWTouchBit(&psaDS248X[psOW->DevNum]
  * @param	Byte
  * @return	status register value after write
  */
-void OWWriteByte(owdi_t * psOW, uint8_t Byte) { ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte) ; }
+uint8_t OWWriteByte(owdi_t * psOW, uint8_t Byte) { return ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte) ; }
 
 /**
  * Reads 8 bits of communication from the 1-Wire Net

@@ -106,7 +106,7 @@ int OWReset(owdi_t * psOW) ;
 void OWWriteBit(owdi_t * psOW, bool Bit) ;
 bool OWReadBit(owdi_t * psOW) ;
 
-void OWWriteByte(owdi_t * psOW, uint8_t sendbyte) ;
+uint8_t OWWriteByte(owdi_t * psOW, uint8_t sendbyte) ;
 uint8_t	OWReadByte(owdi_t * psOW) ;
 
 void OWWriteBlock(owdi_t * psOW, uint8_t * pBuf, int Len);

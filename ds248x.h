@@ -165,7 +165,7 @@ int	ds248xOWReset(ds248x_t * psDS248X) ;
 int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed) ;
 int	ds248xOWLevel(ds248x_t * psDS248X, bool level) ;
 bool ds248xOWTouchBit(ds248x_t * psDS248X, bool bit) ;
-void ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t sendbyte) ;
+uint8_t ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t sendbyte) ;
 uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
 /**
  * Use the DS248x help command '1-Wire triplet' to perform one bit of a 1-Wire
@@ -175,7 +175,7 @@ uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
  *
  * Returns � The DS248x status byte result from the triplet command
  */
-bool ds248xOWSearchTriplet(ds248x_t * psDS248X, bool bDir) ;
+uint8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, uint8_t u8Dir) ;
 
 #ifdef __cplusplus
 }

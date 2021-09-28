@@ -536,7 +536,7 @@ bool ds248xOWTouchBit(ds248x_t * psDS248X, bool Bit) {
  *	NS	560		860		635
  *	OD	88		388		163
  */
-void ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t Byte) {
+uint8_t	ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t Byte) {
 // 1-Wire Write Byte (Case B)
 //	S AD,0 [A] 1WWB [A] DD [A] Sr AD,1 [A] [Status] A [Status] A\ P
 //										   \--------/
@@ -548,6 +548,7 @@ void ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t Byte) {
 	IF_SYSTIMER_START(debugTIMING, stDS248xWR) ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_WB_OD : owDELAY_WB) ;
 	IF_SYSTIMER_STOP(debugTIMING, stDS248xWR) ;
+	return psDS248X->Rstat ;
 }
 
 /**
@@ -574,14 +575,14 @@ uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) {
 	return psDS248X->Rdata;
 }
 
-bool ds248xOWSearchTriplet(ds248x_t * psDS248X, bool bDir) {
+uint8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, uint8_t u8Dir) {
 // 1-Wire Triplet (Case B)
 //	S AD,0 [A] 1WT [A] SS [A] Sr AD,1 [A] [Status] A [Status] A\ P
 //							  \--------/
 //				Repeat until 1WB bit has changed to 0
 //  [] indicates from slave
 //  SS indicates byte containing search direction bit value in msbit
-	uint8_t	cBuf[2] = { ds248xCMD_1WT, bDir ? 0x80 : 0x00 } ;
+	uint8_t	cBuf[2] = { ds248xCMD_1WT, u8Dir ? 0x80 : 0x00 } ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	IF_SYSTIMER_START(debugTIMING, stDS248xST) ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_ST_OD : owDELAY_ST) ;
