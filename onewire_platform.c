@@ -122,7 +122,7 @@ int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
 
 int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
 	int iRV = printfx("OW ch=%d  ", FlagMask.uCount) ;
-	if (psCI->LastRead) iRV += printfx("%r  ", psCI->LastRead) ;
+	if (psCI->LastRead) iRV += printfx("%R  ", xTimeMakeTimestamp(psCI->LastRead, 0)) ;
 	if (psCI->LastROM.Family) iRV += OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
 	if (psCI->ds18any) iRV += printfx("  DS18B=%d  DS18S=%d", psCI->ds18b20, psCI->ds18s20) ;
 	if (FlagMask.bNL) iRV += printfx("\n") ;
