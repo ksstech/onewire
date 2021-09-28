@@ -46,9 +46,6 @@ static uint8_t	OWP_NumBus = 0, OWP_NumDev = 0 ;
  * we filter reads based on the value of the iButton read and time expired since the last
  * successful read. If the same ID is read on the same channel within 'x' seconds, skip it */
 
-uint8_t	ds1990ReadIntvl	= ds1990READ_INTVL ;
-uint8_t	Family01Count = 0 ;
-
 // ################################# Application support functions #################################
 
 owbi_t * psOWP_BusGetPointer(uint8_t LogBus) {
@@ -117,16 +114,6 @@ int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
 	int iRV = OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
 	iRV += printfx(" Log=%d Dev=%d Phy=%d PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
-	if (FlagMask.bNL) iRV += printfx("\n") ;
-	return iRV ;
-}
-
-int	OWP_PrintDS18_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
-	int iRV = OWP_Print1W_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
-	iRV += printfx(" Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d", psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
-		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9) ;
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) iRV += printfx(" Conf=x%02X %s",
-		psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "") ;
 	if (FlagMask.bNL) iRV += printfx("\n") ;
 	return iRV ;
 }
@@ -300,36 +287,3 @@ void OWP_Report(void) {
 	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus)
 		OWP_PrintChan_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &psaOWBI[LogBus]) ;
 }
-
-// ###################################### DS1990X support ##########################################
-
-/* To avoid registering multiple reads if iButton is held in place too long we enforce a
- * period of 'x' seconds within which successive reads of the same tag will be ignored */
-int	OWP_DS1990ScanCB(flagmask_t sFM, owdi_t * psOW) {
-	seconds_t	NowRead = xTimeStampAsSeconds(sTSZ.usecs) ;
-	uint8_t		LogChan = OWP_BusP2L(psOW) ;
-	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan) ;
-	++Family01Count ;
-	if ((psOW_CI->LastROM.Value == psOW->ROM.Value)
-	&& ((NowRead - psOW_CI->LastRead) <= ds1990ReadIntvl)) {
-		IF_PRINT(debugTRACK, "SAME iButton in %d sec, Skipped...\n", ds1990ReadIntvl) ;
-		return erSUCCESS ;
-	}
-	psOW_CI->LastROM.Value	= psOW->ROM.Value ;
-	psOW_CI->LastRead		= NowRead ;
-	xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits) ;
-	portYIELD() ;
-#if		(debugEVENTS)
-	sFM.bRT	= 1 ;
-	sFM.bNL	= 1 ;
-	OWP_Print1W_CB(sFM, psOW) ;
-#endif
-	return erSUCCESS ;
-}
-
-int	OWP_DS1990ScanAll(epw_t * psEWP) {
-	vShowActivity(0) ;
-	Family01Count = 0;
-	return OWP_Scan(OWFAMILY_01, OWP_DS1990ScanCB) ;
-}
-

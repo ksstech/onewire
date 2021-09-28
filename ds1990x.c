@@ -33,6 +33,7 @@
 
 // ################################# Platform related variables ####################################
 
+uint8_t	Family01Count = 0 ;
 
 // ################################# Application support functions #################################
 
@@ -47,7 +48,34 @@ int	ds1990xConfig(void) {
 	psEWP->Rsns				= ds1990xT_SNS_NORM ;
 	psEWP->uri				= URI_DS1990X ;				// Used in OWPlatformEndpoints()
 	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990x", 1, 100) ;
+	return erSUCCESS;
+}
+
+// #################################### 1W Platform support ########################################
+
+/* To avoid registering multiple reads if iButton is held in place too long we enforce a
+ * period of 'x' seconds within which successive reads of the same tag will be ignored */
+int	OWP_DS1990ScanCB(flagmask_t sFM, owdi_t * psOW) {
+	seconds_t NowRead = xTimeStampAsSeconds(sTSZ.usecs);
+	uint8_t LogChan = OWP_BusP2L(psOW);
+	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan);
+	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) &&
+		(NowRead-psOW_CI->LastRead) <= ioB4GET(ioDS1990RdDly)) {
+		IF_PRINT(debugTRACK && ioB1GET(ioDS1990x), "Tag repeat %ds\n", ioB4GET(ioDS1990RdDly)) ;
+		return erSUCCESS ;
+	}
+	psOW_CI->LastROM.Value	= psOW->ROM.Value ;
+	psOW_CI->LastRead		= NowRead ;
+	xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits) ;
+	portYIELD() ;
+	if (debugTRACK && ioB1GET(ioDS1990x)) { sFM.bRT = 1; sFM.bNL = 1; OWP_Print1W_CB(sFM, psOW); }
 	return erSUCCESS ;
 }
+
+int	OWP_DS1990ScanAll(epw_t * psEWP) {
 	IF_SYSTIMER_START(debugTIMING, stDS1990) ;
+	int iRV = OWP_Scan(OWFAMILY_01, OWP_DS1990ScanCB) ;
 	IF_SYSTIMER_STOP(debugTIMING, stDS1990) ;
+	return iRV;
+}
+
