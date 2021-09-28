@@ -6,6 +6,10 @@
 #include	"hal_variables.h"
 
 #include	"onewire_platform.h"
+#include	"ds248x.h"
+#include	"ds18x20.h"
+#include	"ds1990x.h"
+
 #include	"task_events.h"
 #include	"endpoints.h"
 
@@ -25,7 +29,6 @@
 #define	debugCONFIG					(debugFLAG & 0x0001)
 #define	debugSCANNER				(debugFLAG & 0x0002)
 #define	debugMAPPING				(debugFLAG & 0x0004)
-#define	debugDS18X20				(debugFLAG & 0x0008)
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)

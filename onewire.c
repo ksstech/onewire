@@ -3,7 +3,9 @@
  */
 
 #include	"hal_variables.h"
-#include	"onewire_platform.h"
+
+#include	"onewire.h"
+#include	"ds248x.h"
 
 #include	"endpoint_id.h"
 
@@ -67,16 +69,11 @@ void OWWriteBit(owdi_t * psOW, bool Bit) { ds248xOWTouchBit(&psaDS248X[psOW->Dev
 bool OWReadBit(owdi_t * psOW) { return ds248xOWTouchBit(&psaDS248X[psOW->DevNum], 1) ; }
 
 /**
- * Send 8 bits of communication to the 1-Wire Net and verify that the
- * 8 bits read from the 1-Wire Net is the same (write operation).
- * The parameter 'sendbyte' least significant 8 bits are used.
- *
- * 'sendbyte' - 8 bits to send (least significant byte)
- */
-/**
- * @brief
+ * @brief	Send 8 bits of communication to the 1-Wire Net and verify that the
+ * 			8 bits read from the 1-Wire Net is the same (write operation).
  * @param	psOW
  * @param	Byte
+ * @return	status register value after write
  */
 void OWWriteByte(owdi_t * psOW, uint8_t Byte) { ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte) ; }
 
@@ -138,9 +135,9 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 	uint8_t u8SrcDir, u8Status, u8ByteMask = 1;
 	int8_t i8SrcRes = 0, i8IdBitNum = 1, i8LastZero = 0, i8ByteNum = 0;
 	psOW->crc8 = 0;
-	if (psOW->LDF == 0) {					// if the last call was not the last device
-		if (OWReset(psOW) == 0) {						// reset the search
-			psOW->LD	= 0 ;
+	if (psOW->LDF == 0) {								// if the last call was not the last device
+		if (OWReset(psOW) == 0) {						// any device there?
+			psOW->LD	= 0 ;							// no, reset the search
 			psOW->LDF	= 0 ;
 			psOW->LFD	= 0 ;
 			return 0 ;

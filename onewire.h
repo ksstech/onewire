@@ -4,9 +4,7 @@
 
 #pragma		once
 
-#include	"hal_i2c.h"
-#include	"ds248x.h"
-
+#include	<stdint.h>
 #include	<stddef.h>
 #include	<stdbool.h>
 
