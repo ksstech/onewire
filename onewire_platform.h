@@ -37,7 +37,6 @@ DUMB_STATIC_ASSERT(sizeof(owbi_t) == 14) ;
 
 // #################################### Public Data structures #####################################
 
-extern ow_flags_t OWflags;
 
 // ###################################### Public functions #########################################
 

@@ -41,7 +41,6 @@
 // ################################# Platform related variables ####################################
 
 owbi_t * psaOWBI = NULL ;
-ow_flags_t	OWflags ;
 
 static uint8_t	OWP_NumBus = 0, OWP_NumDev = 0 ;
 

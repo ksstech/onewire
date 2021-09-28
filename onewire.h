@@ -97,11 +97,6 @@ typedef	struct __attribute__((packed)) {
 } owdi_t ;
 DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12) ;
 
-typedef struct ow_flags_s {
-	uint8_t	Level 	: 2 ;
-	uint8_t	Spare	: 6 ;
-} ow_flags_t ;
-
 // ################################ Generic 1-Wire LINK API's ######################################
 
 int OWReset(owdi_t * psOW) ;
