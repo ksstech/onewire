@@ -204,31 +204,33 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
-int	OWP_Scan2(uint8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void * pVoid, owdi_t * psOW) {
+int	OWP_Scan2(uint8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void * pVoid) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
+	owdi_t sOW ;
 	for (uint8_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
-		OWP_BusL2P(psOW, LogBus) ;
-		if (OWP_BusSelect(psOW) == 0) continue ;
+		OWP_BusL2P(&sOW, LogBus) ;
+		if (OWP_BusSelect(&sOW) == 0) continue ;
 		if (Family) {
-			OWTargetSetup(psOW, Family) ;
-			iRV = OWSearch(psOW, 0) ;
-			if (iRV > 0 && psOW->ROM.Family != Family) {
-				IF_TRACK(debugSCANNER, "Family 0x%02X wanted, 0x%02X found\n", Family, psOW->ROM.Family) ;
-				OWP_BusRelease(psOW) ;
+			OWTargetSetup(&sOW, Family) ;
+			iRV = OWSearch(&sOW, 0) ;
+			if (iRV > 0 && (sOW.ROM.Family != Family)) {
+				IF_TRACK(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\n", Family, &sOW.ROM.Family) ;
+				OWP_BusRelease(&sOW) ;
 				continue ;
 			}
-		} else iRV = OWFirst(psOW, 0) ;
+		} else iRV = OWFirst(&sOW, 0) ;
 		while (iRV) {
-			iRV = OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
+			IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &sOW) ;
+			iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
-			iRV = Handler((flagmask_t) uCount, pVoid, psOW) ;
+			iRV = Handler((flagmask_t) uCount, pVoid, &sOW) ;
 			if (iRV < erSUCCESS)  break ;
 			if (iRV > 0) ++uCount ;
-			iRV = OWNext(psOW, 0) ;						// try to find next device (if any)
+			iRV = OWNext(&sOW, 0) ;						// try to find next device (if any)
 		}
-		OWP_BusRelease(psOW) ;
+		OWP_BusRelease(&sOW) ;
 		if (iRV < erSUCCESS) break ;
 	}
 	IF_SL_ERR(iRV < erSUCCESS, "Handler error=%d", iRV) ;
