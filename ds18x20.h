@@ -27,7 +27,7 @@ DUMB_STATIC_ASSERT(sizeof(fam28) == 4) ;
 
 typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sensors
 	owdi_t	sOW ;										// address of enumerated sensor (size = 12)
-	epw_t	sEWx ;										// size = 36
+	epw_t	sEWx ;										// size = 32
 	union {												// Scratchpad
 		struct __attribute__((packed)) {
 			uint8_t	Tlsb, Tmsb ;						// last RAM sample
@@ -44,7 +44,7 @@ typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sens
 	uint8_t	Res		: 2 ;								// Resolution 0=9b 1=10b 2=11b 3=12b
 	uint8_t	SBits	: 3 ;
 } ds18x20_t ;
-DUMB_STATIC_ASSERT(sizeof(ds18x20_t) == 58) ;
+DUMB_STATIC_ASSERT(sizeof(ds18x20_t) == 54) ;
 
 // ###################################### Public variables #########################################
 
