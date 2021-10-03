@@ -29,7 +29,7 @@
 
 // ###################################### General macros ###########################################
 
-#define	ds1990xT_SNS_NORM			1000
+#define	DS1990X_T_SNS			1000
 
 // ################################# Platform related variables ####################################
 
@@ -44,8 +44,7 @@ int	ds1990xConfig(void) {
 	psEWP->var.def.cv.vf	= vfUXX ;
 	psEWP->var.def.cv.vt	= vtVALUE ;
 	psEWP->var.def.cv.vs	= vs32B ;
-	psEWP->Tsns				= ds1990xT_SNS_NORM ;
-	psEWP->Rsns				= ds1990xT_SNS_NORM ;
+	psEWP->Tsns = psEWP->Rsns = DS1990X_T_SNS ;
 	psEWP->uri				= URI_DS1990X ;				// Used in OWPlatformEndpoints()
 	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990x", 1, 100) ;
 	return erSUCCESS;
