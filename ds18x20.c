@@ -328,8 +328,10 @@ void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 	 * time is 750mSec (per bus or device) at normal (not overdrive) bus speed.
 	 * When we get here the psEWS structure will already having been configured with the
 	 * parameters as supplied, just check & adjust for validity & new min Tsns */
-	if (psEWS->Tsns < ds18x20T_SNS_MIN)	psEWS->Tsns = ds18x20T_SNS_MIN ;	// no, default to minimum
-	if (psEWS->Tsns < psEWP->Tsns) psEWP->Tsns = psEWS->Tsns ;	// set lowest of EWP/EWS
+	if (psEWS->Tsns < ds18x20T_SNS_MIN)
+		psEWS->Tsns = ds18x20T_SNS_MIN ;				// default to minimum
+	if (psEWS->Tsns < psEWP->Tsns)
+		psEWP->Tsns = psEWS->Tsns ;						// set lowest of EWP/EWS
 	psEWS->Tsns = 0 ;									// discard EWS value
 	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
 }
@@ -369,15 +371,14 @@ int	ds18x20Enumerate(void) {
 
 	// Init primary EWP endpoint (leave fSecSNS = 0 to force parallel sensing
 	epw_t * psEWP = &table_work[URI_DS18X20];
-	psEWP->var.def.cv.pntr	= 1;
-	psEWP->var.def.cv.vf	= vfFXX ;
-	psEWP->var.def.cv.vs	= vs32B ;
-	psEWP->var.def.cv.vt	= vtENUM ;
-	psEWP->var.def.cv.vc	= Fam10_28Count ;
-	psEWP->var.val.px.pv	= (void *) &sDS18X20Func ;
-	psEWP->Tsns				= ds18x20T_SNS_NORM ;	// All channels read in succession
-	psEWP->Rsns				= ds18x20T_SNS_NORM ;	// with blocking I2C driver
-	psEWP->uri				= URI_DS18X20 ;			// Used in OWPlatformEndpoints()
+	psEWP->var.def.cv.pntr = 1;
+	psEWP->var.def.cv.vf = vfFXX ;
+	psEWP->var.def.cv.vs = vs32B ;
+	psEWP->var.def.cv.ve = 1;
+	psEWP->var.def.cv.vc = Fam10_28Count ;
+	psEWP->var.val.px.pv = (void *) &sDS18X20Func ;
+	psEWP->Tsns	= psEWP->Rsns = ds18x20T_SNS_NORM;
+	psEWP->uri = URI_DS18X20 ;							// Used in OWPlatformEndpoints()
 
 	psaDS18X20 = pvRtosMalloc(Fam10_28Count * sizeof(ds18x20_t)) ;
 	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t)) ;
