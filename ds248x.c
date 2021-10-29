@@ -25,11 +25,7 @@
 
 // ###################################### General macros ###########################################
 
-#define	debugFLAG					0xF007
-
-#define	debugBUS_CFG				(debugFLAG & 0x0001)
-#define	debugCONFIG					(debugFLAG & 0x0002)
-#define	debugCRC					(debugFLAG & 0x0004)
+#define	debugFLAG					0xF000
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -273,7 +269,7 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
 	#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
 	#endif
-	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
+	IF_myASSERT(debugTRACK, psDS248X->OWB == 0) ;
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cR_B,
 			NULL, 0,
 			&psDS248X->RegX[psDS248X->Rptr], SO_MEM(ds248x_t, Rconf),
@@ -290,7 +286,7 @@ int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSiz
 	#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
 	#endif
-	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
+	IF_myASSERT(debugTRACK, psDS248X->OWB == 0) ;
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B,
 			pTxBuf, TxSize,
 			&psDS248X->RegX[psDS248X->Rptr], 1,
