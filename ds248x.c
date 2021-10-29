@@ -244,21 +244,23 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 			snprintf(caBuf, sizeof(caBuf), "W=x%.2x  R=x%.2x (%s)", Value, psDS248X->Rconf, pcMess);
 			iRV = ds248xLogError(psDS248X, caBuf);
 		} else {
-			IF_myASSERT(debugRESULT, psDS248X->APU == 1);
-			if (ioB1GET(ioDS248Xstat) && (psDS248X->Rconf != psDS248X->PrvConf[psDS248X->CurChan])) {
-				const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" } ;
-				uint8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan] ;
-				char * pcBuf = pcBitMapDecodeChanges(ConfX, psDS248X->Rconf, 0x0000000F, ConfNames) ;
-				printfx("D=%d C=%u x%02X->x%02X %s\n", psDS248X->psI2C->DevIdx,
-					psDS248X->CurChan, ConfX, psDS248X->Rconf, pcBuf) ;
-				vRtosFree(pcBuf) ;
-				psDS248X->PrvConf[psDS248X->CurChan] = psDS248X->Rconf ;
 			#if	(configPRODUCTION == 0)
+			if (ioB1GET(ioDS248Xcheck)) {
+				uint8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];
+				if (psDS248X->Rconf != ConfX) {
+					printf("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
+						psDS248X->CurChan, ConfX, psDS248X->Rconf);
+					ds248xReportConfig(ConfX, psDS248X->Rconf);
+				}
 			}
+			psDS248X->PrvConf[psDS248X->CurChan] = psDS248X->Rconf;
 			#endif
 		}
-	} else if (psDS248X->Rptr == ds248xREG_CHAN && psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan]) {
-		iRV = ds248xLogError(psDS248X, "CHAN") ;
+		IF_myASSERT(debugRESULT, psDS248X->APU == 1);
+	} else if (psDS248X->Rptr == ds248xREG_CHAN && (psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan])) {
+		char caBuf[36];
+		snprintf(caBuf, sizeof(caBuf)," CHAN (0x%02X vs 0x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
+		iRV = ds248xLogError(psDS248X, caBuf) ;
 	}
 	return iRV ;
 }
