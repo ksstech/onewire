@@ -63,6 +63,15 @@ typedef union __attribute__((packed)) {
 	uint8_t	Rconf ;
 } ds248x_conf_t ;
 
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+/*LSB*/	uint8_t	VAL	: 4;			// PARameter VALue
+		uint8_t	OD	: 1;			// OverDrive control
+/*MSB*/	uint8_t	PAR	: 3;			// PARameter selector
+	};
+	uint8_t RadjX;
+} ds248x_padj_t;
+
 // ###################################### Local variables ##########################################
 
 const char * const RegNames[ds248xREG_NUM] = {"Stat", "Data", "Chan", "Conf", "Port" } ;
