@@ -118,6 +118,14 @@ int	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 	return iRV ;
 }
 
+int ds248xReportStatus(uint8_t Val1, uint8_t Val2) {
+	const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
+	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x000000FF, StatNames) ;
+	int iRV = printf("%s\n", pcBuf);
+	vRtosFree(pcBuf);
+	return iRV;
+}
+
 int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 	int iRV = 1 ;
 	if (psDS248X->Rptr == ds248xREG_STAT) {		// STATus register
@@ -294,21 +302,6 @@ void ds248xBusRelease(ds248x_t * psDS248X) {
 #if (d248xAUTO_LOCK == 2)
 	xRtosSemaphoreGive(&psDS248X->mux) ;
 #endif
-}
-
-
-int	ds248xReportStatus(uint8_t Num, ds248x_stat_t Stat) {
-	return printfx("STAT(0) #%u=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
-			Num,
-			Stat.STAT,
-			Stat.DIR ? '1' : '0',
-			Stat.TSB ? '1' : '0',
-			Stat.SBR ? '1' : '0',
-			Stat.RST ? '1' : '0',
-			Stat.LL  ? '1' : '0',
-			Stat.SD  ? '1' : '0',
-			Stat.PPD ? '1' : '0',
-			Stat.OWB ? '1' : '0') ;
 }
 
 /**
