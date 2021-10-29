@@ -206,7 +206,6 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 		if (psDS248X->OWB) {					// Check for error if not blocking in I2C task
 			iRV = ds248xLogError(psDS248X, "OWB") ;
 		} else {
-			#if	(!defined(NDEBUG) || defined(DEBUG))
 			const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
 			const uint8_t DS248Xmask[4] = { 0b00000111, 0b00011111, 0b00111111, 0b11111111 } ;
 			uint8_t Mask = DS248Xmask[ioB2GET(ioDS248Xdbg)] ;
@@ -216,6 +215,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 				printfx("D=%d C=%u x%02X->x%02X %s\n", psDS248X->psI2C->DevIdx,
 					psDS248X->CurChan, StatX, psDS248X->Rstat, pcBuf) ;
 				vRtosFree(pcBuf) ;
+			#if	(configPRODUCTION == 0)
 			}
 			psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat ;
 			#endif
@@ -233,7 +233,6 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 			snprintfx(caBuf, sizeof(caBuf), "W=x%02X R=x%02X (%s)", Value, psDS248X->Rconf, pcMess) ;
 			iRV = ds248xLogError(psDS248X, caBuf) ;
 		} else {
-			#if	(!defined(NDEBUG) || defined(DEBUG))
 			IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 			if (ioB1GET(ioDS248Xstat) && (psDS248X->Rconf != psDS248X->PrvConf[psDS248X->CurChan])) {
 				const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" } ;
@@ -243,6 +242,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 					psDS248X->CurChan, ConfX, psDS248X->Rconf, pcBuf) ;
 				vRtosFree(pcBuf) ;
 				psDS248X->PrvConf[psDS248X->CurChan] = psDS248X->Rconf ;
+			#if	(configPRODUCTION == 0)
 			}
 			#endif
 		}
@@ -253,32 +253,32 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 }
 
 int	ds248xI2C_Read(ds248x_t * psDS248X) {
-	#if (d248xAUTO_LOCK == 1)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
+	#if (ds248xLOCK == ds248xLOCK_IO)
 	#endif
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cR_B,
 			NULL, 0,
 			&psDS248X->RegX[psDS248X->Rptr], SO_MEM(ds248x_t, Rconf),
 			(i2cq_p1_t) NULL, (i2cq_p2_t) NULL) ;
-	#if (d248xAUTO_LOCK == 1)
 	xRtosSemaphoreGive(&psDS248X->mux) ;
+	#if (ds248xLOCK == ds248xLOCK_IO)
 	#endif
 	if (iRV == erSUCCESS) return ds248xCheckRead(psDS248X, 0xFF) ;
 	return 0 ;
 }
 
 int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t uSdly) {
-	#if (d248xAUTO_LOCK == 1)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
+	#if (ds248xLOCK == ds248xLOCK_IO)
 	#endif
 	IF_myASSERT(debugBUS_CFG, psDS248X->OWB == 0) ;
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B,
 			pTxBuf, TxSize,
 			&psDS248X->RegX[psDS248X->Rptr], 1,
 			(i2cq_p1_t) uSdly, (i2cq_p2_t) NULL) ;
-	#if (d248xAUTO_LOCK == 1)
 	xRtosSemaphoreGive(&psDS248X->mux) ;
+	#if (ds248xLOCK == ds248xLOCK_IO)
 	#endif
 	if (iRV == erSUCCESS) return ds248xCheckRead(psDS248X, (TxSize > 1) ? pTxBuf[1] : 0xFF) ;
 	return 0 ;
@@ -365,15 +365,15 @@ int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 		IF_SYSTIMER_START(debugTIMING, stDS248xIO) ;
 		iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0) ;
 		IF_SYSTIMER_STOP(debugTIMING, stDS248xIO) ;
+#if (ds248xLOCK == ds248xLOCK_BUS)
 	}
-#if (d248xAUTO_LOCK == 2)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
 #endif
 	return iRV ;
 }
 
 void ds248xBusRelease(ds248x_t * psDS248X) {
-#if (d248xAUTO_LOCK == 2)
+#if (ds248xLOCK == ds248xLOCK_BUS)
 	xRtosSemaphoreGive(&psDS248X->mux) ;
 #endif
 }
@@ -407,8 +407,9 @@ int	ds248xIdentify(i2c_di_t * psI2C_DI) {
 		}
 	}
 	psI2C_DI->Test	= 0 ;
-	if (psI2C_DI->Type != i2cDEV_UNDEF) psI2C_DI->Speed = i2cSPEED_400 ;
-#if (d248xAUTO_LOCK == 1)
+	if (psI2C_DI->Type != i2cDEV_UNDEF)
+		psI2C_DI->Speed = i2cSPEED_400 ;
+#if (ds248xLOCK == ds248xLOCK_IO)
 	if (sDS248X.mux) vSemaphoreDelete(sDS248X.mux) ;
 #endif
 	return (psI2C_DI->Type == i2cDEV_UNDEF) ? erFAILURE : erSUCCESS ;
