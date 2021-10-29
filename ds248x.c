@@ -84,11 +84,38 @@ uint8_t ds248xCount	= 0;
 ds248x_t * psaDS248X = NULL;
 
 // ################################ Local ONLY utility functions ###################################
+// #################################### DS248x debug/reporting #####################################
 
 int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 	SL_ERR("Dev=%d  Ch=%d  %s error", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess) ;
 	ds248xReset(psDS248X) ;
 	return 0 ;
+}
+
+/**
+ * @brief	Set the Read Pointer and reads the register
+ *			Once set the pointer remains static to allow reread of same register
+ * @return	1 if successfully read else 0
+ *
+ *	WWDR		100KHz	400KHz
+ *				300uS	75uS
+ *		uS-----+------+-------+
+ *	NS	0		300		75
+ *	OD	0		300		75
+ */
+int	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
+	// check for validity of CHAN (only DS2482-800) and PADJ (only DS2484)
+	if ((Reg == ds248xREG_CHAN && psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
+		(Reg == ds248xREG_PADJ && psDS248X->psI2C->Type != i2cDEV_DS2484)) {
+		SL_ERR("Invalid device/register combo Reg=%d (%s)",Reg, RegNames[Reg]);
+		return 0;
+	}
+	psDS248X->Rptr = Reg;
+	uint8_t	cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg };
+	IF_SYSTIMER_START(debugTIMING, stDS248xIO);
+	int iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0);
+	IF_SYSTIMER_STOP(debugTIMING, stDS248xIO);
+	return iRV ;
 }
 
 int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
@@ -229,35 +256,6 @@ int	ds248xWriteConfig(ds248x_t * psDS248X) {
 }
 
 /**
- * @brief	Set the Read Pointer and reads the register
- *			Once set the pointer remains static to allow reread of same register
- * @return	1 if successfully read else 0
- *
- *	WWDR		100KHz	400KHz
- *				300uS	75uS
- *		uS-----+------+-------+
- *	NS	0		300		75
- *	OD	0		300		75
- */
-int	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
-	// check for validity of CHAN (only DS2482-800) and PADJ (only DS2484)
-	int iRV ;
-	if ((Reg == ds248xREG_CHAN && psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
-		(Reg == ds248xREG_PADJ && psDS248X->psI2C->Type != i2cDEV_DS2484)) {
-		halI2C_DeviceReport((void *) ((uint32_t) psDS248X->I2Cnum)) ;
-		printfx("Invalid device/register combo Reg=%d (%s)",Reg, RegNames[Reg]) ;
-		iRV = 0 ;
-	} else {
-		psDS248X->Rptr	= Reg ;
-		uint8_t	cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg } ;
-		IF_SYSTIMER_START(debugTIMING, stDS248xIO) ;
-		iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0) ;
-		IF_SYSTIMER_STOP(debugTIMING, stDS248xIO) ;
-	}
-	return iRV ;
-}
-
-/**
  * @brief	Select the 1-Wire bus on a DS2482-800.
  * @param	psDS248X
  * @param 	Chan
@@ -298,7 +296,6 @@ void ds248xBusRelease(ds248x_t * psDS248X) {
 #endif
 }
 
-// #################################### DS248x debug/reporting #####################################
 
 int	ds248xReportStatus(uint8_t Num, ds248x_stat_t Stat) {
 	return printfx("STAT(0) #%u=0x%02X  DIR=%c  TSB=%c  SBR=%c  RST=%c  LL=%c  SD=%c  PPD=%c  1WB=%c\n",
@@ -384,13 +381,6 @@ void ds248xReport(ds248x_t * psDS248X, bool Refresh) {
 	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
 	for (int Reg = 0; Reg < ds248xREG_NUM; ds248xReportRegister(psDS248X, Reg++, Refresh)) ;
 	printfx("\n") ;
-}
-
-/**
- * ds248xReportAll() - report decoded status of all devices and all registers
- */
-void ds248xReportAll(bool Refresh) {
-	for (int i = 0; i < ds248xCount; ds248xReport(&psaDS248X[i++], Refresh)) ;
 }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
