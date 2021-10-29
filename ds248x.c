@@ -184,6 +184,22 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 	return iRV ;
 }
 
+/**
+ * Report decoded status of a specific device, all registers
+ */
+void ds248xReport(ds248x_t * psDS248X) {
+	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
+	for (int Reg = 0; Reg < ds248xREG_NUM; ds248xReportRegister(psDS248X, Reg++));
+	printf("\n") ;
+}
+
+/**
+ * Report decoded status of all devices & registers
+ */
+void ds248xReportAll(void) {
+	for (int i = 0; i < ds248xCount; ds248xReport(&psaDS248X[i++]));
+}
+
 int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 	int iRV = 1 ;
 	if (psDS248X->Rptr == ds248xREG_STAT) {		// STATus register
@@ -360,15 +376,6 @@ void ds248xBusRelease(ds248x_t * psDS248X) {
 #if (d248xAUTO_LOCK == 2)
 	xRtosSemaphoreGive(&psDS248X->mux) ;
 #endif
-}
-
-/**
- * ds248xReport() - report decoded status of a specific device
- */
-void ds248xReport(ds248x_t * psDS248X, bool Refresh) {
-	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
-	for (int Reg = 0; Reg < ds248xREG_NUM; ds248xReportRegister(psDS248X, Reg++, Refresh)) ;
-	printfx("\n") ;
 }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
