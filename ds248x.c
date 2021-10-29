@@ -36,6 +36,13 @@
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
+// ######################################## Build macros ###########################################
+
+#define	ds248xLOCK_DIS				0
+#define	ds248xLOCK_IO				1					// un/locked on I2C access level
+#define	ds248xLOCK_BUS				2					// un/locked on Bus select level
+#define	ds248xLOCK					ds248xLOCK_DIS
+
 // ##################################### Local structures ##########################################
 
 typedef union __attribute__((packed)) {
