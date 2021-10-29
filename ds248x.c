@@ -95,6 +95,10 @@ static const uint16_t Rwpu[16]	= { 500, 500, 500, 500, 500, 500, 1000, 1000, 100
 uint8_t ds248xCount	= 0;
 ds248x_t * psaDS248X = NULL;
 
+// ##################################### Forward declarations ######################################
+
+int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t uSdly);
+
 // #################################### DS248x debug/reporting #####################################
 
 int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {

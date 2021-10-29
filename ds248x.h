@@ -10,13 +10,6 @@
 extern "C" {
 #endif
 
-// ######################################## Build macros ###########################################
-
-#define	d248xAUTO_LOCK_DIS			0
-#define	d248xAUTO_LOCK_IO			1					// un/locked on I2C access level
-#define	d248xAUTO_LOCK_BUS			2					// un/locked on Bus select level
-#define	d248xAUTO_LOCK				d248xAUTO_LOCK_BUS
-
 // ################################### DS248X 1-Wire Commands ######################################
 
 #define ds248xCMD_DRST   			0xF0				// Device Reset (525nS)
@@ -122,13 +115,13 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	uint8_t		Lo		: 4 ;
 	uint8_t		Hi		: 4 ;
 	uint8_t		Sp2		: 4 ;
-#if	(!defined(NDEBUG)) || defined(DEBUG)
+#if		(configPRODUCTION == 0)
 	uint8_t		PrvStat[8] ;					// previous STAT reg
 	uint8_t		PrvConf[8] ;
 #endif
 } ds248x_t ;
-#if		(!defined(NDEBUG)) || defined(DEBUG)
 	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 36) ;
+#if		(configPRODUCTION == 0)
 #else
 	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 20) ;
 #endif
