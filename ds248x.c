@@ -363,6 +363,9 @@ int	ds248xWriteConfig(ds248x_t * psDS248X) {
  */
 int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 	int iRV = 1;
+#if (ds248xLOCK == ds248xLOCK_BUS)
+	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
+#endif
 	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800) && (psDS248X->CurChan != Bus))	{					// optimise to avoid unnecessary IO
 		/* Channel Select (Case A)
 		 *	S AD,0 [A] CHSL [A] CC [A] Sr AD,1 [A] [RR] A\ P
@@ -376,9 +379,11 @@ int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 		IF_SYSTIMER_START(debugTIMING, stDS248xIO);
 		iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0);
 		IF_SYSTIMER_STOP(debugTIMING, stDS248xIO);
-#if (ds248xLOCK == ds248xLOCK_BUS)
 	}
-	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY) ;
+#if (ds248xLOCK == ds248xLOCK_BUS)
+	if (iRV == 0) {
+		xRtosSemaphoreGive(&psDS248X->mux);	// error, release...
+	}
 #endif
 	return iRV;
 }
