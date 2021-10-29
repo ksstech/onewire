@@ -40,27 +40,27 @@
 
 typedef union __attribute__((packed)) {
 	struct {
-/*LSB*/	uint8_t		OWB		: 1 ;					// 1-Wire Busy
-		uint8_t		PPD		: 1 ;					// Presence Pulse Detected
-		uint8_t		SD		: 1 ;
-		uint8_t		LL		: 1 ;					// Link Level
-		uint8_t		RST		: 1 ;					// ReSeT
-		uint8_t		SBR		: 1 ;					// Single Bit Read
-		uint8_t		TSB		: 1 ;					//
-/*MSB*/	uint8_t		DIR		: 1 ;					// DIRection
+/*LSB*/	uint8_t	OWB	: 1 ;			// 1-Wire Busy
+		uint8_t	PPD	: 1 ;			// Presence Pulse Detected
+		uint8_t	SD	: 1 ;
+		uint8_t	LL	: 1 ;			// Link Level
+		uint8_t	RST	: 1 ;			// ReSeT
+		uint8_t	SBR	: 1 ;			// Single Bit Read
+		uint8_t	TSB	: 1 ;			//
+/*MSB*/	uint8_t	DIR	: 1 ;			// DIRection
 	} ;
-	uint8_t		STAT ;
+	uint8_t	STAT ;
 } ds248x_stat_t ;
 
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
-/*LSB*/	uint8_t		APU		: 1 ;			// Active Pull Up
-		uint8_t		PDN		: 1 ;			// Pull Down (DS2484 only)
-		uint8_t		SPU		: 1 ;			// Strong Pull Up
-		uint8_t		OWS		: 1 ;			// 1-Wire Speed
-/*MSB*/	uint8_t		RES1	: 4 ;
+/*LSB*/	uint8_t	APU	: 1 ;			// Active Pull Up
+		uint8_t	PDN	: 1 ;			// Pull Down (DS2484 only)
+		uint8_t	SPU	: 1 ;			// Strong Pull Up
+		uint8_t	OWS	: 1 ;			// 1-Wire Speed
+/*MSB*/	uint8_t	RES	: 4 ;
 	} ;
-	uint8_t		Rconf ;
+	uint8_t	Rconf ;
 } ds248x_conf_t ;
 
 // ###################################### Local variables ##########################################
@@ -86,7 +86,7 @@ ds248x_t * psaDS248X = NULL;
 // ################################ Local ONLY utility functions ###################################
 
 int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
-	SL_ERR("Dev=%d Ch=%d %s error", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess) ;
+	SL_ERR("Dev=%d  Ch=%d  %s error", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess) ;
 	ds248xReset(psDS248X) ;
 	return 0 ;
 }
