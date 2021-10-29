@@ -204,17 +204,10 @@ int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	return erSCRIPT_INV_VALUE ;
 }
 
-int	ds18x20ConfigMode (struct rule_t * psR) {
 	if (psaDS18X20 == NULL) { SET_ERRINFO("No DS18x20 enumerated"); return erSCRIPT_INV_OPERATION; }
+int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	uint8_t	AI = psR->ActIdx ;
-	int EI	= psR->actPar0[AI] ;						// get sensor epURI
-	int Xmax = table_work[EI].var.def.cv.vc ;
-	int Xcur = psR->actPar1[AI]; 						// get # of selected end-point(s)
-	if (Xcur == 255) Xcur = 0;							// full range requested?, start from 0
-	else if (Xcur >= Xmax) { SET_ERRINFO("Invalid EP Index"); return erSCRIPT_INV_INDEX; }
-	else Xmax = Xcur ;									// only do the specific endpoint
-
 	uint32_t lo	= psR->para.x32[AI][0].u32;
 	uint32_t hi	= psR->para.x32[AI][1].u32;
 	uint32_t res = psR->para.x32[AI][2].u32;
