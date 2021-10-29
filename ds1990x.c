@@ -59,8 +59,8 @@ int	OWP_DS1990ScanCB(flagmask_t sFM, owdi_t * psOW) {
 	uint8_t LogChan = OWP_BusP2L(psOW);
 	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan);
 	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) &&
-		(NowRead-psOW_CI->LastRead) <= ioB4GET(ioDS1990RdDly)) {
-		IF_PRINT(debugTRACK && ioB1GET(ioDS1990x), "Tag repeat %ds\n", ioB4GET(ioDS1990RdDly)) ;
+		(NowRead-psOW_CI->LastRead) <= ioB4GET(ioDS1990Dly)) {
+		IF_PRINT(debugTRACK && ioB1GET(ioDS1990x), "Tag repeat %ds\n", ioB4GET(ioDS1990Dly)) ;
 		return erSUCCESS ;
 	}
 	psOW_CI->LastROM.Value	= psOW->ROM.Value ;
