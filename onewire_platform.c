@@ -283,7 +283,7 @@ int	OWP_Config(void) {
 
 void OWP_Report(void) {
 #if 	(halHAS_DS248X > 0)
-	ds248xReportAll(1) ;
+	ds248xReportAll() ;
 #endif
 #if 	(halHAS_DS18X20 > 0)
 	ds18x20ReportAll() ;
