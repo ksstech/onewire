@@ -293,9 +293,12 @@ int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSiz
 	#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0) ;
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B,
-			pTxBuf, TxSize,
-			&psDS248X->RegX[psDS248X->Rptr], 1,
-			(i2cq_p1_t) uSdly, (i2cq_p2_t) NULL) ;
+			pTxBuf,
+			TxSize,
+			&psDS248X->RegX[psDS248X->Rptr],
+			(psDS248X->Rptr == ds248xREG_PADJ) ? SO_MEM(ds248x_t, Rpadj) : 1,
+			(i2cq_p1_t) uSdly,
+			(i2cq_p2_t) NULL) ;
 	#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreGive(&psDS248X->mux);
 	SystemFlag &= ~sysFLAG_LOCK;
@@ -328,8 +331,8 @@ int ds248xReset(ds248x_t * psDS248X) {
 	psDS248X->Rconf		= 0 ;							// all bits cleared (default) config
 	psDS248X->CurChan	= 0 ;
 	psDS248X->Rchan		= ds248x_V2N[0] ;				// DS2482-800 specific
-	psDS248X->Rpadj		= 0 ;							// DS2484 specific
-	return psDS248X->RST ;
+	memset(psDS248X->Rpadj, 0, SO_MEM(ds248x_t, Rpadj));// DS2484 specific
+	return psDS248X->RST;
 }
 
 /**
@@ -420,7 +423,7 @@ int	ds248xIdentify(i2c_di_t * psI2C_DI) {
 	if (ds248xReset(&sDS248X) == 1) {
 		psI2C_DI->Type = i2cDEV_DS2484 ;
 		int iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ) ;
-		if (iRV == 1 &&	sDS248X.VAL == 0b00000110) {	// PADJ=OK & PAR=000 & OD=0
+		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) {	// PADJ=OK & PAR=000 & OD=0
 			psI2C_DI->DevIdx = ds248xCount++ ;		// valid DS2484
 		} else {
 			psI2C_DI->Type = i2cDEV_DS2482_800 ;		// assume -800 there
