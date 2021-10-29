@@ -96,16 +96,9 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 				} ;
 				uint8_t		Rconf ;
 			} ;
-			union {
-				struct __attribute__((packed)) {
-			/*LSB*/	uint8_t		VAL		: 4 ;			// PARameter VALue
-					uint8_t		OD		: 1 ;			// OverDrive control
-			/*MSB*/	uint8_t		PAR		: 3 ;			// PARameter selector
-				} ;
-				uint8_t		Rpadj ;
-			} ;
-		} ;
-		uint8_t			RegX[5] ;
+			uint8_t Rpadj[5];
+		};
+		uint8_t RegX[9];			// 4 + Rpadj[5]
 	} ;
 	uint8_t		CurChan	: 3 ;					// 0 -> 7
 	uint8_t		Rptr	: 3 ;					// 0 -> 4
@@ -120,10 +113,10 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	uint8_t		PrvConf[8] ;
 #endif
 } ds248x_t ;
-	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 36) ;
 #if		(configPRODUCTION == 0)
+	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 40) ;
 #else
-	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 20) ;
+	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 24) ;
 #endif
 
 // #################################### Public Data structures #####################################
