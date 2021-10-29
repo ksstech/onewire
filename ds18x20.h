@@ -69,7 +69,7 @@ void ds18x20ReportAll(void) ;
 // ##################################### I2C Task support ##########################################
 
 struct rule_t ;
-int	ds18x20ConfigMode (struct rule_t * psRule);
+int	ds18x20ConfigMode (struct rule_t *, int Xcur, int Xmax);
 int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW);
 int	ds18x20Enumerate(void);
 
