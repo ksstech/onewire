@@ -126,6 +126,64 @@ int ds248xReportStatus(uint8_t Val1, uint8_t Val2) {
 	return iRV;
 }
 
+int ds248xReportConfig(uint8_t Val1, uint8_t Val2) {
+	const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" } ;
+	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x0000000F, ConfNames) ;
+	int iRV = printf("%s\n", pcBuf);
+	vRtosFree(pcBuf);
+	return iRV;
+}
+
+/**
+ * Display register contents, decode status & configuration
+ */
+int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
+	int iRV = 0, Chan;
+	switch (Reg) {
+	case ds248xREG_STAT:
+		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
+			iRV += printf("STAT(0-%u)=0x%02X  ", i, psDS248X->PrvStat[i]);
+			iRV += ds248xReportStatus(0, psDS248X->PrvStat[i]);
+		}
+		break ;
+
+	case ds248xREG_DATA:
+		iRV += printf("DATA(1)=0x%02X (Last read)\n", psDS248X->Rdata) ;
+		break ;
+
+	case ds248xREG_CHAN:
+		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800) break;
+		// Channel, start by finding the matching Channel #
+		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
+		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]) ;
+		iRV = printf("CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
+		break ;
+
+	case ds248xREG_CONF:
+		iRV += printf("CONF(3)=0x%02X  ", psDS248X->Rconf);
+		iRV += ds248xReportConfig(0, psDS248X->Rconf);
+		break ;
+
+	case ds248xREG_PADJ:
+		if (psDS248X->psI2C->Type != i2cDEV_DS2484) break;
+		ds248xReadRegister(psDS248X, Reg);
+		ds248x_padj_t sPadj;
+		sPadj.RadjX = psDS248X->Rpadj[0];
+		iRV += printf("PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
+				sPadj.OD ? '1' : '0', Trstl[sPadj.VAL] * (sPadj.OD ? 1 : 10));
+		sPadj.RadjX = psDS248X->Rpadj[1];
+		iRV += printf(" | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
+		sPadj.RadjX = psDS248X->Rpadj[2];
+		iRV += printf(" | tWOL=%.1fuS", sPadj.OD ? (double) Twol1[sPadj.VAL] / 10.0 : (double) Twol0[sPadj.VAL]);
+		sPadj.RadjX = psDS248X->Rpadj[3];
+		iRV += printf(" | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
+		sPadj.RadjX = psDS248X->Rpadj[4];
+		iRV += printf(" | rWPU=%f ohm\n", (double) Rwpu[sPadj.VAL]);
+		break ;
+	}
+	return iRV ;
+}
+
 int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 	int iRV = 1 ;
 	if (psDS248X->Rptr == ds248xREG_STAT) {		// STATus register
@@ -302,69 +360,6 @@ void ds248xBusRelease(ds248x_t * psDS248X) {
 #if (d248xAUTO_LOCK == 2)
 	xRtosSemaphoreGive(&psDS248X->mux) ;
 #endif
-}
-
-/**
- * Display register contents, decode status & configuration
- */
-int	ds248xReportRegister(ds248x_t * psDS248X, int Reg, bool Refresh) {
-	int iRV = 0 ;
-	int	Chan ;
-	if (Refresh) ds248xBusSelect(psDS248X, psDS248X->CurChan) ;
-	switch (Reg) {
-	case ds248xREG_STAT:
-		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) break;
-	#if	(!defined(NDEBUG)) || defined(DEBUG)
-		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i)
-			iRV += ds248xReportStatus(i, (ds248x_stat_t) psDS248X->PrvStat[i]);
-	#else
-		iRV += ds248xReportStatus(0, (ds248x_stat_t) psDS248X->Rstat) ;
-	#endif
-		break ;
-
-	case ds248xREG_DATA:
-		iRV += printfx("DATA(1)=0x%02X (Last read)\n", psDS248X->Rdata) ;
-		break ;
-
-	case ds248xREG_CHAN:
-		if ((psDS248X->psI2C->Type != i2cDEV_DS2482_800)
-		|| (Refresh && ds248xReadRegister(psDS248X, Reg) == 0)) break;
-		// Channel, start by finding the matching Channel #
-		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
-		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]) ;
-		iRV = printfx("CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
-		break ;
-
-	case ds248xREG_CONF:
-		if (Refresh && ds248xReadRegister(psDS248X, Reg) == 0) break;
-		iRV += printfx("CONF(3)=0x%02X  1WS=%c  SPU=%c  PDN=%c  APU=%c\n",
-				psDS248X->Rconf,
-				psDS248X->OWS	? '1' : '0',
-				psDS248X->SPU	? '1' : '0',
-				psDS248X->PDN	? '1' : '0',
-				psDS248X->APU	? '1' : '0') ;
-		break ;
-
-	case ds248xREG_PADJ:
-		if ((Refresh == 0)
-		|| (psDS248X->psI2C->Type != i2cDEV_DS2484)
-		|| (ds248xReadRegister(psDS248X, Reg) == 0)) break;
-		iRV += printfx("PADJ=0x%02X  OD=%c | tRSTL=%duS | tMSP=", psDS248X->Rpadj,
-				psDS248X->OD ? '1' : '0', Trstl[psDS248X->VAL] * (psDS248X->OD ? 1 : 10)) ;
-		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx(psDS248X->OD ? "%duS" : "%.1fuS",
-				psDS248X->OD ? (float) Tmsp1[psDS248X->VAL] / 10.0 : Tmsp0[psDS248X->VAL]) ;
-		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx(psDS248X->OD ? " | tWOL=%duS" : " | tWOL=%.1fuS",
-				psDS248X->OD ? (float) Twol1[psDS248X->VAL] / 10.0 : Twol0[psDS248X->VAL]) ;
-		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx(" | tREC0=%.2fuS", (float) Trec0[psDS248X->VAL] / 100.0) ;
-		ds248xI2C_Read(psDS248X) ;
-		iRV += printfx(" | rWPU=%f ohm\n", (float) Rwpu[psDS248X->VAL]) ;
-		break ;
-	}
-	if (Refresh) ds248xBusRelease(psDS248X) ;
-	return iRV ;
 }
 
 /**
