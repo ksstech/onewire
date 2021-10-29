@@ -323,7 +323,7 @@ int	ds18x20Enumerate(void) {
 	psEWP->var.def.cv.pntr = 1;
 	psEWP->var.def.cv.vf = vfFXX ;
 	psEWP->var.def.cv.vs = vs32B ;
-	psEWP->var.def.cv.ve = 1;
+	psEWP->var.def.cv.ve = 1;							// Enumerated type
 	psEWP->var.def.cv.vc = Fam10_28Count ;
 	psEWP->var.val.px.pv = (void *) &sDS18X20Func ;
 	psEWP->Tsns	= psEWP->Rsns = ds18x20T_SNS_NORM;
@@ -340,7 +340,8 @@ int	ds18x20Enumerate(void) {
 		iRV = OWP_Scan(OWFAMILY_28, ds18x20EnumerateCB) ;
 		if (iRV > 0) ds18x20NumDev += iRV ;
 	}
-	if (ds18x20NumDev == Fam10_28Count) iRV = ds18x20NumDev ;
+	if (ds18x20NumDev == Fam10_28Count)
+		iRV = ds18x20NumDev ;
 	else {
 		SL_ERR("Only %d of %d enumerated!!!", ds18x20NumDev, Fam10_28Count) ;
 		iRV = erFAILURE ;
@@ -390,10 +391,11 @@ int	ds18x20StartAllInOne(epw_t * psEWP) {
 				OWP_BusRelease(&psDS18X20->sOW) ;		// keep locked for period of delay
 			}
 		}
-		if ((OWP_BusSelect(&psDS18X20->sOW) == 1) && (ds18x20ReadSP(psDS18X20, 2) == 1)) {
+		if (OWP_BusSelect(&psDS18X20->sOW) && ds18x20ReadSP(psDS18X20, 2)) {
 			ds18x20ConvertTemperature(psDS18X20) ;
 			OWP_BusRelease(&psDS18X20->sOW) ;			// TODO maybe simplify Release ?
-		} else SL_ERR("Read/Convert failed") ;
+		} else
+			SL_ERR("Read/Convert failed") ;
 	}
 	return erSUCCESS ;
 }
@@ -406,7 +408,7 @@ int	ds18x20StepTwoBusConvert(ds18x20_t * psDS18X20, int i) {
 //		IF_PRINT(debugOWP, "Start Dev=%d Bus=%d\n", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus);
 		return 1 ;
 	}
-	SL_ERR("Failed to start convert Dev=%d Bus=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus) ;
+	SL_ERR("Failed to start convert Dev=%d Ch=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus) ;
 	return 0 ;
 }
 
