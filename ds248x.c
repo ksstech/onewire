@@ -236,13 +236,13 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 		Value &= 0x0F ;
 		if (Value != psDS248X->Rconf) {
 			ds248x_conf_t sConf = { .Rconf = Value } ;
-			char caBuf[18] ;
+			char caBuf[36];
 			char * pcMess	= (psDS248X->OWS != sConf.OWS) ? "OWS"
 							: (psDS248X->SPU != sConf.SPU) ? "SPU"
 							: ((psDS248X->psI2C->Type == i2cDEV_DS2484) && (psDS248X->PDN != sConf.PDN)) ? "PDN"
 							: (psDS248X->APU != sConf.APU) ? "APU" : "???" ;
-			snprintfx(caBuf, sizeof(caBuf), "W=x%02X R=x%02X (%s)", Value, psDS248X->Rconf, pcMess) ;
-			iRV = ds248xLogError(psDS248X, caBuf) ;
+			snprintf(caBuf, sizeof(caBuf), "W=x%.2x  R=x%.2x (%s)", Value, psDS248X->Rconf, pcMess);
+			iRV = ds248xLogError(psDS248X, caBuf);
 		} else {
 			IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 			if (ioB1GET(ioDS248Xstat) && (psDS248X->Rconf != psDS248X->PrvConf[psDS248X->CurChan])) {
