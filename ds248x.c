@@ -217,16 +217,16 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 		if (psDS248X->OWB) {					// Check for error in case not blocking in I2C task
 			iRV = ds248xLogError(psDS248X, "OWB") ;
 		} else {
-			const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
-			const uint8_t DS248Xmask[4] = { 0b00000111, 0b00011111, 0b00111111, 0b11111111 } ;
-			uint8_t Mask = DS248Xmask[ioB2GET(ioDS248Xdbg)] ;
-			uint8_t StatX = psDS248X->PrvStat[psDS248X->CurChan] ;
-			if (ioB1GET(ioDS248Xstat) && ((psDS248X->Rstat & Mask) != (StatX & Mask))) {
-				char * pcBuf = pcBitMapDecodeChanges(StatX, psDS248X->Rstat, 0x000000FF, StatNames) ;
-				printfx("D=%d C=%u x%02X->x%02X %s\n", psDS248X->psI2C->DevIdx,
-					psDS248X->CurChan, StatX, psDS248X->Rstat, pcBuf) ;
-				vRtosFree(pcBuf) ;
 			#if	(configPRODUCTION == 0)
+			if (ioB1GET(ioDS248Xcheck)) {
+				const uint8_t DS248Xmask[4] = { 0b00000111, 0b00011111, 0b00111111, 0b11111111 };
+				uint8_t Mask = DS248Xmask[ioB2GET(ioDS248Xdbg)];
+				uint8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
+				if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
+					printf("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
+						psDS248X->CurChan, StatX, psDS248X->Rstat);
+					ds248xReportStatus(StatX, psDS248X->Rstat);
+				}
 			}
 			psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat ;
 			#endif
