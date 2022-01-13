@@ -420,10 +420,11 @@ void ds248xBusRelease(ds248x_t * psDS248X) {
  * @return	erSUCCESS if supported device was detected, if not erFAILURE
  */
 int	ds248xIdentify(i2c_di_t * psI2C_DI) {
-	ds248x_t sDS248X = { 0 } ;							// temporary device structure
-	psI2C_DI->Delay	= pdMS_TO_TICKS(10) ;				// default device timeout
-	psI2C_DI->Test	= 1 ;								// and halI2C modules
-	sDS248X.psI2C	= psI2C_DI ;						// link to I2C device discovered
+	ds248x_t sDS248X = { 0 } ;		// temporary device structure
+	psI2C_DI->Delay	= 10;
+	psI2C_DI->TOuS = 400;			// Max 13000 (13mS)
+	psI2C_DI->Test	= 1;			// and halI2C modules
+	sDS248X.psI2C	= psI2C_DI;		// link to I2C device discovered
 	if (ds248xReset(&sDS248X) == 1) {
 		psI2C_DI->Type = i2cDEV_DS2484 ;
 		int iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ) ;
