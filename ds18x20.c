@@ -404,7 +404,7 @@ int	ds18x20StepTwoBusConvert(ds18x20_t * psDS18X20, int i) {
 		OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, owADDR_SKIP, 1);
 		vTimerSetTimerID(psaDS248X[psDS18X20->sOW.DevNum].tmr, (void *) i);
 		xTimerStart(psaDS248X[psDS18X20->sOW.DevNum].tmr, ds18x20CalcDelay(psDS18X20, 1));
-		SL_DBG("Start Dev=%d Ch=%d\n", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus);
+		SL_DBG("Start Dev=%d Ch=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus);
 		return 1 ;
 	}
 	SL_ERR("Failed to start convert Dev=%d Ch=%d", psDS18X20->sOW.DevNum, psDS18X20->sOW.PhyBus) ;
