@@ -274,7 +274,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 int	ds248xI2C_Read(ds248x_t * psDS248X) {
 	#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
-	SystemFlag |= sysFLAG_LOCK;
+	setSYSFLAGS(sfDS248X);
 	#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0) ;
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cR_B,
@@ -282,8 +282,8 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
 			&psDS248X->RegX[psDS248X->Rptr], SO_MEM(ds248x_t, Rconf),
 			(i2cq_p1_t) NULL, (i2cq_p2_t) NULL) ;
 	#if (ds248xLOCK == ds248xLOCK_IO)
+	clrSYSFLAGS(sfDS248X);
 	xRtosSemaphoreGive(&psDS248X->mux);
-	SystemFlag &= ~sysFLAG_LOCK;
 	#endif
 	if (iRV == erSUCCESS)
 		return ds248xCheckRead(psDS248X, 0xFF) ;
@@ -293,7 +293,7 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
 int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t uSdly) {
 	#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
-	SystemFlag |= sysFLAG_LOCK;
+	setSYSFLAGS(sfDS248X);
 	#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0) ;
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B,
@@ -304,8 +304,8 @@ int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSiz
 			(i2cq_p1_t) uSdly,
 			(i2cq_p2_t) NULL) ;
 	#if (ds248xLOCK == ds248xLOCK_IO)
+	clrSYSFLAGS(sfDS248X);
 	xRtosSemaphoreGive(&psDS248X->mux);
-	SystemFlag &= ~sysFLAG_LOCK;
 	#endif
 	if (iRV == erSUCCESS) return ds248xCheckRead(psDS248X, (TxSize > 1) ? pTxBuf[1] : 0xFF) ;
 	return 0 ;
@@ -381,7 +381,7 @@ int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 	int iRV = 1;
 #if (ds248xLOCK == ds248xLOCK_BUS)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
-	SystemFlag |= sysFLAG_LOCK;
+	setSYSFLAGS(sfDS248X);
 #endif
 	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800) && (psDS248X->CurChan != Bus))	{					// optimise to avoid unnecessary IO
 		/* Channel Select (Case A)
@@ -399,8 +399,8 @@ int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 	}
 #if (ds248xLOCK == ds248xLOCK_BUS)
 	if (iRV == 0) {
+		clrSYSFLAGS(sfDS248X);
 		xRtosSemaphoreGive(&psDS248X->mux);	// error, release...
-		SystemFlag &= ~sysFLAG_LOCK;
 	}
 #endif
 	return iRV;
@@ -408,8 +408,8 @@ int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 
 void ds248xBusRelease(ds248x_t * psDS248X) {
 #if (ds248xLOCK == ds248xLOCK_BUS)
+	clrSYSFLAGS(sfDS248X);
 	xRtosSemaphoreGive(&psDS248X->mux) ;
-	SystemFlag &= ~sysFLAG_LOCK;
 #endif
 }
 
