@@ -67,7 +67,10 @@ int	OWP_DS1990ScanCB(flagmask_t sFM, owdi_t * psOW) {
 	psOW_CI->LastRead		= NowRead ;
 	xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits) ;
 	portYIELD() ;
-	if (debugTRACK && ioB1GET(ioDS1990x)) { sFM.bRT = 1; sFM.bNL = 1; OWP_Print1W_CB(sFM, psOW); }
+	if (debugTRACK && ioB1GET(ioDS1990x)) {
+		sFM.bRT = 1; sFM.bNL = 1;
+		OWP_Print1W_CB(sFM, psOW);
+	}
 	return erSUCCESS ;
 }
 
