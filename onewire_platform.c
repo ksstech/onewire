@@ -114,8 +114,9 @@ int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 
 int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
 	int iRV = OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
-	iRV += printfx(" Log=%d Dev=%d Phy=%d PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
-	if (FlagMask.bNL) iRV += printfx("\n") ;
+	iRV += printfx("  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
+	if (FlagMask.bNL)
+		iRV += printfx("\n") ;
 	return iRV ;
 }
 
