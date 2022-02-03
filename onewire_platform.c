@@ -189,21 +189,26 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 				iRV = OWFirst(&sOW, 0) ;
 			}
 			while (iRV) {
-				IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &sOW) ;
+				flagmask_t sFM;
+				sFM.u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus);
+				IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, sFM, &sOW) ;
 				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 				IF_myASSERT(debugRESULT, iRV == 1) ;
-				flagmask_t sFM;
 				sFM.uCount = uCount;
 				iRV = Handler(sFM, &sOW) ;
-				if (iRV < erSUCCESS) break ;
-				if (iRV > 0) ++uCount ;
+				if (iRV < erSUCCESS)
+					break ;
+				if (iRV > 0)
+					++uCount ;
 				iRV = OWNext(&sOW, 0) ;						// try to find next device (if any)
 			}
 			OWP_BusRelease(&sOW) ;
-			if (iRV < erSUCCESS) break ;
+			if (iRV < erSUCCESS)
+				break ;
 		}
 	}
-	if (iRV < erSUCCESS) SL_ERR("Handler error=%d", iRV) ;
+	if (iRV < erSUCCESS)
+		SL_ERR("Handler error=%d", iRV) ;
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
@@ -225,16 +230,21 @@ int	OWP_Scan2(uint8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), voi
 			}
 		} else iRV = OWFirst(&sOW, 0) ;
 		while (iRV) {
-			IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &sOW) ;
+			flagmask_t sFM;
+			sFM.u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus);
+			IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, sFM, &sOW) ;
 			iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
 			iRV = Handler((flagmask_t) uCount, pVoid, &sOW) ;
-			if (iRV < erSUCCESS)  break ;
-			if (iRV > 0) ++uCount ;
+			if (iRV < erSUCCESS)
+				break ;
+			if (iRV > 0)
+				++uCount ;
 			iRV = OWNext(&sOW, 0) ;						// try to find next device (if any)
 		}
 		OWP_BusRelease(&sOW) ;
-		if (iRV < erSUCCESS) break ;
+		if (iRV < erSUCCESS)
+			break ;
 	}
 	IF_SL_ERR(iRV < erSUCCESS, "Handler error=%d", iRV) ;
 	return iRV < erSUCCESS ? iRV : uCount ;
@@ -269,10 +279,12 @@ int	OWP_Config(void) {
 		memset(psaOWBI, 0, OWP_NumBus * sizeof(owbi_t)) ;
 		// enumerate any/all physical devices (possibly) (permanently) attached to individual channel(s)
 		int	iRV = OWP_Scan(0, OWP_Count_CB) ;
-		if (iRV > 0) OWP_NumDev += iRV ;
+		if (iRV > 0)
+			OWP_NumDev += iRV ;
 
 #if		(halHAS_DS18X20 > 0)
-		if (Fam10Count || Fam28Count) ds18x20Enumerate(); // enumerate & config individually
+		if (Fam10Count || Fam28Count)
+			ds18x20Enumerate(); 	// enumerate & config individually
 #endif
 
 #if		(halHAS_DS1990X > 0)
@@ -289,6 +301,9 @@ void OWP_Report(void) {
 #if 	(halHAS_DS18X20 > 0)
 	ds18x20ReportAll() ;
 #endif
-	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus)
-		OWP_PrintChan_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,LogBus), &psaOWBI[LogBus]) ;
+	flagmask_t sFM;
+	for (uint32_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
+		sFM.u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus);
+		OWP_PrintChan_CB(sFM, &psaOWBI[LogBus]) ;
+	}
 }

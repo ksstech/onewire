@@ -135,7 +135,7 @@ int	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 
 int ds248xReportStatus(uint8_t Val1, uint8_t Val2) {
 	const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
-	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x000000FF, StatNames) ;
+	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x000000FF, StatNames, 1) ;
 	int iRV = printf("%s\n", pcBuf);
 	vRtosFree(pcBuf);
 	return iRV;
@@ -143,7 +143,7 @@ int ds248xReportStatus(uint8_t Val1, uint8_t Val2) {
 
 int ds248xReportConfig(uint8_t Val1, uint8_t Val2) {
 	const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" } ;
-	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x0000000F, ConfNames) ;
+	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x0000000F, ConfNames, 1) ;
 	int iRV = printf("%s\n", pcBuf);
 	vRtosFree(pcBuf);
 	return iRV;

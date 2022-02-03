@@ -170,8 +170,10 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const uint8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
 	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
-	if (debugTRACK && ioB1GET(ioDS18x20))
-		ds18x20Print_CB(makeMASKFLAG(0,1,0,0,0,0,0,0,0,psDS18X20->Idx), psDS18X20);
+	if (debugTRACK && ioB1GET(ioDS18x20)) {
+		flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
+		ds18x20Print_CB(sFM, psDS18X20);
+	}
 	return 1;
 }
 
@@ -242,8 +244,10 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 // ######################################### Reporting #############################################
 
 void ds18x20ReportAll(void) {
-	for (int i = 0; i < Fam10_28Count; ++i)
-		ds18x20Print_CB(makeMASKFLAG(0,1,1,1,1,1,1,1,1,i), &psaDS18X20[i]) ;
+	for (int i = 0; i < Fam10_28Count; ++i) {
+		flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i) };
+		ds18x20Print_CB(sFM, &psaDS18X20[i]) ;
+	}
 }
 
 // #################################### 1W Platform support ########################################
