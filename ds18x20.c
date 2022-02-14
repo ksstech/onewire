@@ -241,15 +241,6 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	return iRV < erSUCCESS? iRV : iRVx;
 }
 
-// ######################################### Reporting #############################################
-
-void ds18x20ReportAll(void) {
-	for (int i = 0; i < Fam10_28Count; ++i) {
-		flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i) };
-		ds18x20Print_CB(sFM, &psaDS18X20[i]) ;
-	}
-}
-
 // #################################### 1W Platform support ########################################
 
 epw_t * ds18x20GetWork(int32_t x) ;
@@ -357,9 +348,10 @@ int	ds18x20Print_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	iRV += printfx(" Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
 		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9) ;
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) iRV += printfx(" Conf=x%02X %s",
-		psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "") ;
-	if (FlagMask.bNL) iRV += printfx("\n") ;
+	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
+		iRV += printfx(" Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK") ;
+	if (FlagMask.bNL)
+		iRV += printfx("\n") ;
 	return iRV ;
 }
 
@@ -451,4 +443,17 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 		}
 		// more sensors, same device and same bus
 	} while  (i < Fam10_28Count) ;
+}
+
+// ######################################### Reporting #############################################
+
+void ds18x20ReportAll(void) {
+	for (int i = 0; i < Fam10_28Count; ++i) {
+		if (i == 0)
+			printfx("\r# DS18x20 #\n");
+		flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i) };
+		ds18x20Print_CB(sFM, &psaDS18X20[i]) ;
+	}
+	if (Fam10_28Count)
+		printfx("\n");
 }

@@ -167,7 +167,8 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		break ;
 
 	case ds248xREG_CHAN:
-		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800) break;
+		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800)
+			break;
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
 		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]) ;
@@ -180,7 +181,8 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		break ;
 
 	case ds248xREG_PADJ:
-		if (psDS248X->psI2C->Type != i2cDEV_DS2484) break;
+		if (psDS248X->psI2C->Type != i2cDEV_DS2484)
+			break;
 		ds248xReadRegister(psDS248X, Reg);
 		ds248x_padj_t sPadj;
 		sPadj.RadjX = psDS248X->Rpadj[0];

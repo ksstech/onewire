@@ -122,10 +122,14 @@ int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
 
 int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
 	int iRV = printfx("OW ch=%d  ", FlagMask.uCount) ;
-	if (psCI->LastRead) iRV += printfx("%R  ", xTimeMakeTimestamp(psCI->LastRead, 0)) ;
-	if (psCI->LastROM.Family) iRV += OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
-	if (psCI->ds18any) iRV += printfx("  DS18B=%d  DS18S=%d", psCI->ds18b20, psCI->ds18s20) ;
-	if (FlagMask.bNL) iRV += printfx("\n") ;
+	if (psCI->LastRead)
+		iRV += printfx("%R  ", xTimeMakeTimestamp(psCI->LastRead, 0)) ;
+	if (psCI->LastROM.Family)
+		iRV += OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
+	if (psCI->ds18any)
+		iRV += printfx("  DS18B=%d  DS18S=%d", psCI->ds18b20, psCI->ds18s20) ;
+	if (FlagMask.bNL)
+		iRV += printfx("\n") ;
 	return iRV ;
 }
 
@@ -137,11 +141,11 @@ int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
  */
 int	OWP_Count_CB(flagmask_t FlagCount, owdi_t * psOW) {
 	switch (psOW->ROM.Family) {
-#if		(halHAS_DS1990X > 0)							// DS1990A/R, 2401/11 devices
+#if (halHAS_DS1990X > 0)								// DS1990A/R, 2401/11 devices
 	case OWFAMILY_01:	++Family01Count ;	return 1 ;
 #endif
 
-#if		(halHAS_DS18X20 > 0)							// DS18x20 Thermometers
+#if (halHAS_DS18X20 > 0)								// DS18x20 Thermometers
 	case OWFAMILY_10:	++Fam10Count ;		return 1 ;
 	case OWFAMILY_28:	++Fam28Count ;		return 1 ;
 #endif
@@ -301,9 +305,4 @@ void OWP_Report(void) {
 #if 	(halHAS_DS18X20 > 0)
 	ds18x20ReportAll() ;
 #endif
-	flagmask_t sFM;
-	for (uint32_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
-		sFM.u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus);
-		OWP_PrintChan_CB(sFM, &psaOWBI[LogBus]) ;
-	}
 }
