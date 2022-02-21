@@ -190,7 +190,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 		psDS18X20->Res = Res ;
 		return 1 ;										// changed, must write
 	}
-	ERR_RETURN("Invalid Family/Resolution", erSCRIPT_INV_VALUE);
+	ERR_RETURN("Invalid Family/Resolution", erINVALID_VALUE);
 }
 
 int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
@@ -201,12 +201,12 @@ int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 		psDS18X20->Thi = Hi ;
 		return 1 ;										// changed, must write
 	}
-	ERR_RETURN("Invalid Lo/Hi alarm limits", erSCRIPT_INV_VALUE);
+	ERR_RETURN("Invalid Lo/Hi alarm limits", erINVALID_VALUE);
 }
 
 int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	if (psaDS18X20 == NULL)
-		ERR_RETURN("No DS18x20 enumerated", erSCRIPT_INV_OPERATION);
+		ERR_RETURN("No DS18x20 enumerated", erINVALID_OPERATION);
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	int iRV = erFAILURE, iRVx = erFAILURE;
 	uint8_t	AI = psR->ActIdx ;
@@ -237,7 +237,7 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 			if (iRVx < erSUCCESS) break ;
 		} while (++Xcur < Xmax) ;
 	} else
-		ERR_INFO_MC("Invalid persist flag, not 0/1", erSCRIPT_INV_MODE);
+		ERR_INFO_MC("Invalid persist flag, not 0/1", erINVALID_MODE);
 	return iRV < erSUCCESS? iRV : iRVx;
 }
 
