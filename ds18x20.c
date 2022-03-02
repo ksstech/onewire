@@ -116,7 +116,7 @@ bool ds18x20CheckPower(ds18x20_t * psDS18X20) {
 int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) {
 	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_SP, owADDR_MATCH, 0) == 0) return 0 ;
 	OWReadBlock(&psDS18X20->sOW, psDS18X20->RegX, Len);
-	IF_TL(debugSPAD, "%'-B ", Len, psDS18X20->RegX);
+	IF_PL(debugSPAD, "%'-B ", Len, psDS18X20->RegX);
 	// If full SP read, verify CRC else terminate read
 	return (Len == SO_MEM(ds18x20_t, RegX))
 			? OWCheckCRC(psDS18X20->RegX, SO_MEM(ds18x20_t, RegX))
@@ -127,7 +127,7 @@ int	ds18x20WriteSP(ds18x20_t * psDS18X20) {
 	if (OWResetCommand(&psDS18X20->sOW, DS18X20_WRITE_SP, owADDR_MATCH, 0) == 0) return 0 ;
 	int Len = (psDS18X20->sOW.ROM.Family == OWFAMILY_28) ? 3 : 2 ;	// Thi, Tlo [+Conf]
 	OWWriteBlock(&psDS18X20->sOW, (uint8_t *) &psDS18X20->Thi, Len);
-	IF_TL(debugSPAD, "%'-B ", Len, psDS18X20->RegX);
+	IF_PL(debugSPAD, "%'-B ", Len, psDS18X20->RegX);
 	return 1 ;
 }
 
@@ -183,7 +183,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
 		Res -= 9 ;
 		uint8_t u8Res = (Res << 5) | 0x1F ;
-		IF_PRINT(debugTRACK && ioB1GET(ioMode), "SP Res x%02X->x%02X (%d->%d)\n",
+		IF_P(debugTRACK && ioB1GET(ioMode), "SP Res x%02X->x%02X (%d->%d)\n",
 				psDS18X20->fam28.Conf, u8Res, psDS18X20->Res, Res) ;
 		if (psDS18X20->fam28.Conf == u8Res) return 0;	// nothing changed
 		psDS18X20->fam28.Conf = u8Res;
