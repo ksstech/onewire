@@ -65,14 +65,14 @@ void OWP_BusL2P(owdi_t * psOW, uint8_t LogBus) {
 #if		(halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
-		IF_TL(debugMAPPING, "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
+		IF_PL(debugMAPPING, "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
 		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi, uint8_t)) {
 			psOW->DevNum = i;
 			psOW->PhyBus = LogBus - psDS248X->Lo;
-			IF_TL(debugMAPPING, " -> P=%d\n", psOW->PhyBus) ;
+			IF_PL(debugMAPPING, " -> P=%d\n", psOW->PhyBus) ;
 			return ;
 		}
-		IF_TL(debugMAPPING, "\n") ;
+		IF_PL(debugMAPPING, "\n") ;
 	}
 #endif
 	SL_ERR("Invalid Logical Ch=%d", LogBus) ;
@@ -185,7 +185,7 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 				iRV = OWSearch(&sOW, 0) ;
 				if (iRV > 0 && (sOW.ROM.Family != Family)) {
 					// Strictly speaking should never get here, iRV must be 0 if same family not found
-					IF_PRINT(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\n", Family, sOW.ROM.Family) ;
+					IF_P(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\n", Family, sOW.ROM.Family) ;
 					OWP_BusRelease(&sOW) ;
 					continue ;
 				}
@@ -228,7 +228,7 @@ int	OWP_Scan2(uint8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), voi
 			OWTargetSetup(&sOW, Family) ;
 			iRV = OWSearch(&sOW, 0) ;
 			if (iRV > 0 && (sOW.ROM.Family != Family)) {
-				IF_TL(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\n", Family, &sOW.ROM.Family) ;
+				IF_PL(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\n", Family, &sOW.ROM.Family) ;
 				OWP_BusRelease(&sOW) ;
 				continue ;
 			}
