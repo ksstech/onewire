@@ -195,7 +195,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 
 int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	if (INRANGE(-128, Lo, 127, int) && INRANGE(-128, Hi, 127, int)) {
-		IF_PRINT(debugTRACK && ioB1GET(ioMode), "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
+		IF_P(debugTRACK && ioB1GET(ioMode), "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
 		if (psDS18X20->Tlo == Lo && psDS18X20->Thi == Hi) return 0 ;
 		psDS18X20->Tlo = Lo ;
 		psDS18X20->Thi = Hi ;
@@ -214,7 +214,7 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	uint32_t hi	= psR->para.x32[AI][1].u32;
 	uint32_t res = psR->para.x32[AI][2].u32;
 	uint32_t wr	= psR->para.x32[AI][3].u32;
-	IF_PRINT(debugTRACK && ioB1GET(ioMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, Xmax, lo, hi, res, wr);
+	IF_P(debugTRACK && ioB1GET(ioMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, Xmax, lo, hi, res, wr);
 
 	if (wr == 0 || wr == 1) {							// if parameter omitted, do not persist
 		do {
