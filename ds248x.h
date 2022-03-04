@@ -1,11 +1,11 @@
 /*
- * Copyright 2020-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * Copyright 2020-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma		once
 
-#include	<stdint.h>
-
+#include <stdint.h>
+#include "hal_i2c.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
