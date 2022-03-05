@@ -136,7 +136,7 @@ int	ds248xReadRegister(ds248x_t * psDS248X, uint8_t Reg) {
 int ds248xReportStatus(uint8_t Val1, uint8_t Val2) {
 	const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
 	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x000000FF, StatNames, 1) ;
-	int iRV = printf("%s\n", pcBuf);
+	int iRV = P("%s\n", pcBuf);
 	vRtosFree(pcBuf);
 	return iRV;
 }
@@ -144,7 +144,7 @@ int ds248xReportStatus(uint8_t Val1, uint8_t Val2) {
 int ds248xReportConfig(uint8_t Val1, uint8_t Val2) {
 	const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" } ;
 	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x0000000F, ConfNames, 1) ;
-	int iRV = printf("%s\n", pcBuf);
+	int iRV = P("%s\n", pcBuf);
 	vRtosFree(pcBuf);
 	return iRV;
 }
@@ -157,13 +157,13 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 	switch (Reg) {
 	case ds248xREG_STAT:
 		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
-			iRV += printf("STAT(0-%u)=0x%02X  ", i, psDS248X->PrvStat[i]);
+			iRV += P("STAT(0-%u)=0x%02X  ", i, psDS248X->PrvStat[i]);
 			iRV += ds248xReportStatus(0, psDS248X->PrvStat[i]);
 		}
 		break ;
 
 	case ds248xREG_DATA:
-		iRV += printf("DATA(1)=0x%02X (Last read)\n", psDS248X->Rdata) ;
+		iRV += P("DATA(1)=0x%02X (Last read)\n", psDS248X->Rdata) ;
 		break ;
 
 	case ds248xREG_CHAN:
@@ -172,11 +172,11 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
 		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]) ;
-		iRV = printf("CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
+		iRV = P("CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
 		break ;
 
 	case ds248xREG_CONF:
-		iRV += printf("CONF(3)=0x%02X  ", psDS248X->Rconf);
+		iRV += P("CONF(3)=0x%02X  ", psDS248X->Rconf);
 		iRV += ds248xReportConfig(0, psDS248X->Rconf);
 		break ;
 
@@ -186,16 +186,16 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		ds248xReadRegister(psDS248X, Reg);
 		ds248x_padj_t sPadj;
 		sPadj.RadjX = psDS248X->Rpadj[0];
-		iRV += printf("PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
+		iRV += P("PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
 				sPadj.OD ? '1' : '0', Trstl[sPadj.VAL] * (sPadj.OD ? 1 : 10));
 		sPadj.RadjX = psDS248X->Rpadj[1];
-		iRV += printf(" | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
+		iRV += P(" | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
 		sPadj.RadjX = psDS248X->Rpadj[2];
-		iRV += printf(" | tWOL=%.1fuS", sPadj.OD ? (double) Twol1[sPadj.VAL] / 10.0 : (double) Twol0[sPadj.VAL]);
+		iRV += P(" | tWOL=%.1fuS", sPadj.OD ? (double) Twol1[sPadj.VAL] / 10.0 : (double) Twol0[sPadj.VAL]);
 		sPadj.RadjX = psDS248X->Rpadj[3];
-		iRV += printf(" | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
+		iRV += P(" | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
 		sPadj.RadjX = psDS248X->Rpadj[4];
-		iRV += printf(" | rWPU=%f ohm\n", (double) Rwpu[sPadj.VAL]);
+		iRV += P(" | rWPU=%f ohm\n", (double) Rwpu[sPadj.VAL]);
 		break ;
 	}
 	return iRV ;
@@ -207,7 +207,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 void ds248xReport(ds248x_t * psDS248X) {
 	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
 	for (int Reg = 0; Reg < ds248xREG_NUM; ds248xReportRegister(psDS248X, Reg++));
-	printf("\n") ;
+	P("\n") ;
 }
 
 /**
@@ -229,7 +229,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 				uint8_t Mask = DS248Xmask[ioB2GET(ioDS248Xdbg)];
 				uint8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
 				if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
-					printf("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
+					P("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
 						psDS248X->CurChan, StatX, psDS248X->Rstat);
 					ds248xReportStatus(StatX, psDS248X->Rstat);
 				}
@@ -254,7 +254,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 			if (ioB1GET(ioDS248Xcheck)) {
 				uint8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];
 				if (psDS248X->Rconf != ConfX) {
-					printf("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
+					P("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
 						psDS248X->CurChan, ConfX, psDS248X->Rconf);
 					ds248xReportConfig(ConfX, psDS248X->Rconf);
 				}
