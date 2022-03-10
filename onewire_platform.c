@@ -105,10 +105,13 @@ void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]) 
  */
 int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 	int iRV = 0 ;
-	if (FlagMask.bRT) iRV += printfx("%!.R: ", RunTime) ;
-	if (FlagMask.bCount) iRV += printfx("#%u ", FlagMask.uCount) ;
+	if (FlagMask.bRT)
+		iRV += printfx("%!.R: ", RunTime) ;
+	if (FlagMask.bCount)
+		iRV += printfx("#%u ", FlagMask.uCount) ;
 	iRV += printfx("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ;
-	if (FlagMask.bNL) iRV += printfx("\n") ;
+	if (FlagMask.bNL)
+		iRV += printfx("\n") ;
 	return iRV ;
 }
 
