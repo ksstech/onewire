@@ -156,10 +156,12 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 	int iRV = 0, Chan;
 	switch (Reg) {
 	case ds248xREG_STAT:
+		#if	(configPRODUCTION == 0)
 		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
 			iRV += P("STAT(0-%u)=0x%02X  ", i, psDS248X->PrvStat[i]);
 			iRV += ds248xReportStatus(0, psDS248X->PrvStat[i]);
 		}
+		#endif
 		break ;
 
 	case ds248xREG_DATA:
