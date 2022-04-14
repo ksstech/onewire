@@ -250,7 +250,8 @@ uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
 			if (fb_bit) shift_reg = shift_reg ^ 0x8c ;
 		}
 	}
-	if (shift_reg) SL_ERR("CRC=%x (%d) FAIL %'-+B\n", shift_reg, buflen, buflen, buf) ;
+	if (shift_reg)
+		SL_ERR("CRC=%x (%d) FAIL %`-+B", shift_reg, buflen, buflen, buf) ;
 	return shift_reg ? 0 : 1 ;
 }
 
