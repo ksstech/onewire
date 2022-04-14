@@ -189,7 +189,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		ds248x_padj_t sPadj;
 		sPadj.RadjX = psDS248X->Rpadj[0];
 		iRV += P("PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
-				sPadj.OD ? '1' : '0', Trstl[sPadj.VAL] * (sPadj.OD ? 1 : 10));
+				sPadj.OD ? CHR_1 : CHR_0, Trstl[sPadj.VAL] * (sPadj.OD ? 1 : 10));
 		sPadj.RadjX = psDS248X->Rpadj[1];
 		iRV += P(" | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
 		sPadj.RadjX = psDS248X->Rpadj[2];
