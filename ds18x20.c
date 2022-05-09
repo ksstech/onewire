@@ -216,28 +216,27 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	uint32_t wr	= psR->para.x32[AI][3].u32;
 	IF_P(debugTRACK && ioB1GET(ioMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, Xmax, lo, hi, res, wr);
 
-	if (wr == 0 || wr == 1) {							// if parameter omitted, do not persist
-		do {
-			ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
-			if (OWP_BusSelect(&psDS18X20->sOW) == 1) {
-				// Do resolution 1st since small range (9-12) a good test for valid parameter
-				iRV = ds18x20SetResolution(psDS18X20, res) ;
-				if (iRV > erFAILURE) {
-					iRVx = ds18x20SetAlarms(psDS18X20, lo, hi);
-					if (iRVx > erFAILURE) {
-						if (iRV == 1 || iRVx == 1) {	// 1 or both changed in scratchpad
-							iRV = ds18x20WriteSP(psDS18X20);
-							if (wr == 1)
-								ds18x20WriteEE(psDS18X20);
-						}
+	IF_RETURN_MX(wr != 0 && wr != 1, "Invalid persist flag, not 0/1", erINVALID_MODE);
+	do {
+		ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
+		if (OWP_BusSelect(&psDS18X20->sOW) == 1) {
+			// Do resolution 1st since small range (9-12) a good test for valid parameter
+			iRV = ds18x20SetResolution(psDS18X20, res) ;
+			if (iRV > erFAILURE) {
+				iRVx = ds18x20SetAlarms(psDS18X20, lo, hi);
+				if (iRVx > erFAILURE) {
+					if (iRV == 1 || iRVx == 1) {	// 1 or both changed in scratchpad
+						iRV = ds18x20WriteSP(psDS18X20);
+						if (wr == 1)
+							ds18x20WriteEE(psDS18X20);
 					}
 				}
-				OWP_BusRelease(&psDS18X20->sOW) ;
 			}
-			if (iRVx < erSUCCESS) break ;
-		} while (++Xcur < Xmax) ;
-	} else
-		ERR_INFO_MC("Invalid persist flag, not 0/1", erINVALID_MODE);
+			OWP_BusRelease(&psDS18X20->sOW) ;
+		}
+		if (iRVx < erSUCCESS)
+			break ;
+	} while (++Xcur < Xmax) ;
 	return iRV < erSUCCESS? iRV : iRVx;
 }
 
