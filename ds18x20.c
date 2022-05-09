@@ -185,28 +185,28 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 		uint8_t u8Res = (Res << 5) | 0x1F ;
 		IF_P(debugTRACK && ioB1GET(ioMode), "SP Res x%02X->x%02X (%d->%d)\n",
 				psDS18X20->fam28.Conf, u8Res, psDS18X20->Res, Res) ;
-		if (psDS18X20->fam28.Conf == u8Res) return 0;	// nothing changed
+		IF_RETURN_X(psDS18X20->fam28.Conf == u8Res, 0);	// nothing changed
 		psDS18X20->fam28.Conf = u8Res;
 		psDS18X20->Res = Res ;
 		return 1 ;										// changed, must write
 	}
-	ERR_RETURN("Invalid Family/Resolution", erINVALID_VALUE);
+	RETURN_MX("Invalid Family/Resolution", erINVALID_VALUE);
 }
 
 int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	if (INRANGE(-128, Lo, 127, int) && INRANGE(-128, Hi, 127, int)) {
 		IF_P(debugTRACK && ioB1GET(ioMode), "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
-		if (psDS18X20->Tlo == Lo && psDS18X20->Thi == Hi) return 0 ;
+		IF_RETURN_X(psDS18X20->Tlo == Lo && psDS18X20->Thi == Hi, 0);
 		psDS18X20->Tlo = Lo ;
 		psDS18X20->Thi = Hi ;
 		return 1 ;										// changed, must write
 	}
-	ERR_RETURN("Invalid Lo/Hi alarm limits", erINVALID_VALUE);
+	RETURN_MX("Invalid Lo/Hi alarm limits", erINVALID_VALUE);
 }
 
 int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	if (psaDS18X20 == NULL)
-		ERR_RETURN("No DS18x20 enumerated", erINVALID_OPERATION);
+		RETURN_MX("No DS18x20 enumerated", erINVALID_OPERATION);
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	int iRV = erFAILURE, iRVx = erFAILURE;
 	uint8_t	AI = psR->ActIdx ;
