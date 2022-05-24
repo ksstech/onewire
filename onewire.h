@@ -1,12 +1,8 @@
 /*
- * Copyright 2017-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * Copyright (c) 2017-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma		once
-
-#include	<stdint.h>
-#include	<stddef.h>
-#include	<stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
