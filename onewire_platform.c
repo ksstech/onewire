@@ -105,35 +105,42 @@ void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]) 
  */
 int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 	int iRV = 0;
+	printfx_lock();
 	if (FlagMask.bRT)
-		iRV += printfx("%!.R: ", RunTime) ;
+		iRV += printfx_nolock("%!.R: ", RunTime);
 	if (FlagMask.bCount)
-		iRV += printfx("#%u ", FlagMask.uCount) ;
-	iRV += printfx("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC) ;
+		iRV += printfx_nolock("#%u ", FlagMask.uCount);
+	iRV += printfx_nolock("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC);
 	if (FlagMask.bNL)
-		iRV += printfx("\n") ;
-	return iRV ;
+		iRV += printfx_nolock("\n");
+	printfx_unlock();
+	return iRV;
 }
 
 int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
-	int iRV = OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM) ;
-	iRV += printfx("  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
+	int iRV = OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM);
+	printfx_lock();
+	iRV += printfx_nolock("  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
 	if (FlagMask.bNL)
-		iRV += printfx("\n") ;
-	return iRV ;
+		iRV += printfx_nolock("\n");
+	printfx_unlock();
+	return iRV;
 }
 
 int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
-	int iRV = printfx("OW ch=%d  ", FlagMask.uCount) ;
-	if (psCI->LastRead)
-		iRV += printfx("%R  ", xTimeMakeTimestamp(psCI->LastRead, 0)) ;
+	int iRV = 0;
 	if (psCI->LastROM.Family)
-		iRV += OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM) ;
+		iRV += OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM);
+	printfx_lock();
+	iRV += printfx_nolock(" OW#%d ", FlagMask.uCount);
+	if (psCI->LastRead)
+		iRV += printfx_nolock("%R ", xTimeMakeTimestamp(psCI->LastRead, 0));
 	if (psCI->ds18any)
-		iRV += printfx("  DS18B=%d  DS18S=%d", psCI->ds18b20, psCI->ds18s20) ;
+		iRV += printfx_nolock("DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
 	if (FlagMask.bNL)
-		iRV += printfx("\n") ;
-	return iRV ;
+		iRV += printfx_nolock("\n");
+	printfx_unlock();
+	return iRV;
 }
 
 /**
