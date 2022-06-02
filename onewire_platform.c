@@ -74,10 +74,8 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 			psOW->DevNum = i;
 			#if (HW_VARIANT == HW_AC00)
 			psOW->PhyBus = AC00Xlat[LogBus - psDS248X->Lo];
-			#elif (HW_VARIANT == HW_AC01)
-			psOW->PhyBus = LogBus - psDS248X->Lo;
 			#else
-			#error "Invalid HW_VARIANT"
+			psOW->PhyBus = LogBus - psDS248X->Lo;
 			#endif
 			IF_PL(debugMAPPING, " -> P=%d\n", psOW->PhyBus) ;
 			return ;
@@ -94,10 +92,8 @@ int	OWP_BusP2L(owdi_t * psOW) {
 	ds248x_t * psDS248X = &psaDS248X[psOW->DevNum];
 	#if (HW_VARIANT == HW_AC00)
 	return (psDS248X->Lo + AC00Xlat[psOW->PhyBus]);
-	#elif (HW_VARIANT == HW_AC01)
-	return psDS248X->Lo + psOW->PhyBus;
 	#else
-	#error "Invalid HW_VARIANT"
+	return psDS248X->Lo + psOW->PhyBus;
 	#endif
 }
 
