@@ -90,8 +90,8 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 }
 
 int	OWP_BusP2L(owdi_t * psOW) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS248X) && halCONFIG_inSRAM(psOW)) ;
-	ds248x_t * psDS248X = &psaDS248X[psOW->DevNum] ;
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS248X) && halCONFIG_inSRAM(psOW));
+	ds248x_t * psDS248X = &psaDS248X[psOW->DevNum];
 	#if (HW_VARIANT == HW_AC00)
 	return (psDS248X->Lo + AC00Xlat[psOW->PhyBus]);
 	#elif (HW_VARIANT == HW_AC01)
