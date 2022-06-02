@@ -41,7 +41,7 @@
 // ################################# Platform related variables ####################################
 
 owbi_t * psaOWBI = NULL;
-static uint8_t	OWP_NumBus = 0, OWP_NumDev = 0;
+static u8_t	OWP_NumBus = 0, OWP_NumDev = 0;
 
 /* In order to avoid multiple successive reads of the same iButton on the same OW channel
  * we filter reads based on the value of the iButton read and time expired since the last
@@ -49,7 +49,7 @@ static uint8_t	OWP_NumBus = 0, OWP_NumDev = 0;
 
 // ################################# Application support functions #################################
 
-owbi_t * psOWP_BusGetPointer(uint8_t LogBus) {
+owbi_t * psOWP_BusGetPointer(u8_t LogBus) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaOWBI) && (LogBus < OWP_NumBus)) ;
 	return &psaOWBI[LogBus] ;
 }
@@ -60,13 +60,13 @@ owbi_t * psOWP_BusGetPointer(uint8_t LogBus) {
  * @param	LogBus
  * @note	Physical device & bus info returned in the psOW structure
  */
-void OWP_BusL2P(owdi_t * psOW, uint8_t LogBus) {
+void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (LogBus < OWP_NumBus)) ;
 	#if	(halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
 		IF_PL(debugMAPPING, "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
-		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi, uint8_t)) {
+		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi, u8_t)) {
 			psOW->DevNum = i;
 			psOW->PhyBus = LogBus - psDS248X->Lo;
 			IF_PL(debugMAPPING, " -> P=%d\n", psOW->PhyBus) ;
@@ -174,7 +174,7 @@ int	OWP_ScanAlarms_CB(flagmask_t sFM, owdi_t * psOW) {
  * @param	psOW
  * @return	number of matching ROM's found (>= 0) or an error code (< 0)
  */
-int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
+int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
@@ -218,12 +218,12 @@ int	OWP_Scan(uint8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
-int	OWP_Scan2(uint8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void * pVoid) {
+int	OWP_Scan2(u8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void * pVoid) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int	iRV = erSUCCESS ;
 	uint32_t uCount = 0 ;
 	owdi_t sOW ;
-	for (uint8_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
+	for (u8_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
 		OWP_BusL2P(&sOW, LogBus) ;
 		if (OWP_BusSelect(&sOW) == 0)
 			continue ;
@@ -257,7 +257,7 @@ int	OWP_Scan2(uint8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), voi
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
-int	OWP_ScanAlarmsFamily(uint8_t Family) { return OWP_Scan(Family, OWP_ScanAlarms_CB); }
+int	OWP_ScanAlarmsFamily(u8_t Family) { return OWP_Scan(Family, OWP_ScanAlarms_CB); }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
 

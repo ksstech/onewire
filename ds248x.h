@@ -74,44 +74,46 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 		struct __attribute__((packed)) {
 			union {
 				struct __attribute__((packed)) {
-			/*LSB*/	uint8_t		OWB		: 1 ;			// 1-Wire Busy
-					uint8_t		PPD		: 1 ;			// Presence Pulse Detected
-					uint8_t		SD		: 1 ;
-					uint8_t		LL		: 1 ;			// Link Level
-					uint8_t		RST		: 1 ;			// ReSeT
-					uint8_t		SBR		: 1 ;			// Single Bit Read
-					uint8_t		TSB		: 1 ;			//
-			/*MSB*/	uint8_t		DIR		: 1 ;			// DIRection
+			/*LSB*/	u8_t OWB : 1;	// 1-Wire Busy
+					u8_t PPD : 1;	// Presence Pulse Detected
+					u8_t SD : 1;
+					u8_t LL : 1;	// Link Level
+					u8_t RST : 1;	// ReSeT
+					u8_t SBR : 1;	// Single Bit Read
+					u8_t TSB : 1;
+			/*MSB*/	u8_t DIR : 1;	// DIRection
 				};
-				uint8_t		Rstat ;
+				u8_t Rstat;
 			} ;
-			uint8_t		Rdata ;
-			uint8_t		Rchan ;							// Code read back after ChanSel
+			u8_t Rdata;
+			u8_t Rchan;				// Code read back after ChanSel
 			union {
 				struct __attribute__((packed)) {
-			/*LSB*/	uint8_t		APU		: 1 ;			// Active Pull Up
-					uint8_t		PDN		: 1 ;			// Pull Down (DS2484 only)
-					uint8_t		SPU		: 1 ;			// Strong Pull Up
-					uint8_t		OWS		: 1 ;			// 1-Wire Speed
-			/*MSB*/	uint8_t		RES1	: 4 ;
+			/*LSB*/	u8_t APU : 1;	// Active Pull Up
+					u8_t PDN : 1;	// Pull Down (DS2484 only)
+					u8_t SPU : 1;	// Strong Pull Up
+					u8_t OWS : 1;	// 1-Wire Speed
+			/*MSB*/	u8_t RES1 : 4;
 				} ;
-				uint8_t		Rconf ;
+				u8_t Rconf;
 			} ;
-			uint8_t Rpadj[5];
+			u8_t Rpadj[5];
 		};
-		uint8_t RegX[9];			// 4 + Rpadj[5]
+		u8_t RegX[9];				// 4 + Rpadj[5]
 	} ;
-	uint8_t		CurChan	: 3 ;					// 0 -> 7
-	uint8_t		Rptr	: 3 ;					// 0 -> 4
-	uint8_t		NumChan	: 1 ;					// 0 / 1 / 8
-	uint8_t		Sp1		: 1 ;
-	uint8_t		I2Cnum	: 4 ;					// index into I2C Device Info table
-	uint8_t		Lo		: 4 ;
-	uint8_t		Hi		: 4 ;
-	uint8_t		Sp2		: 4 ;
-	uint8_t		PrvStat[8] ;					// previous STAT reg
-	uint8_t		PrvConf[8] ;
-#endif
+	u8_t CurChan : 3;				// 0 -> 7
+	u8_t Rptr : 3;					// 0 -> 4
+	u8_t NumChan : 1;				// 0 / 1 / 8
+	u8_t Sp1 : 1;
+	u8_t I2Cnum	: 4;				// index into I2C Device Info table
+	u8_t Lo : 4;
+	u8_t Hi : 4;
+	u8_t Sp2 : 4;
+	#if	(configPRODUCTION == 0)
+	u8_t PrvStat[8];				// previous STAT reg
+	u8_t PrvConf[8];
+	#endif
+} ds248x_t;
 #if		(configPRODUCTION == 0)
 	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 40);
 #else
@@ -120,7 +122,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 
 // #################################### Public Data structures #####################################
 
-extern uint8_t ds248xCount;
+extern u8_t ds248xCount;
 extern ds248x_t * psaDS248X;
 
 // ################################ DS248X I2C Read/Write support ##################################
@@ -144,14 +146,14 @@ void ds248xReConfig(i2c_di_t * psI2C_DI);
 
 // ############################## DS248X-x00 1-Wire support functions ##############################
 
-int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Chan) ;
+int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Chan) ;
 void ds248xBusRelease(ds248x_t * psDS248X) ;
 int	ds248xOWReset(ds248x_t * psDS248X) ;
 int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed) ;
 int	ds248xOWLevel(ds248x_t * psDS248X, bool level) ;
 bool ds248xOWTouchBit(ds248x_t * psDS248X, bool bit) ;
-uint8_t ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t sendbyte) ;
-uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
+u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t sendbyte) ;
+u8_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
 /**
  * Use the DS248x help command '1-Wire triplet' to perform one bit of a 1-Wire
  * search. This command does two read bits and one write bit. The write bit
@@ -160,7 +162,7 @@ uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
  *
  * Returns � The DS248x status byte result from the triplet command
  */
-uint8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, uint8_t u8Dir) ;
+u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) ;
 
 #ifdef __cplusplus
 }
