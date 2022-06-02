@@ -24,7 +24,7 @@ extern uint8_t	Family01Count;
 
 // ###################################### Public functions #########################################
 
-int	ds1990xConfig(void) ;
+void ds1990xConfig(void) ;
 int	OWP_DS1990ScanCB(flagmask_t, owdi_t *) ;
 int	OWP_DS1990ScanAll(epw_t * psEWP) ;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * Copyright (c) 2020-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  * ds1990x.c
  */
 
@@ -37,17 +37,16 @@ uint8_t	Family01Count = 0 ;
 
 // ################################# Application support functions #################################
 
-int	ds1990xConfig(void) {
+void ds1990xConfig(void) {
 	epw_t * psEWP = &table_work[URI_DS1990X] ;
 	IF_myASSERT(debugRESULT, halCONFIG_inSRAM(psEWP)) ;
 	psEWP->var.def.cv.vc = 1 ;
 	psEWP->var.def.cv.vf = vfUXX ;
 	psEWP->var.def.cv.vt = vtVALUE ;
 	psEWP->var.def.cv.vs = vs32B ;
-	psEWP->Tsns = psEWP->Rsns = DS1990X_T_SNS ;
+	psEWP->Tsns = psEWP->Rsns = DS1990X_T_SNS;
 	psEWP->uri = URI_DS1990X ;		// Used in OWPlatformEndpoints()
 	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990x", 1, 100) ;
-	return erSUCCESS;
 }
 
 // #################################### 1W Platform support ########################################
@@ -80,4 +79,3 @@ int	OWP_DS1990ScanAll(epw_t * psEWP) {
 	IF_SYSTIMER_STOP(debugTIMING, stDS1990) ;
 	return iRV;
 }
-

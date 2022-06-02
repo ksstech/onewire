@@ -240,7 +240,8 @@ int	ds248xCheckRead(ds248x_t * psDS248X, uint8_t Value) {
 			#endif
 		}
 	} else if (psDS248X->Rptr == ds248xREG_CONF) {		// CONFiguration register
-		if (Value == 0xC3) return iRV ;					// Just read CONF, no change
+		if (Value == 0xC3)
+			return iRV ;								// Just read CONF, no change
 		Value &= 0x0F ;
 		if (Value != psDS248X->Rconf) {
 			ds248x_conf_t sConf = { .Rconf = Value } ;
@@ -289,9 +290,7 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
 	clrSYSFLAGS(sfDS248X);
 	xRtosSemaphoreGive(&psDS248X->mux);
 	#endif
-	if (iRV == erSUCCESS)
-		return ds248xCheckRead(psDS248X, 0xFF) ;
-	return 0 ;
+	return iRV == erSUCCESS ? ds248xCheckRead(psDS248X, 0xFF) : 0 ;
 }
 
 int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSize, uint32_t uSdly) {
@@ -311,8 +310,7 @@ int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, uint8_t * pTxBuf, size_t TxSiz
 	clrSYSFLAGS(sfDS248X);
 	xRtosSemaphoreGive(&psDS248X->mux);
 	#endif
-	if (iRV == erSUCCESS) return ds248xCheckRead(psDS248X, (TxSize > 1) ? pTxBuf[1] : 0xFF) ;
-	return 0 ;
+	return iRV == erSUCCESS ? ds248xCheckRead(psDS248X, (TxSize > 1) ? pTxBuf[1] : 0xFF) : 0;
 }
 
 /**
@@ -355,12 +353,12 @@ int ds248xReset(ds248x_t * psDS248X) {
  *	OD	0		300		75
  */
 int	ds248xWriteConfig(ds248x_t * psDS248X) {
-// Write configuration (Case A)
-//	S AD,0 [A] WCFG [A] CF [A] Sr AD,1 [A] [CF] A\ P
-//  [] indicates from slave
-//  CF configuration byte to write
 	uint8_t	config	= psDS248X->Rconf & 0x0F ;
 	uint8_t	cBuf[2] = { ds248xCMD_WCFG , (~config << 4) | config } ;
+	// Write configuration (Case A)
+	//	S AD,0 [A] WCFG [A] CF [A] Sr AD,1 [A] [CF] A\ P
+	//  [] indicates from slave
+	//  CF configuration byte to write
 	psDS248X->Rptr = ds248xREG_CONF ;
 	IF_SYSTIMER_START(debugTIMING, stDS248xIO) ;
 	int iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0) ;
@@ -383,10 +381,10 @@ int	ds248xWriteConfig(ds248x_t * psDS248X) {
  */
 int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 	int iRV = 1;
-#if (ds248xLOCK == ds248xLOCK_BUS)
+	#if (ds248xLOCK == ds248xLOCK_BUS)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
 	setSYSFLAGS(sfDS248X);
-#endif
+	#endif
 	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800) && (psDS248X->CurChan != Bus))	{					// optimise to avoid unnecessary IO
 		/* Channel Select (Case A)
 		 *	S AD,0 [A] CHSL [A] CC [A] Sr AD,1 [A] [RR] A\ P
@@ -401,20 +399,20 @@ int	ds248xBusSelect(ds248x_t * psDS248X, uint8_t Bus) {
 		iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0);
 		IF_SYSTIMER_STOP(debugTIMING, stDS248xIO);
 	}
-#if (ds248xLOCK == ds248xLOCK_BUS)
+	#if (ds248xLOCK == ds248xLOCK_BUS)
 	if (iRV == 0) {
 		clrSYSFLAGS(sfDS248X);
 		xRtosSemaphoreGive(&psDS248X->mux);	// error, release...
 	}
-#endif
+	#endif
 	return iRV;
 }
 
 void ds248xBusRelease(ds248x_t * psDS248X) {
-#if (ds248xLOCK == ds248xLOCK_BUS)
+	#if (ds248xLOCK == ds248xLOCK_BUS)
 	clrSYSFLAGS(sfDS248X);
 	xRtosSemaphoreGive(&psDS248X->mux) ;
-#endif
+	#endif
 }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
@@ -449,9 +447,10 @@ int	ds248xIdentify(i2c_di_t * psI2C_DI) {
 	psI2C_DI->Test	= 0 ;
 	if (psI2C_DI->Type != i2cDEV_UNDEF)
 		psI2C_DI->Speed = i2cSPEED_400 ;
-#if (ds248xLOCK == ds248xLOCK_IO)
-	if (sDS248X.mux) vSemaphoreDelete(sDS248X.mux) ;
-#endif
+	#if (ds248xLOCK == ds248xLOCK_IO)
+	if (sDS248X.mux)
+		vSemaphoreDelete(sDS248X.mux);
+	#endif
 	return (psI2C_DI->Type == i2cDEV_UNDEF) ? erFAILURE : erSUCCESS ;
 }
 
@@ -515,7 +514,7 @@ int	ds248xOWReset(ds248x_t * psDS248X) {
 //									\--------/
 //						Repeat until 1WB bit has changed to 0
 //  [] indicates from slave
-	uint8_t	cChr = ds248xCMD_1WRS ;
+	u8_t cChr = ds248xCMD_1WRS ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	IF_SYSTIMER_START(debugTIMING, stDS248x1R) ;
 	ds248xI2C_WriteDelayRead(psDS248X, &cChr, sizeof(cChr), psDS248X->OWS ? owDELAY_RST_OD : owDELAY_RST) ;
@@ -543,13 +542,13 @@ int	ds248xOWLevel(ds248x_t * psDS248X, bool level) {
 }
 
 bool ds248xOWTouchBit(ds248x_t * psDS248X, bool Bit) {
-// 1-Wire bit (Case B)
-//	S AD,0 [A] 1WSB [A] BB [A] Sr AD,1 [A] [Status] A [Status] A\ P
-//										   \--------/
-//								Repeat until 1WB bit has changed to 0
-//  [] indicates from slave
-//  BB indicates byte containing bit value in msbit
 	uint8_t	cBuf[2] = {	ds248xCMD_1WSB, Bit << 7 } ;
+	// 1-Wire bit (Case B)
+	//	S AD,0 [A] 1WSB [A] BB [A] Sr AD,1 [A] [Status] A [Status] A\ P
+	//										   \--------/
+	//								Repeat until 1WB bit has changed to 0
+	//  [] indicates from slave
+	//  BB indicates byte containing bit value in msbit
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_SB_OD : owDELAY_SB) ;
 	return psDS248X->SBR ;
@@ -563,13 +562,13 @@ bool ds248xOWTouchBit(ds248x_t * psDS248X, bool Bit) {
  *	OD	88		388		163
  */
 uint8_t	ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t Byte) {
-// 1-Wire Write Byte (Case B)
-//	S AD,0 [A] 1WWB [A] DD [A] Sr AD,1 [A] [Status] A [Status] A\ P
-//										   \--------/
-//							Repeat until 1WB bit has changed to 0
-//  [] indicates from slave
-//  DD data to write
 	uint8_t	cBuf[2] = { ds248xCMD_1WWB, Byte } ;
+	// 1-Wire Write Byte (Case B)
+	//	S AD,0 [A] 1WWB [A] DD [A] Sr AD,1 [A] [Status] A [Status] A\ P
+	//										   \--------/
+	//							Repeat until 1WB bit has changed to 0
+	//  [] indicates from slave
+	//  DD data to write
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	IF_SYSTIMER_START(debugTIMING, stDS248xWR) ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_WB_OD : owDELAY_WB) ;
@@ -585,14 +584,14 @@ uint8_t	ds248xOWWriteByte(ds248x_t * psDS248X, uint8_t Byte) {
  *	OD	88		588		213
  */
 uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) {
-/* 1-Wire Read Bytes (Case C)
- *	S AD,0 [A] 1WRB [A] Sr AD,1 [A] [Status] A [Status] A\
- *										\--------/
- *							Repeat until 1WB bit has changed to 0
- *	Sr AD,0 [A] SRP [A] E1 [A] Sr AD,1 [A] DD A\ P
- *  [] indicates from slave
- *  DD data read	*/
 	uint8_t	cBuf = ds248xCMD_1WRB;
+	// 1-Wire Read Bytes (Case C)
+	//	S AD,0 [A] 1WRB [A] Sr AD,1 [A] [Status] A [Status] A\ '
+	//										\--------/
+	//							Repeat until 1WB bit has changed to 0
+	//	Sr AD,0 [A] SRP [A] E1 [A] Sr AD,1 [A] DD A\ P
+	//  [] indicates from slave
+	//  DD data read
 	psDS248X->Rptr = ds248xREG_STAT;
 	IF_SYSTIMER_START(debugTIMING, stDS248xRD);
 	ds248xI2C_WriteDelayRead(psDS248X, &cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_RB_OD : owDELAY_RB);
@@ -602,13 +601,13 @@ uint8_t	ds248xOWReadByte(ds248x_t * psDS248X) {
 }
 
 uint8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, uint8_t u8Dir) {
-// 1-Wire Triplet (Case B)
-//	S AD,0 [A] 1WT [A] SS [A] Sr AD,1 [A] [Status] A [Status] A\ P
-//							  \--------/
-//				Repeat until 1WB bit has changed to 0
-//  [] indicates from slave
-//  SS indicates byte containing search direction bit value in msbit
 	uint8_t	cBuf[2] = { ds248xCMD_1WT, u8Dir ? 0x80 : 0x00 } ;
+	// 1-Wire Triplet (Case B)
+	//	S AD,0 [A] 1WT [A] SS [A] Sr AD,1 [A] [Status] A [Status] A\ P
+	//							  \--------/
+	//				Repeat until 1WB bit has changed to 0
+	//  [] indicates from slave
+	//  SS indicates byte containing search direction bit value in msbit
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	IF_SYSTIMER_START(debugTIMING, stDS248xST) ;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_ST_OD : owDELAY_ST) ;

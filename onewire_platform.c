@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * Copyright (c) 2020-2022 Andre M. Maree/KSS Technologies (Pty) Ltd.
  * onewire_platform.c
  */
 
@@ -62,7 +62,7 @@ owbi_t * psOWP_BusGetPointer(uint8_t LogBus) {
  */
 void OWP_BusL2P(owdi_t * psOW, uint8_t LogBus) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (LogBus < OWP_NumBus)) ;
-#if		(halHAS_DS248X > 0)
+	#if	(halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
 		IF_PL(debugMAPPING, "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
@@ -74,7 +74,7 @@ void OWP_BusL2P(owdi_t * psOW, uint8_t LogBus) {
 		}
 		IF_PL(debugMAPPING, "\n") ;
 	}
-#endif
+	#endif
 	SL_ERR("Invalid Logical Ch=%d", LogBus) ;
 	IF_myASSERT(debugRESULT, 0) ;
 }
@@ -104,7 +104,7 @@ void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]) 
  * @return	number of characters printed
  */
 int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
-	int iRV = 0 ;
+	int iRV = 0;
 	if (FlagMask.bRT)
 		iRV += printfx("%!.R: ", RunTime) ;
 	if (FlagMask.bCount)
@@ -144,14 +144,14 @@ int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
  */
 int	OWP_Count_CB(flagmask_t FlagCount, owdi_t * psOW) {
 	switch (psOW->ROM.Family) {
-#if (halHAS_DS1990X > 0)								// DS1990A/R, 2401/11 devices
+	#if (halHAS_DS1990X > 0)							// DS1990A/R, 2401/11 devices
 	case OWFAMILY_01:	++Family01Count ;	return 1 ;
-#endif
+	#endif
 
-#if (halHAS_DS18X20 > 0)								// DS18x20 Thermometers
+	#if (halHAS_DS18X20 > 0)							// DS18x20 Thermometers
 	case OWFAMILY_10:	++Fam10Count ;		return 1 ;
 	case OWFAMILY_28:	++Fam28Count ;		return 1 ;
-#endif
+	#endif
 
 	default: SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.Family) ;
 	}
@@ -225,7 +225,8 @@ int	OWP_Scan2(uint8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), voi
 	owdi_t sOW ;
 	for (uint8_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
 		OWP_BusL2P(&sOW, LogBus) ;
-		if (OWP_BusSelect(&sOW) == 0) continue ;
+		if (OWP_BusSelect(&sOW) == 0)
+			continue ;
 		if (Family) {
 			OWTargetSetup(&sOW, Family) ;
 			iRV = OWSearch(&sOW, 0) ;
@@ -270,14 +271,14 @@ int	OWP_Config(void) {
 	/* Start by iterating over each instance of each type of 1-Wire technology (DS248x/RTM/GPIO) supported.
 	 * For each technology enumerate each physical device and the logical channels on each device before
 	 * moving on to the next device (same type) or next technology */
-#if		(halHAS_DS248X > 0)
+	#if (halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
 		psDS248X->Lo = OWP_NumBus ;
 		psDS248X->Hi = OWP_NumBus + (psDS248X->NumChan ? 7 : 0);
 		OWP_NumBus	+= (psDS248X->NumChan ? 8 : 1) ;
 	}
-#endif
+	#endif
 
 	// When all technologies & devices individually enumerated
 	if (OWP_NumBus) {
@@ -288,23 +289,23 @@ int	OWP_Config(void) {
 		if (iRV > 0)
 			OWP_NumDev += iRV ;
 
-#if		(halHAS_DS18X20 > 0)
+		#if (halHAS_DS18X20 > 0)
 		if (Fam10Count || Fam28Count)
 			ds18x20Enumerate(); 	// enumerate & config individually
-#endif
+		#endif
 
-#if		(halHAS_DS1990X > 0)
-		ds1990xConfig() ;								// cannot enumerate, simple config
-#endif
+		#if	(halHAS_DS1990X > 0)
+		ds1990xConfig();								// cannot enumerate, simple config
+		#endif
 	}
 	return OWP_NumDev ;
 }
 
 void OWP_Report(void) {
-#if 	(halHAS_DS248X > 0)
-	ds248xReportAll() ;
-#endif
-#if 	(halHAS_DS18X20 > 0)
-	ds18x20ReportAll() ;
-#endif
+	#if (halHAS_DS248X > 0)
+	ds248xReportAll();
+	#endif
+	#if (halHAS_DS18X20 > 0)
+	ds18x20ReportAll();
+	#endif
 }

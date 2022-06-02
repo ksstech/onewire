@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include "hal_i2c.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -108,13 +109,11 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	uint8_t		Lo		: 4 ;
 	uint8_t		Hi		: 4 ;
 	uint8_t		Sp2		: 4 ;
-#if		(configPRODUCTION == 0)
 	uint8_t		PrvStat[8] ;					// previous STAT reg
 	uint8_t		PrvConf[8] ;
 #endif
-} ds248x_t ;
 #if		(configPRODUCTION == 0)
-	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 40) ;
+	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 40);
 #else
 	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 24) ;
 #endif
