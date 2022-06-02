@@ -38,6 +38,10 @@
 // ###################################### General macros ###########################################
 
 
+#if (HW_VARIANT == HW_AC00)
+static const u8_t AC00Xlat[8] = { 3, 2, 1, 0, 4, 5, 6, 7 };
+#endif
+
 // ################################# Platform related variables ####################################
 
 owbi_t * psaOWBI = NULL;
@@ -68,7 +72,13 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 		IF_PL(debugMAPPING, "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
 		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi, u8_t)) {
 			psOW->DevNum = i;
+			#if (HW_VARIANT == HW_AC00)
+			psOW->PhyBus = AC00Xlat[LogBus - psDS248X->Lo];
+			#elif (HW_VARIANT == HW_AC01)
 			psOW->PhyBus = LogBus - psDS248X->Lo;
+			#else
+			#error "Invalid HW_VARIANT"
+			#endif
 			IF_PL(debugMAPPING, " -> P=%d\n", psOW->PhyBus) ;
 			return ;
 		}
@@ -82,7 +92,13 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 int	OWP_BusP2L(owdi_t * psOW) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS248X) && halCONFIG_inSRAM(psOW)) ;
 	ds248x_t * psDS248X = &psaDS248X[psOW->DevNum] ;
-	return (psDS248X->Lo + psOW->PhyBus) ;
+	#if (HW_VARIANT == HW_AC00)
+	return (psDS248X->Lo + AC00Xlat[psOW->PhyBus]);
+	#elif (HW_VARIANT == HW_AC01)
+	return psDS248X->Lo + psOW->PhyBus;
+	#else
+	#error "Invalid HW_VARIANT"
+	#endif
 }
 
 /**
