@@ -508,12 +508,13 @@ void ds248xReConfig(i2c_di_t * psI2C_DI) {
  */
 int	ds248xOWReset(ds248x_t * psDS248X) {
 	// DS2482-800 datasheet page 7 para 2
-	if (psDS248X->SPU == owPOWER_STRONG) ds248xOWLevel(psDS248X, owPOWER_STANDARD);
-// 1-Wire reset (Case B)
-//	S AD,0 [A] 1WRS [A] Sr AD,1 [A] [Status] A [Status] A\ P
-//									\--------/
-//						Repeat until 1WB bit has changed to 0
-//  [] indicates from slave
+	if (psDS248X->SPU == owPOWER_STRONG)
+		ds248xOWLevel(psDS248X, owPOWER_STANDARD);
+	// 1-Wire reset (Case B)
+	//	S AD,0 [A] 1WRS [A] Sr AD,1 [A] [Status] A [Status] A\ P
+	//									\--------/
+	//						Repeat until 1WB bit has changed to 0
+	//  [] indicates from slave
 	u8_t cChr = ds248xCMD_1WRS ;
 	psDS248X->Rptr	= ds248xREG_STAT ;
 	IF_SYSTIMER_START(debugTIMING, stDS248x1R) ;
