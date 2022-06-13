@@ -77,10 +77,10 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 			#else
 			psOW->PhyBus = LogBus - psDS248X->Lo;
 			#endif
-			IF_PL(debugMAPPING, " -> P=%d\n", psOW->PhyBus) ;
+			IF_PL(debugMAPPING, " -> P=%d\r\n", psOW->PhyBus) ;
 			return ;
 		}
-		IF_PL(debugMAPPING, "\n") ;
+		IF_PL(debugMAPPING, "\r\n") ;
 	}
 	#endif
 	SL_ERR("Invalid Logical Ch=%d", LogBus) ;
@@ -124,7 +124,7 @@ int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 		iRV += printfx_nolock("#%u ", FlagMask.uCount);
 	iRV += printfx_nolock("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC);
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\n");
+		iRV += printfx_nolock("\r\n");
 	printfx_unlock();
 	return iRV;
 }
@@ -134,7 +134,7 @@ int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
 	printfx_lock();
 	iRV += printfx_nolock("  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\n");
+		iRV += printfx_nolock("\r\n");
 	printfx_unlock();
 	return iRV;
 }
@@ -150,7 +150,7 @@ int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
 	if (psCI->ds18any)
 		iRV += printfx_nolock("DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\n");
+		iRV += printfx_nolock("\r\n");
 	printfx_unlock();
 	return iRV;
 }
@@ -207,7 +207,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 				iRV = OWSearch(&sOW, 0) ;
 				if (iRV > 0 && (sOW.ROM.Family != Family)) {
 					// Strictly speaking should never get here, iRV must be 0 if same family not found
-					IF_P(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\n", Family, sOW.ROM.Family) ;
+					IF_P(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, sOW.ROM.Family) ;
 					OWP_BusRelease(&sOW) ;
 					continue ;
 				}
@@ -250,7 +250,7 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void *
 			OWTargetSetup(&sOW, Family) ;
 			iRV = OWSearch(&sOW, 0) ;
 			if (iRV > 0 && (sOW.ROM.Family != Family)) {
-				IF_PL(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\n", Family, &sOW.ROM.Family) ;
+				IF_PL(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, &sOW.ROM.Family) ;
 				OWP_BusRelease(&sOW) ;
 				continue ;
 			}

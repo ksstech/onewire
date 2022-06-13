@@ -136,7 +136,7 @@ int	ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
 int ds248xReportStatus(u8_t Val1, u8_t Val2) {
 	const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" } ;
 	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x000000FF, StatNames, 1) ;
-	int iRV = P("%s\n", pcBuf);
+	int iRV = P("%s\r\n", pcBuf);
 	vRtosFree(pcBuf);
 	return iRV;
 }
@@ -144,7 +144,7 @@ int ds248xReportStatus(u8_t Val1, u8_t Val2) {
 int ds248xReportConfig(u8_t Val1, u8_t Val2) {
 	const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" } ;
 	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x0000000F, ConfNames, 1) ;
-	int iRV = P("%s\n", pcBuf);
+	int iRV = P("%s\r\n", pcBuf);
 	vRtosFree(pcBuf);
 	return iRV;
 }
@@ -165,7 +165,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		break ;
 
 	case ds248xREG_DATA:
-		iRV += P("DATA(1)=0x%02X (Last read)\n", psDS248X->Rdata) ;
+		iRV += P("DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata) ;
 		break ;
 
 	case ds248xREG_CHAN:
@@ -174,7 +174,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan) ;
 		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]) ;
-		iRV = P("CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
+		iRV = P("CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\r\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]) ;
 		break ;
 
 	case ds248xREG_CONF:
@@ -197,7 +197,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		sPadj.RadjX = psDS248X->Rpadj[3];
 		iRV += P(" | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
 		sPadj.RadjX = psDS248X->Rpadj[4];
-		iRV += P(" | rWPU=%f ohm\n", (double) Rwpu[sPadj.VAL]);
+		iRV += P(" | rWPU=%f ohm\r\n", (double) Rwpu[sPadj.VAL]);
 		break ;
 	}
 	return iRV ;
@@ -209,7 +209,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 void ds248xReport(ds248x_t * psDS248X) {
 	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
 	for (int Reg = 0; Reg < ds248xREG_NUM; ds248xReportRegister(psDS248X, Reg++));
-	P("\n") ;
+	P("\r\n") ;
 }
 
 /**

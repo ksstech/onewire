@@ -183,7 +183,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
 		Res -= 9 ;
 		uint8_t u8Res = (Res << 5) | 0x1F ;
-		IF_P(debugTRACK && ioB1GET(ioMode), "SP Res x%02X->x%02X (%d->%d)\n",
+		IF_P(debugTRACK && ioB1GET(ioMode), "SP Res x%02X->x%02X (%d->%d)\r\n",
 				psDS18X20->fam28.Conf, u8Res, psDS18X20->Res, Res) ;
 		IF_RETURN_X(psDS18X20->fam28.Conf == u8Res, 0);	// nothing changed
 		psDS18X20->fam28.Conf = u8Res;
@@ -195,7 +195,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 
 int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	if (INRANGE(-128, Lo, 127, int) && INRANGE(-128, Hi, 127, int)) {
-		IF_P(debugTRACK && ioB1GET(ioMode), "SP Tlo:%d -> %d  Thi:%d -> %d\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
+		IF_P(debugTRACK && ioB1GET(ioMode), "SP Tlo:%d -> %d  Thi:%d -> %d\r\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
 		IF_RETURN_X(psDS18X20->Tlo == Lo && psDS18X20->Thi == Hi, 0);
 		psDS18X20->Tlo = Lo ;
 		psDS18X20->Thi = Hi ;
@@ -214,7 +214,7 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	uint32_t hi	= psR->para.x32[AI][1].u32;
 	uint32_t res = psR->para.x32[AI][2].u32;
 	uint32_t wr	= psR->para.x32[AI][3].u32;
-	IF_P(debugTRACK && ioB1GET(ioMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%d hi=%d res=%d wr=%d\n", Xcur, Xmax, lo, hi, res, wr);
+	IF_P(debugTRACK && ioB1GET(ioMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%d hi=%d res=%d wr=%d\r\n", Xcur, Xmax, lo, hi, res, wr);
 
 	IF_RETURN_MX(wr != 0 && wr != 1, "Invalid persist flag, not 0/1", erINVALID_MODE);
 	do {
@@ -350,7 +350,7 @@ int	ds18x20Print_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
 		iRV += printfx(" Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK") ;
 	if (FlagMask.bNL)
-		iRV += printfx("\n") ;
+		iRV += printfx("\r\n") ;
 	return iRV ;
 }
 
@@ -412,7 +412,7 @@ int ds18x20StepOneStart(epw_t * psEWx) {			// Step 1: Start CONVERT on each phys
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];		// log can be different for each instance
 		if (psDS18X20->sOW.DevNum != PrevDev) {
 			if (ds18x20StepTwoBusConvert(psDS18X20, i) == 1) {
-//				TRACK("DevNum=%d\n", psDS18X20->sOW.DevNum);
+//				TRACK("DevNum=%d\r\n", psDS18X20->sOW.DevNum);
 				PrevDev = psDS18X20->sOW.DevNum;
 			}
 		}
@@ -429,13 +429,13 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 		++i ;
 		// no more sensors or different device - release bus, exit loop
 		if ((i == Fam10_28Count) || (psDS18X20->sOW.DevNum != psaDS18X20[i].sOW.DevNum)) {
-//			TRACK("i=%d  DevNum=%d\n", i, psDS18X20->sOW.DevNum);
+//			TRACK("i=%d  DevNum=%d\r\n", i, psDS18X20->sOW.DevNum);
 			OWP_BusRelease(&psDS18X20->sOW);
 			break;
 		}
 		// more sensors, same device but new bus - release bus, start convert on new bus.
 		if (psDS18X20->sOW.PhyBus != psaDS18X20[i].sOW.PhyBus) {
-//			TRACK("i=%d  DevNum=%d\n", i, psDS18X20->sOW.DevNum);
+//			TRACK("i=%d  DevNum=%d\r\n", i, psDS18X20->sOW.DevNum);
 			OWP_BusRelease(&psDS18X20->sOW);
 			ds18x20StepTwoBusConvert(&psaDS18X20[i], i);
 			break;
@@ -449,10 +449,10 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 void ds18x20ReportAll(void) {
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		if (i == 0)
-			printfx("\r# DS18x20 #\n");
+			printfx("\r# DS18x20 #\r\n");
 		flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i) };
 		ds18x20Print_CB(sFM, &psaDS18X20[i]) ;
 	}
 	if (Fam10_28Count)
-		printfx("\n");
+		printfx("\r\n");
 }
