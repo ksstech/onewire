@@ -1,6 +1,6 @@
 /*
- * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
  * ds1990x.h
+ * Copyright (c) 2018-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma		once
@@ -20,7 +20,7 @@ extern "C" {
 
 // ###################################### Public variables #########################################
 
-extern uint8_t	Family01Count;
+extern u8_t	Family01Count;
 
 // ###################################### Public functions #########################################
 

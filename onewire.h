@@ -76,22 +76,24 @@ extern "C" {
 enum { owADDR_MATCH, owADDR_SKIP } ;
 enum { owSPEED_STANDARD, owSPEED_ODRIVE	} ;
 enum { owPOWER_STANDARD, owPOWER_STRONG	} ;
-enum { owFAM28_RES9B, owFAM28_RES10B, owFAM28_RES11B, owFAM28_RES12B } ;
+enum { owFAM28_RES9B, owFAM28_RES10B, owFAM28_RES11B, owFAM28_RES12B };
 
 // ######################################### Structures ############################################
 
-typedef	struct __attribute__((packed)) {
-	ow_rom_t	ROM ;								// size = 1+6+1
-	uint8_t 	crc8 ;
-	int8_t 		LD ;								// Last Discrepancy (bit #)
-	int8_t 		LFD ;								// Last Family Discrepancy (bit #)
-	uint8_t 	LDF		: 1 ;						// Last Device Flag
-	uint8_t		DevNum	: 2 ;						// index into 1W DevInfo table
-	uint8_t		PhyBus	: 3 ;
-	uint8_t		OD		: 1 ;						// 1=OverDrive supported
-	uint8_t		PSU		: 1 ;						// 1=External Power
-} owdi_t ;
-DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12) ;
+typedef	struct {
+	ow_rom_t ROM;					// size = 8
+	u8_t crc8;
+	s8_t LD;						// Last Discrepancy (bit #)
+	s8_t LFD;						// Last Family Discrepancy (bit #)
+	struct __attribute__((packed)) {
+		u8_t LDF:1;					// Last Device Flag
+		u8_t DevNum:2;				// index into 1W DevInfo table
+		u8_t PhyBus:3;
+		u8_t OD:1;					// 1=OverDrive supported
+		u8_t PSU:1;					// 1=External Power
+	};
+} owdi_t;
+//DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12);
 
 // ################################ Generic 1-Wire LINK API's ######################################
 
@@ -102,15 +104,15 @@ int OWReset(owdi_t * psOW) ;
 void OWWriteBit(owdi_t * psOW, bool Bit) ;
 bool OWReadBit(owdi_t * psOW) ;
 
-uint8_t OWWriteByte(owdi_t * psOW, uint8_t sendbyte) ;
-uint8_t	OWReadByte(owdi_t * psOW) ;
+u8_t OWWriteByte(owdi_t * psOW, u8_t sendbyte) ;
+u8_t OWReadByte(owdi_t * psOW) ;
 
-void OWWriteBlock(owdi_t * psOW, uint8_t * pBuf, int Len);
-void OWReadBlock(owdi_t * psOW, uint8_t * pBuf, int Len);
+void OWWriteBlock(owdi_t * psOW, u8_t * pBuf, int Len);
+void OWReadBlock(owdi_t * psOW, u8_t * pBuf, int Len);
 
 // ############################## Search and Variations thereof ####################################
 
-void OWTargetSetup(owdi_t * psOW, uint8_t family_code) ;
+void OWTargetSetup(owdi_t * psOW, u8_t family_code) ;
 void OWFamilySkipSetup(owdi_t * psOW) ;
 int OWSearch(owdi_t * psOW, bool alarm_only) ;
 int OWFirst(owdi_t * psOW, bool alarm_only) ;
@@ -120,12 +122,12 @@ int OWNext(owdi_t * psOW, bool alarm_only) ;
 
 int	OWSpeed(owdi_t * psOW, bool speed) ;
 int	OWLevel(owdi_t * psOW, bool level) ;
-uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) ;
-uint8_t	OWCalcCRC8(owdi_t * psOW, uint8_t data) ;
+u8_t OWCheckCRC(u8_t * buf, u8_t buflen) ;
+u8_t OWCalcCRC8(owdi_t * psOW, u8_t data) ;
 
 int	OWReadROM(owdi_t * psOW) ;
 void OWAddress(owdi_t * psOW, bool Skip) ;
-int OWResetCommand(owdi_t * psOW, uint8_t Command, bool Skip, bool Pwr) ;
+int OWResetCommand(owdi_t * psOW, u8_t Command, bool Skip, bool Pwr) ;
 int	OWVerify(owdi_t * psOW) ;
 
 #ifdef __cplusplus

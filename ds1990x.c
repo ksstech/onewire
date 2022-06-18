@@ -1,7 +1,9 @@
 /*
- * Copyright (c) 2020-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  * ds1990x.c
+ * Copyright (c) 2020-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
+
+//#include	<string.h>
 
 #include	"hal_variables.h"
 #include	"onewire_platform.h"
@@ -14,8 +16,6 @@
 
 #include	"x_errors_events.h"
 #include	"x_utilities.h"								// vShowActivity
-
-#include	<string.h>
 
 #define	debugFLAG					0xF001
 
@@ -33,7 +33,7 @@
 
 // ################################# Platform related variables ####################################
 
-uint8_t	Family01Count = 0 ;
+u8_t Family01Count = 0 ;
 
 // ################################# Application support functions #################################
 
@@ -55,7 +55,7 @@ void ds1990xConfig(void) {
  * period of 'x' seconds within which successive reads of the same tag will be ignored */
 int	OWP_DS1990ScanCB(flagmask_t sFM, owdi_t * psOW) {
 	seconds_t NowRead = xTimeStampAsSeconds(sTSZ.usecs);
-	uint8_t LogChan = OWP_BusP2L(psOW);
+	u8_t LogChan = OWP_BusP2L(psOW);
 	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan);
 	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) && (NowRead-psOW_CI->LastRead) <= ioB4GET(ioDS1990Dly)) {
 		IF_P(debugTRACK && ioB1GET(ioDS1990x), "Tag repeat %ds\r\n", ioB4GET(ioDS1990Dly));

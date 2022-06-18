@@ -40,8 +40,8 @@ DUMB_STATIC_ASSERT(sizeof(owbi_t) == 14) ;
 
 // ###################################### Public functions #########################################
 
-owbi_t * psOWP_BusGetPointer(uint8_t) ;
-void OWP_BusL2P(owdi_t *, uint8_t) ;
+owbi_t * psOWP_BusGetPointer(u8_t) ;
+void OWP_BusL2P(owdi_t *, u8_t) ;
 int	OWP_BusP2L(owdi_t *) ;
 int	OWP_BusSelect(owdi_t *) ;
 void OWP_BusRelease(owdi_t *) ;
@@ -52,9 +52,9 @@ int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) ;
 int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) ;
 int	OWP_Count_CB(flagmask_t FlagMask, owdi_t *) ;
 
-int	OWP_Scan(uint8_t, int (*)(flagmask_t, owdi_t *)) ;
-int	OWP_Scan2(uint8_t, int (*)(flagmask_t, void *, owdi_t *), void *) ;
-int	OWP_ScanAlarmsFamily(uint8_t Family) ;
+int	OWP_Scan(u8_t, int (*)(flagmask_t, owdi_t *)) ;
+int	OWP_Scan2(u8_t, int (*)(flagmask_t, void *, owdi_t *), void *) ;
+int	OWP_ScanAlarmsFamily(u8_t Family) ;
 
 int	OWP_Config(void) ;
 void OWP_Report(void) ;

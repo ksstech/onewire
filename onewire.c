@@ -49,7 +49,7 @@
  * @return	1 if presence pulse(s) detected, device(s) reset
  *			0 if no presence pulse(s) detected
  */
-int	 OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]) ; }
+int OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]) ; }
 
 // ############################### Bit/Byte/Block Read/Write #######################################
 
@@ -75,19 +75,19 @@ bool OWReadBit(owdi_t * psOW) { return ds248xOWTouchBit(&psaDS248X[psOW->DevNum]
  * @param	Byte
  * @return	status register value after write
  */
-uint8_t OWWriteByte(owdi_t * psOW, uint8_t Byte) { return ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte) ; }
+u8_t OWWriteByte(owdi_t * psOW, u8_t Byte) { return ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte) ; }
 
 /**
  * Reads 8 bits of communication from the 1-Wire Net
  * @return	8 bits read from 1-Wire Net
  */
-uint8_t	OWReadByte(owdi_t * psOW) { return ds248xOWReadByte(&psaDS248X[psOW->DevNum]) ; }
+u8_t OWReadByte(owdi_t * psOW) { return ds248xOWReadByte(&psaDS248X[psOW->DevNum]) ; }
 
-void OWWriteBlock(owdi_t * psOW, uint8_t * pBuf, int Len) {
+void OWWriteBlock(owdi_t * psOW, u8_t * pBuf, int Len) {
 	for (int i = 0; i < Len; OWWriteByte(psOW, pBuf[i++])) ;
 }
 
-void OWReadBlock(owdi_t * psOW, uint8_t * pBuf, int Len) {
+void OWReadBlock(owdi_t * psOW, u8_t * pBuf, int Len) {
 	for (int i = 0; i < Len; pBuf[i++] = OWReadByte(psOW)) ;
 }
 
@@ -97,7 +97,7 @@ void OWReadBlock(owdi_t * psOW, uint8_t * pBuf, int Len) {
  * Setup search to find the first 'family_code' device on the next call to OWNext().
  * If no (more) devices of 'family_code' can be found return first device of next family
  */
-void OWTargetSetup(owdi_t * psOW, uint8_t family_code) {
+void OWTargetSetup(owdi_t * psOW, u8_t family_code) {
 	psOW->ROM.Value	= 0ULL ;				// reset all ROM fields
 	psOW->ROM.Family = family_code ;
 	psOW->LD = 64 ;
@@ -132,8 +132,8 @@ void OWFamilySkipSetup(owdi_t * psOW) {
  *			there are no devices on the 1-Wire Net.
  */
 int OWSearch(owdi_t * psOW, bool alarm_only) {
-	uint8_t u8SrcDir, u8Status, u8ByteMask = 1;
-	int8_t i8SrcRes = 0, i8IdBitNum = 1, i8LastZero = 0, i8ByteNum = 0;
+	u8_t u8SrcDir, u8Status, u8ByteMask = 1;
+	s8_t i8SrcRes = 0, i8IdBitNum = 1, i8LastZero = 0, i8ByteNum = 0;
 	psOW->crc8 = 0;
 	if (psOW->LDF == 0) {								// if the last call was not the last device
 		if (OWReset(psOW) == 0) {						// any device there?
@@ -152,8 +152,8 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 				u8SrcDir = (i8IdBitNum == psOW->LD) ? 1 : 0 ;
 			}
 			u8Status = ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], u8SrcDir) ;
-			int8_t i8IdBit		= ((u8Status & ds248xSTAT_SBR) == ds248xSTAT_SBR) ;
-			int8_t i8IdBitCmp	= ((u8Status & ds248xSTAT_TSB) == ds248xSTAT_TSB) ;
+			s8_t i8IdBit = ((u8Status & ds248xSTAT_SBR) == ds248xSTAT_SBR);
+			s8_t i8IdBitCmp	= ((u8Status & ds248xSTAT_TSB) == ds248xSTAT_TSB);
 			u8SrcDir = ((u8Status & ds248xSTAT_DIR) == ds248xSTAT_DIR) ? 1 : 0 ;
 			if (i8IdBit && i8IdBitCmp) {				// check for no devices on 1-Wire
 				break ;
@@ -239,8 +239,8 @@ int	OWLevel(owdi_t * psOW, bool Pwr) { return ds248xOWLevel(&psaDS248X[psOW->Dev
  * @param	buflen		buffer length
  * @return	1 if the CRC is correct, 0 otherwise
  */
-uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
-	uint8_t data_bit, sr_lsb, fb_bit, shift_reg = 0 ;
+u8_t OWCheckCRC(u8_t * buf, u8_t buflen) {
+	u8_t data_bit, sr_lsb, fb_bit, shift_reg = 0 ;
 	for (int iByte = 0; iByte < buflen; iByte++) {
 		for (int iBit = 0; iBit < BITS_IN_BYTE; iBit++) {
 			data_bit	= (buf[iByte] >> iBit) & 0x01 ;
@@ -261,7 +261,7 @@ uint8_t	OWCheckCRC(uint8_t * buf, uint8_t buflen) {
  * @param	data
  * @return				Returns current crc8 value
  */
-uint8_t	OWCalcCRC8(owdi_t * psOW, uint8_t data) {
+u8_t OWCalcCRC8(owdi_t * psOW, u8_t data) {
 	psOW->crc8 = psOW->crc8 ^ data;
 	for (int i = 0; i < BITS_IN_BYTE; ++i) {
 		if (psOW->crc8 & 1)	psOW->crc8 = (psOW->crc8 >> 1) ^ 0x8c;
@@ -279,7 +279,7 @@ uint8_t	OWCalcCRC8(owdi_t * psOW, uint8_t data) {
 int	OWReadROM(owdi_t * psOW) {
 	OWWriteByte(psOW, OW_CMD_READROM);
 	OWReadBlock(psOW, psOW->ROM.HexChars, sizeof(ow_rom_t));
-	return OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t)) ;
+	return OWCheckCRC(psOW->ROM.HexChars, sizeof(ow_rom_t));
 }
 
 /**
@@ -290,14 +290,17 @@ int	OWReadROM(owdi_t * psOW) {
  */
 void OWAddress(owdi_t * psOW, bool Skip) {
 	OWWriteByte(psOW, Skip ? OW_CMD_SKIPROM : OW_CMD_MATCHROM);
-	if (Skip == owADDR_MATCH) OWWriteBlock(psOW, psOW->ROM.HexChars, sizeof(ow_rom_t));
+	if (Skip == owADDR_MATCH)
+		OWWriteBlock(psOW, psOW->ROM.HexChars, sizeof(ow_rom_t));
 }
 
-int OWResetCommand(owdi_t * psOW, uint8_t Command, bool Skip, bool Pwr) {
-	if (OWReset(psOW) == 0) return 0;					// check if any device there
-	OWAddress(psOW, Skip);								// address bus or device
-	if (Pwr && (psOW->PSU == 0)) OWLevel(psOW, owPOWER_STRONG);
-	OWWriteByte(psOW, Command);							// send the command
+int OWResetCommand(owdi_t * psOW, u8_t Command, bool Skip, bool Pwr) {
+	if (OWReset(psOW) == 0) 		// check if any device there
+		return 0;
+	OWAddress(psOW, Skip);			// address bus or device
+	if (Pwr && (psOW->PSU == 0)) 	// If PWR requested but not enabled...
+		OWLevel(psOW, owPOWER_STRONG);
+	OWWriteByte(psOW, Command);		// send the command
 	return 1;
 }
 

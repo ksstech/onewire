@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * Copyright (c) 2018-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  * ds18x20.h
  */
 

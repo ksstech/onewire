@@ -1,6 +1,8 @@
 /*
- * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * Copyright (c) 2018-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
+
+#include	<string.h>
 
 #include	"hal_variables.h"
 
@@ -16,8 +18,6 @@
 #include	"systiming.h"					// timing debugging
 
 #include	"x_errors_events.h"
-
-#include	<string.h>
 
 #define	debugFLAG					0xF000
 
@@ -85,7 +85,7 @@
 // ###################################### Local variables ##########################################
 
 ds18x20_t *	psaDS18X20 = NULL;
-uint8_t	Fam10Count = 0, Fam28Count = 0, Fam10_28Count = 0;
+u8_t	Fam10Count = 0, Fam28Count = 0, Fam10_28Count = 0;
 
 // #################################### Local ONLY functions #######################################
 
@@ -126,7 +126,7 @@ int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) {
 int	ds18x20WriteSP(ds18x20_t * psDS18X20) {
 	if (OWResetCommand(&psDS18X20->sOW, DS18X20_WRITE_SP, owADDR_MATCH, 0) == 0) return 0 ;
 	int Len = (psDS18X20->sOW.ROM.Family == OWFAMILY_28) ? 3 : 2 ;	// Thi, Tlo [+Conf]
-	OWWriteBlock(&psDS18X20->sOW, (uint8_t *) &psDS18X20->Thi, Len);
+	OWWriteBlock(&psDS18X20->sOW, (u8_t *) &psDS18X20->Thi, Len);
 	IF_PL(debugSPAD, "%`-B ", Len, psDS18X20->RegX);
 	return 1 ;
 }
@@ -167,7 +167,7 @@ int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 }
 
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
-	const uint8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
+	const u8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
 	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
 	if (debugTRACK && ioB1GET(ioDS18x20)) {
@@ -182,7 +182,7 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
 		Res -= 9 ;
-		uint8_t u8Res = (Res << 5) | 0x1F ;
+		u8_t u8Res = (Res << 5) | 0x1F ;
 		IF_P(debugTRACK && ioB1GET(ioMode), "SP Res x%02X->x%02X (%d->%d)\r\n",
 				psDS18X20->fam28.Conf, u8Res, psDS18X20->Res, Res) ;
 		IF_RETURN_X(psDS18X20->fam28.Conf == u8Res, 0);	// nothing changed
@@ -209,11 +209,11 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 		RETURN_MX("No DS18x20 enumerated", erINVALID_OPERATION);
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	int iRV = erFAILURE, iRVx = erFAILURE;
-	uint8_t	AI = psR->ActIdx ;
-	uint32_t lo	= psR->para.x32[AI][0].u32;
-	uint32_t hi	= psR->para.x32[AI][1].u32;
-	uint32_t res = psR->para.x32[AI][2].u32;
-	uint32_t wr	= psR->para.x32[AI][3].u32;
+	u8_t	AI = psR->ActIdx ;
+	u32_t lo	= psR->para.x32[AI][0].u32;
+	u32_t hi	= psR->para.x32[AI][1].u32;
+	u32_t res = psR->para.x32[AI][2].u32;
+	u32_t wr	= psR->para.x32[AI][3].u32;
 	IF_P(debugTRACK && ioB1GET(ioMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%d hi=%d res=%d wr=%d\r\n", Xcur, Xmax, lo, hi, res, wr);
 
 	IF_RETURN_MX(wr != 0 && wr != 1, "Invalid persist flag, not 0/1", erINVALID_MODE);
@@ -242,7 +242,7 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 
 // #################################### 1W Platform support ########################################
 
-epw_t * ds18x20GetWork(int32_t x) ;
+epw_t * ds18x20GetWork(int x) ;
 void ds18x20SetDefault(epw_t * psEWP, epw_t *psEWS) ;
 void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) ;
 float ds18x20GetTemperature(epw_t * psEWx) ;
@@ -305,7 +305,7 @@ int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) {
 }
 
 int	ds18x20Enumerate(void) {
-	uint8_t	ds18x20NumDev = 0;
+	u8_t	ds18x20NumDev = 0;
 	Fam10_28Count = Fam10Count + Fam28Count;
 	IF_SL_INFO(debugOWP, "DS18x20 found %d devices", Fam10_28Count) ;
 	IF_SYSTIMER_INIT(debugTIMING, stDS1820A, stMILLIS, "DS1820A", 10, 1000) ;
@@ -373,7 +373,7 @@ TickType_t ds18x20CalcDelay(ds18x20_t * psDS18X20, bool All) {
  * @return
  */
 int	ds18x20StartAllInOne(epw_t * psEWP) {
-	uint8_t	PrevBus = 0xFF ;
+	u8_t	PrevBus = 0xFF ;
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];
 		if (psDS18X20->sOW.PhyBus != PrevBus) {
@@ -407,7 +407,7 @@ int	ds18x20StepTwoBusConvert(ds18x20_t * psDS18X20, int i) {
 }
 
 int ds18x20StepOneStart(epw_t * psEWx) {			// Step 1: Start CONVERT on each physical bus
-	uint8_t	PrevDev = 0xFF ;						// where 1+ DS18x20 has been enumerated on.
+	u8_t	PrevDev = 0xFF ;						// where 1+ DS18x20 has been enumerated on.
 	for (int i = 0; i < Fam10_28Count; ++i) {		// Although sense is configured on primary level,
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];		// log can be different for each instance
 		if (psDS18X20->sOW.DevNum != PrevDev) {

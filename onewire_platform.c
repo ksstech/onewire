@@ -1,26 +1,22 @@
 /*
- * Copyright (c) 2020-2022 Andre M. Maree/KSS Technologies (Pty) Ltd.
  * onewire_platform.c
+ * Copyright (c) 2020-2022 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
-#include	"hal_variables.h"
+//#include	<string.h>
 
+#include	"hal_variables.h"
 #include	"onewire_platform.h"
 #include	"ds248x.h"
 #include	"ds18x20.h"
 #include	"ds1990x.h"
-
 #include	"task_events.h"
 #include	"endpoints.h"
-
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
-
 #include	"x_errors_events.h"
 #include	"x_utilities.h"								// vShowActivity
-
-#include	<string.h>
 
 // ################################ Global/Local Debug macros ######################################
 
@@ -196,7 +192,7 @@ int	OWP_ScanAlarms_CB(flagmask_t sFM, owdi_t * psOW) {
 int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int	iRV = erSUCCESS ;
-	uint32_t uCount = 0 ;
+	u32_t uCount = 0 ;
 	owdi_t sOW ;
 	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
 		memset(&sOW, 0, sizeof(owdi_t));
@@ -218,7 +214,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 				flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus) };
 				IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, sFM, &sOW);
 				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
-				IF_myASSERT(debugRESULT, iRV == 1) ;
+				IF_myASSERT(debugRESULT, iRV == 1);
 				sFM.uCount = uCount;
 				iRV = Handler(sFM, &sOW) ;
 				if (iRV < erSUCCESS)
@@ -240,7 +236,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 int	OWP_Scan2(u8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void * pVoid) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int	iRV = erSUCCESS ;
-	uint32_t uCount = 0 ;
+	u32_t uCount = 0 ;
 	owdi_t sOW ;
 	for (u8_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
 		OWP_BusL2P(&sOW, LogBus) ;
