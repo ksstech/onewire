@@ -21,19 +21,15 @@ extern "C" {
 /* Bus related info, ie last device read (ROM & timestamp)
  * Used to avoid re-reading a device (primarily DS1990X type) too regularly.
  */
-typedef struct __attribute__((packed)) owbi_t {
-	ow_rom_t	LastROM ;
-	seconds_t	LastRead ;
+typedef struct owbi_t {
+	seconds_t	LastRead;			// size=4
+	ow_rom_t	LastROM;			// size=8
 	union {
-		struct __attribute__((packed)) {
-			uint8_t		ds18b20	: 4 ;
-			uint8_t		ds18s20	: 4 ;
-			uint8_t		spare ;
-		} ;
-		uint16_t	ds18any ;
-	} ;
-} owbi_t ;
-DUMB_STATIC_ASSERT(sizeof(owbi_t) == 14) ;
+		struct { u8_t ds18b20:4, ds18s20:4; };
+		u8_t ds18any;
+	};
+} owbi_t;
+//DUMB_STATIC_ASSERT(sizeof(owbi_t) == 13);
 
 // #################################### Public Data structures #####################################
 
