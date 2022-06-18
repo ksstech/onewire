@@ -327,3 +327,12 @@ int	OWVerify(owdi_t * psOW) {
 	memcpy((void *) psOW, (const void *) &backup, sizeof(owdi_t)) ;			// restore the search state
 	return iRV ;										// return the result of the verify
 }
+
+u64_t OWAddr2Value(ow_rom_t * psROM) {
+	u64_t U64 = 0;
+	for (int Idx = 0; Idx < 6; ++Idx) {
+		U64 <<= 8;
+		U64 += psROM->HexChars[owAD5 - Idx];
+	}
+	return U64;
+}

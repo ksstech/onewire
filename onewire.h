@@ -137,6 +137,8 @@ void OWAddress(owdi_t * psOW, bool Skip) ;
 int OWResetCommand(owdi_t * psOW, u8_t Command, bool Skip, bool Pwr) ;
 int	OWVerify(owdi_t * psOW) ;
 
+u64_t OWAddr2Value(ow_rom_t * psROM);
+
 #ifdef __cplusplus
 }
 #endif
