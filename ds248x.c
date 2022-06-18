@@ -257,8 +257,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 			if (ioB2GET(dbgDS248X)) {
 				u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];
 				if (psDS248X->Rconf != ConfX) {
-					P("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
-						psDS248X->CurChan, ConfX, psDS248X->Rconf);
+					P("D=%d C=%u x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
 					ds248xReportConfig(ConfX, psDS248X->Rconf);
 				}
 			}
