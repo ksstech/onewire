@@ -77,8 +77,15 @@ enum { owADDR_MATCH, owADDR_SKIP } ;
 enum { owSPEED_STANDARD, owSPEED_ODRIVE	} ;
 enum { owPOWER_STANDARD, owPOWER_STRONG	} ;
 enum { owFAM28_RES9B, owFAM28_RES10B, owFAM28_RES11B, owFAM28_RES12B };
+enum { owFAMILY, owAD0, owAD1, owAD2, owAD3, owAD4, owAD5, owCRC };
 
 // ######################################### Structures ############################################
+
+typedef union ow_rom_t {
+	u64_t	Value;
+	u8_t	HexChars[8];
+} ow_rom_t;
+DUMB_STATIC_ASSERT( sizeof(ow_rom_t) == 8);
 
 typedef	struct {
 	ow_rom_t ROM;					// size = 8

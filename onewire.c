@@ -99,7 +99,7 @@ void OWReadBlock(owdi_t * psOW, u8_t * pBuf, int Len) {
  */
 void OWTargetSetup(owdi_t * psOW, u8_t family_code) {
 	psOW->ROM.Value	= 0ULL ;				// reset all ROM fields
-	psOW->ROM.Family = family_code ;
+	psOW->ROM.HexChars[owFAMILY] = family_code ;
 	psOW->LD = 64 ;
 	psOW->LFD = 0 ;
 	psOW->LDF = 0 ;
@@ -186,7 +186,7 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 	}
 
 	// if no device found then reset counters so next 'search' will be like a first
-	if ((i8SrcRes == 0) || (psOW->ROM.Family == 0)) {
+	if ((i8SrcRes == 0) || (psOW->ROM.HexChars[owFAMILY] == 0)) {
 		psOW->LD = 0;
 		psOW->LDF = 0;
 		psOW->LFD = 0;

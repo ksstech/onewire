@@ -118,7 +118,7 @@ int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 		iRV += printfx_nolock("%!.R: ", RunTime);
 	if (FlagMask.bCount)
 		iRV += printfx_nolock("#%u ", FlagMask.uCount);
-	iRV += printfx_nolock("%02X/%#M/%02X", psOW_ROM->Family, psOW_ROM->TagNum, psOW_ROM->CRC);
+	iRV += printfx_nolock("%02X/%M/%02X", psOW_ROM->HexChars[owFAMILY], &psOW_ROM->HexChars[owAD0], psOW_ROM->HexChars[owCRC]);
 	if (FlagMask.bNL)
 		iRV += printfx_nolock("\r\n");
 	printfx_unlock();
@@ -137,7 +137,7 @@ int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
 
 int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
 	int iRV = 0;
-	if (psCI->LastROM.Family)
+	if (psCI->LastROM.HexChars[owFAMILY])
 		iRV += OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM);
 	printfx_lock();
 	iRV += printfx_nolock(" OW#%d ", FlagMask.uCount);
@@ -158,7 +158,7 @@ int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
  * @return
  */
 int	OWP_Count_CB(flagmask_t FlagCount, owdi_t * psOW) {
-	switch (psOW->ROM.Family) {
+	switch (psOW->ROM.HexChars[owFAMILY]) {
 	#if (halHAS_DS1990X > 0)							// DS1990A/R, 2401/11 devices
 	case OWFAMILY_01:	++Family01Count ;	return 1 ;
 	#endif
@@ -168,7 +168,7 @@ int	OWP_Count_CB(flagmask_t FlagCount, owdi_t * psOW) {
 	case OWFAMILY_28:	++Fam28Count ;		return 1 ;
 	#endif
 
-	default: SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.Family) ;
+	default: SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.HexChars[owFAMILY]) ;
 	}
 	return 0 ;
 }
@@ -201,9 +201,9 @@ int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 			if (Family != 0) {
 				OWTargetSetup(&sOW, Family) ;
 				iRV = OWSearch(&sOW, 0) ;
-				if (iRV > 0 && (sOW.ROM.Family != Family)) {
+				if (iRV > 0 && (sOW.ROM.HexChars[owFAMILY] != Family)) {
 					// Strictly speaking should never get here, iRV must be 0 if same family not found
-					IF_P(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, sOW.ROM.Family) ;
+					IF_P(debugTRACK && ioB1GET(dbgOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, sOW.ROM.HexChars[owFAMILY]) ;
 					OWP_BusRelease(&sOW) ;
 					continue ;
 				}
@@ -212,7 +212,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 			}
 			while (iRV) {
 				flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus) };
-				IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, sFM, &sOW);
+				IF_EXEC_2(debugTRACK && ioB1GET(dbgOWscan), OWP_Print1W_CB, sFM, &sOW);
 				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 				IF_myASSERT(debugRESULT, iRV == 1);
 				sFM.uCount = uCount;
@@ -245,8 +245,8 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void *
 		if (Family) {
 			OWTargetSetup(&sOW, Family) ;
 			iRV = OWSearch(&sOW, 0) ;
-			if (iRV > 0 && (sOW.ROM.Family != Family)) {
-				IF_PL(debugTRACK && ioB1GET(ioOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, &sOW.ROM.Family) ;
+			if (iRV > 0 && (sOW.ROM.HexChars[owFAMILY] != Family)) {
+				IF_PL(debugTRACK && ioB1GET(dbgOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, &sOW.ROM.HexChars[owFAMILY]) ;
 				OWP_BusRelease(&sOW) ;
 				continue ;
 			}

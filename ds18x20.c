@@ -125,7 +125,7 @@ int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) {
 
 int	ds18x20WriteSP(ds18x20_t * psDS18X20) {
 	if (OWResetCommand(&psDS18X20->sOW, DS18X20_WRITE_SP, owADDR_MATCH, 0) == 0) return 0 ;
-	int Len = (psDS18X20->sOW.ROM.Family == OWFAMILY_28) ? 3 : 2 ;	// Thi, Tlo [+Conf]
+	int Len = (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28) ? 3 : 2 ;	// Thi, Tlo [+Conf]
 	OWWriteBlock(&psDS18X20->sOW, (u8_t *) &psDS18X20->Thi, Len);
 	IF_PL(debugSPAD, "%`-B ", Len, psDS18X20->RegX);
 	return 1 ;
@@ -147,7 +147,7 @@ int	ds18x20TempRead(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psDS18X20, 2) 
 int	ds18x20Initialize(ds18x20_t * psDS18X20) {
 	if (ds18x20ReadSP(psDS18X20, SO_MEM(ds18x20_t, RegX)) == 0) return 0;
 	ds18x20CheckPower(psDS18X20);
-	psDS18X20->Res	= (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
+	psDS18X20->Res	= (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
 					? psDS18X20->fam28.Conf >> 5
 					: owFAM28_RES9B;
 	return ds18x20ConvertTemperature(psDS18X20);
@@ -161,7 +161,8 @@ int	ds18x20Initialize(ds18x20_t * psDS18X20) {
 int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 	psDS18X20->Thi	= 75 ;
 	psDS18X20->Tlo	= 70 ;
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28) psDS18X20->fam28.Conf = 0x7F ;	// 12 bit resolution
+	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
+		psDS18X20->fam28.Conf = 0x7F ;	// 12 bit resolution
 	ds18x20WriteSP(psDS18X20) ;
 	return ds18x20Initialize(psDS18X20) ;
 }
@@ -180,7 +181,7 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 // ################################ Rules configuration support ####################################
 
 int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
+	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
 		Res -= 9 ;
 		u8_t u8Res = (Res << 5) | 0x1F ;
 		IF_P(debugTRACK && ioB1GET(ioMode), "SP Res x%02X->x%02X (%d->%d)\r\n",
@@ -296,7 +297,7 @@ int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) {
 	ds18x20Initialize(psDS18X20);
 
 	owbi_t * psOW_CI = psOWP_BusGetPointer(OWP_BusP2L(psOW));
-	switch(psOW->ROM.Family) {
+	switch(psOW->ROM.HexChars[owFAMILY]) {
 	case OWFAMILY_10: psOW_CI->ds18s20++;	break;
 	case OWFAMILY_28: psOW_CI->ds18b20++;	break;
 	default: IF_myASSERT(debugRESULT, 0);
@@ -347,7 +348,7 @@ int	ds18x20Print_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
 	iRV += printfx(" Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
 		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9) ;
-	if (psDS18X20->sOW.ROM.Family == OWFAMILY_28)
+	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
 		iRV += printfx(" Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK") ;
 	if (FlagMask.bNL)
 		iRV += printfx("\r\n") ;
@@ -361,7 +362,7 @@ TickType_t ds18x20CalcDelay(ds18x20_t * psDS18X20, bool All) {
 	 * 	ROM match skipped AND only DS18B20 devices on the bus */
 	owbi_t * psOWBI = psOWP_BusGetPointer(OWP_BusP2L(&psDS18X20->sOW)) ;
 	if (((All == 1) && (psOWBI->ds18s20 == 0)) ||
-		((All == 0) && (psDS18X20->sOW.ROM.Family == OWFAMILY_28))) {
+		((All == 0) && (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28))) {
 		tConvert /= (4 - psDS18X20->Res) ;
 	}
 	return tConvert ;
