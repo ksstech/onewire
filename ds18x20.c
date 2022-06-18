@@ -171,7 +171,7 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const u8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
 	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
-	if (debugTRACK && ioB1GET(ioDS18x20)) {
+	if (debugTRACK && ioB1GET(dbgDS1820)) {
 		flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
 		ds18x20Print_CB(sFM, psDS18X20);
 	}

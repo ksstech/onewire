@@ -226,9 +226,9 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 			iRV = ds248xLogError(psDS248X, "OWB") ;
 		} else {
 			#if	(configPRODUCTION == 0)
-			if (ioB1GET(ioDS248Xcheck) > 1) {
-				const u8_t DS248Xmask[4] = { 0b00000111, 0b00011111, 0b00111111, 0b11111111 };
-				u8_t Mask = DS248Xmask[ioB2GET(dbgDS248X)];
+			if (ioB2GET(dbgDS248X) > 1) {
+				const u8_t DS248Xmask[3] = { 0b00001111, 0b00111111, 0b11111111 };
+				u8_t Mask = DS248Xmask[ioB2GET(dbgDS248X) - 1];
 				u8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
 				if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
 					P("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
@@ -254,7 +254,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 			iRV = ds248xLogError(psDS248X, caBuf);
 		} else {
 			#if	(configPRODUCTION == 0)
-			if (ioB1GET(ioDS248Xcheck)) {
+			if (ioB2GET(dbgDS248X)) {
 				u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];
 				if (psDS248X->Rconf != ConfX) {
 					P("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,

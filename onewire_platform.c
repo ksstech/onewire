@@ -254,7 +254,7 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void *
 		while (iRV) {
 			flagmask_t sFM;
 			sFM.u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus);
-			IF_EXEC_2(debugTRACK && ioB1GET(ioOWscan), OWP_Print1W_CB, sFM, &sOW) ;
+			IF_EXEC_2(debugTRACK && ioB1GET(dbgOWscan), OWP_Print1W_CB, sFM, &sOW) ;
 			iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
 			iRV = Handler((flagmask_t) uCount, pVoid, &sOW) ;
