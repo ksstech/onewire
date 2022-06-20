@@ -1,9 +1,7 @@
 /*
  * ds1990x.c
- * Copyright (c) 2020-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * Copyright (c) 2020-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
-
-//#include	<string.h>
 
 #include	"hal_variables.h"
 #include	"onewire_platform.h"
@@ -17,10 +15,7 @@
 #include	"x_errors_events.h"
 #include	"x_utilities.h"								// vShowActivity
 
-#define	debugFLAG					0xF001
-
-#define	debugEVENTS					(debugFLAG & 0x0001)
-#define	debugCONFIG					(debugFLAG & 0x0002)
+#define	debugFLAG					0xF000
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
