@@ -1,9 +1,7 @@
 /*
  * onewire_platform.c
- * Copyright (c) 2020-2022 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * Copyright (c) 2020-2022 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
-
-//#include	<string.h>
 
 #include	"hal_variables.h"
 #include	"onewire_platform.h"
@@ -21,10 +19,6 @@
 // ################################ Global/Local Debug macros ######################################
 
 #define	debugFLAG					0xF003
-
-#define	debugCONFIG					(debugFLAG & 0x0001)
-#define	debugSCANNER				(debugFLAG & 0x0002)
-#define	debugMAPPING				(debugFLAG & 0x0004)
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -65,7 +59,7 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 	#if	(halHAS_DS248X > 0)
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
-		IF_PL(debugMAPPING, "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
+		IF_PL(debugTRACK && ioB1GET(dbgOWscan), "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
 		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi, u8_t)) {
 			psOW->DevNum = i;
 			#if (HW_VARIANT == HW_AC00)
@@ -73,10 +67,10 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 			#else
 			psOW->PhyBus = LogBus - psDS248X->Lo;
 			#endif
-			IF_PL(debugMAPPING, " -> P=%d\r\n", psOW->PhyBus) ;
+			IF_PL(debugTRACK && ioB1GET(dbgOWscan), " -> P=%d\r\n", psOW->PhyBus) ;
 			return ;
 		}
-		IF_PL(debugMAPPING, "\r\n") ;
+		IF_PL(debugTRACK && ioB1GET(dbgOWscan), "\r\n") ;
 	}
 	#endif
 	SL_ERR("Invalid Logical Ch=%d", LogBus) ;
