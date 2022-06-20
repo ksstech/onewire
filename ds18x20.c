@@ -1,8 +1,7 @@
 /*
- * Copyright (c) 2018-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * ds18x20.c
+ * Copyright (c) 2018-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
-
-#include	<string.h>
 
 #include	"hal_variables.h"
 
@@ -25,8 +24,6 @@
 #define	debugCONVERT				(debugFLAG & 0x0002)
 #define	debugPOWER					(debugFLAG & 0x0004)
 #define	debugSPAD					(debugFLAG & 0x0008)
-
-#define	debugOWP					(debugFLAG & 0x0008)
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -308,7 +305,7 @@ int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) {
 int	ds18x20Enumerate(void) {
 	u8_t	ds18x20NumDev = 0;
 	Fam10_28Count = Fam10Count + Fam28Count;
-	IF_SL_INFO(debugOWP, "DS18x20 found %d devices", Fam10_28Count) ;
+	SL_INFO("DS18x20 found %d devices", Fam10_28Count) ;
 	IF_SYSTIMER_INIT(debugTIMING, stDS1820A, stMILLIS, "DS1820A", 10, 1000) ;
 	IF_SYSTIMER_INIT(debugTIMING, stDS1820B, stMILLIS, "DS1820B", 1, 10) ;
 
