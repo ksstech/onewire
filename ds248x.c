@@ -1,21 +1,18 @@
 /*
- * Copyright 2020-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * ds248x.c
+ * Copyright (c) 2020-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
 #include	"hal_variables.h"
 #include	"ds248x.h"
 #include	"onewire.h"
-
 #include	"FreeRTOS_Support.h"
 #include	"options.h"
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
-
 #include	"x_errors_events.h"
 #include	"x_string_general.h"
-
-#include	<string.h>
 
 // ##################################### Developer notes ###########################################
 /*
