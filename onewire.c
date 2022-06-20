@@ -1,27 +1,17 @@
 /*
- * Copyright 2014-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * onewire.c
+ * Copyright (c) 2014-2c Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include	"hal_variables.h"
+#include "hal_variables.h"
+#include "onewire.h"
+#include "ds248x.h"
+#include "endpoint_id.h"
+#include "printfx.h"
+#include "syslog.h"
+#include "x_errors_events.h"
 
-#include	"onewire.h"
-#include	"ds248x.h"
-
-#include	"endpoint_id.h"
-
-#include	"printfx.h"
-#include	"syslog.h"
-
-#include	"x_errors_events.h"
-
-#include	<string.h>
-#include	<limits.h>
-
-#define	debugFLAG					0xD007
-
-#define	debugBUS_CFG				(debugFLAG & 0x0001)
-#define	debugCONFIG					(debugFLAG & 0x0002)
-#define	debugCRC					(debugFLAG & 0x0004)
+#define	debugFLAG					0xD000
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
