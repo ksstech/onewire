@@ -276,7 +276,12 @@ void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
 }
 
-float ds18x20GetTemperature(epw_t * psEWx) { return psEWx->var.val.x32.f32; }
+float ds18x20GetTemperature(epw_t * psEWx) {
+//	return psEWx->var.val.x32.f32;
+	f64_t F64;
+	xCV_GetValue(&psEWx->var, &F64);
+	return (f32_t) F64;
+}
 
 int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) {
 	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount];
