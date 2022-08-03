@@ -178,7 +178,7 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 // ################################ Rules configuration support ####################################
 
 int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
-	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28 && INRANGE(9, Res, 12, int)) {
+	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28 && INRANGE(9, Res, 12)) {
 		Res -= 9 ;
 		u8_t u8Res = (Res << 5) | 0x1F ;
 		IF_P(debugTRACK && ioB1GET(ioMode), "SP Res x%02X->x%02X (%d->%d)\r\n",
@@ -192,7 +192,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 }
 
 int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
-	if (INRANGE(-128, Lo, 127, int) && INRANGE(-128, Hi, 127, int)) {
+	if (INRANGE(-128, Lo, 127) && INRANGE(-128, Hi, 127)) {
 		IF_P(debugTRACK && ioB1GET(ioMode), "SP Tlo:%d -> %d  Thi:%d -> %d\r\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi) ;
 		IF_RETURN_X(psDS18X20->Tlo == Lo && psDS18X20->Thi == Hi, 0);
 		psDS18X20->Tlo = Lo ;
@@ -312,11 +312,11 @@ int	ds18x20Enumerate(void) {
 	// Init primary EWP endpoint (leave fSecSNS = 0 to force parallel sensing
 	epw_t * psEWP = &table_work[URI_DS18X20];
 	psEWP->var.def.cv.pntr = 1;
-	psEWP->var.def.cv.vf = vfFXX ;
-	psEWP->var.def.cv.vs = vs32B ;
+	psEWP->var.def.cv.vf = vfFXX;
+	psEWP->var.def.cv.vs = vs32B;
 	psEWP->var.def.cv.ve = 1;							// Enumerated type
-	psEWP->var.def.cv.vc = Fam10_28Count ;
-	psEWP->var.val.px.pv = (void *) &sDS18X20Func ;
+	psEWP->var.def.cv.vc = Fam10_28Count;
+	psEWP->var.val.ps.psCX = &sDS18X20Func;
 	psEWP->Tsns	= psEWP->Rsns = ds18x20T_SNS_NORM;
 	psEWP->uri = URI_DS18X20 ;							// Used in OWPlatformEndpoints()
 

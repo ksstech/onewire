@@ -60,7 +60,7 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
 		IF_PL(debugTRACK && ioB1GET(dbgOWscan), "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
-		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi, u8_t)) {
+		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi)) {
 			psOW->DevNum = i;
 			#if (halVARIANT == HW_AC00)
 			psOW->PhyBus = AC00Xlat[LogBus - psDS248X->Lo];
