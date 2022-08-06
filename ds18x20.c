@@ -243,13 +243,12 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 epw_t * ds18x20GetWork(int x) ;
 void ds18x20SetDefault(epw_t * psEWP, epw_t *psEWS) ;
 void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) ;
-float ds18x20GetTemperature(epw_t * psEWx) ;
 
 const vt_enum_t	sDS18X20Func = {
 	.work	= ds18x20GetWork,
 	.reset	= ds18x20SetDefault,
 	.sense	= ds18x20SetSense,
-	.get	= ds18x20GetTemperature,
+	.get	= xEpGetValue,
 };
 
 epw_t * ds18x20GetWork(int x) {
@@ -274,13 +273,6 @@ void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 		psEWP->Tsns = psEWS->Tsns ;						// set lowest of EWP/EWS
 	psEWS->Tsns = 0 ;									// discard EWS value
 	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
-}
-
-float ds18x20GetTemperature(epw_t * psEWx) {
-//	return psEWx->var.val.x32.f32;
-	f64_t F64;
-	xCV_GetValue(&psEWx->var, &F64);
-	return (f32_t) F64;
 }
 
 int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) {
