@@ -105,7 +105,7 @@ void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]) 
  * @param	psOW_ROM - pointer to 1-Wire ROM structure
  * @return	number of characters printed
  */
-int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
+int	OWP_PrintROM_CB(fm_t FlagMask, ow_rom_t * psOW_ROM) {
 	int iRV = 0;
 	printfx_lock();
 	if (FlagMask.bRT)
@@ -119,8 +119,8 @@ int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psOW_ROM) {
 	return iRV;
 }
 
-int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
-	int iRV = OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM);
+int	OWP_Print1W_CB(fm_t FlagMask, owdi_t * psOW) {
+	int iRV = OWP_PrintROM_CB((fm_t) (FlagMask.u32Val & ~mfbNL), &psOW->ROM);
 	printfx_lock();
 	iRV += printfx_nolock("  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
 	if (FlagMask.bNL)
@@ -129,10 +129,10 @@ int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) {
 	return iRV;
 }
 
-int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
+int	OWP_PrintChan_CB(fm_t FlagMask, owbi_t * psCI) {
 	int iRV = 0;
 	if (psCI->LastROM.HexChars[owFAMILY])
-		iRV += OWP_PrintROM_CB((flagmask_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM);
+		iRV += OWP_PrintROM_CB((fm_t) (FlagMask.u32Val & ~(mfbRT|mfbNL|mfbCOUNT)), &psCI->LastROM);
 	printfx_lock();
 	iRV += printfx_nolock(" OW#%d ", FlagMask.uCount);
 	if (psCI->LastRead)
@@ -151,7 +151,7 @@ int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) {
  * @param	psOW
  * @return
  */
-int	OWP_Count_CB(flagmask_t FlagCount, owdi_t * psOW) {
+int	OWP_Count_CB(fm_t FlagCount, owdi_t * psOW) {
 	switch (psOW->ROM.HexChars[owFAMILY]) {
 	#if (halHAS_DS1990X > 0)							// DS1990A/R, 2401/11 devices
 	case OWFAMILY_01:	++Family01Count ;	return 1 ;
@@ -167,7 +167,7 @@ int	OWP_Count_CB(flagmask_t FlagCount, owdi_t * psOW) {
 	return 0 ;
 }
 
-int	OWP_ScanAlarms_CB(flagmask_t sFM, owdi_t * psOW) {
+int	OWP_ScanAlarms_CB(fm_t sFM, owdi_t * psOW) {
 	sFM.bNL	= 1 ;
 	sFM.bRT	= 1 ;
 	OWP_Print1W_CB(sFM, psOW) ;
@@ -183,7 +183,7 @@ int	OWP_ScanAlarms_CB(flagmask_t sFM, owdi_t * psOW) {
  * @param	psOW
  * @return	number of matching ROM's found (>= 0) or an error code (< 0)
  */
-int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
+int	OWP_Scan(u8_t Family, int (* Handler)(fm_t, owdi_t *)) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int	iRV = erSUCCESS ;
 	u32_t uCount = 0 ;
@@ -205,7 +205,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 				iRV = OWFirst(&sOW, 0) ;
 			}
 			while (iRV) {
-				flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus) };
+				fm_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus) };
 				IF_EXEC_2(debugTRACK && ioB1GET(dbgOWscan), OWP_Print1W_CB, sFM, &sOW);
 				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 				IF_myASSERT(debugRESULT, iRV == 1);
@@ -227,7 +227,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(flagmask_t, owdi_t *)) {
 	return iRV < erSUCCESS ? iRV : uCount ;
 }
 
-int	OWP_Scan2(u8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void * pVoid) {
+int	OWP_Scan2(u8_t Family, int (* Handler)(fm_t, void *, owdi_t *), void * pVoid) {
 	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler)) ;
 	int	iRV = erSUCCESS ;
 	u32_t uCount = 0 ;
@@ -246,12 +246,12 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(flagmask_t, void *, owdi_t *), void *
 			}
 		} else iRV = OWFirst(&sOW, 0) ;
 		while (iRV) {
-			flagmask_t sFM;
+			fm_t sFM;
 			sFM.u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,LogBus);
 			IF_EXEC_2(debugTRACK && ioB1GET(dbgOWscan), OWP_Print1W_CB, sFM, &sOW) ;
 			iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) ;
 			IF_myASSERT(debugRESULT, iRV == 1) ;
-			iRV = Handler((flagmask_t) uCount, pVoid, &sOW) ;
+			iRV = Handler((fm_t) uCount, pVoid, &sOW) ;
 			if (iRV < erSUCCESS)
 				break ;
 			if (iRV > 0)

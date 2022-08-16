@@ -43,13 +43,13 @@ int	OWP_BusSelect(owdi_t *) ;
 void OWP_BusRelease(owdi_t *) ;
 
 // Common callback handlers
-int	OWP_PrintROM_CB(flagmask_t FlagMask, ow_rom_t * psROM) ;
-int	OWP_Print1W_CB(flagmask_t FlagMask, owdi_t * psOW) ;
-int	OWP_PrintChan_CB(flagmask_t FlagMask, owbi_t * psCI) ;
-int	OWP_Count_CB(flagmask_t FlagMask, owdi_t *) ;
+int	OWP_PrintROM_CB(fm_t FlagMask, ow_rom_t * psROM) ;
+int	OWP_Print1W_CB(fm_t FlagMask, owdi_t * psOW) ;
+int	OWP_PrintChan_CB(fm_t FlagMask, owbi_t * psCI) ;
+int	OWP_Count_CB(fm_t FlagMask, owdi_t *) ;
 
-int	OWP_Scan(u8_t, int (*)(flagmask_t, owdi_t *)) ;
-int	OWP_Scan2(u8_t, int (*)(flagmask_t, void *, owdi_t *), void *) ;
+int	OWP_Scan(u8_t, int (*)(fm_t, owdi_t *)) ;
+int	OWP_Scan2(u8_t, int (*)(fm_t, void *, owdi_t *), void *) ;
 int	OWP_ScanAlarmsFamily(u8_t Family) ;
 
 int	OWP_Config(void) ;

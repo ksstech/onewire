@@ -169,7 +169,7 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
 	if (debugTRACK && ioB1GET(dbgDS1820)) {
-		flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
+		fm_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
 		ds18x20Print_CB(sFM, psDS18X20);
 	}
 	return 1;
@@ -275,7 +275,7 @@ void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 	psEWP->Rsns = psEWP->Tsns ;							// restart SNS timer
 }
 
-int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW) {
+int	ds18x20EnumerateCB(fm_t sFM, owdi_t * psOW) {
 	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount];
 	memcpy(&psDS18X20->sOW, psOW, sizeof(owdi_t));
 	psDS18X20->Idx = sFM.uCount;
@@ -337,8 +337,8 @@ int	ds18x20Enumerate(void) {
 	return iRV ;										// number of devices enumerated
 }
 
-int	ds18x20Print_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20) {
-	int iRV = OWP_Print1W_CB((flagmask_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
+int	ds18x20Print_CB(fm_t FlagMask, ds18x20_t * psDS18X20) {
+	int iRV = OWP_Print1W_CB((fm_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW) ;
 	iRV += printfx(" Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
 		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9) ;
@@ -445,7 +445,7 @@ void ds18x20ReportAll(void) {
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		if (i == 0)
 			printfx("\r# DS18x20 #\r\n");
-		flagmask_t sFM = { .u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i) };
+		fm_t sFM = { .u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i) };
 		ds18x20Print_CB(sFM, &psaDS18X20[i]) ;
 	}
 	if (Fam10_28Count)

@@ -25,7 +25,7 @@ extern u8_t	Family01Count;
 // ###################################### Public functions #########################################
 
 void ds1990xConfig(void) ;
-int	OWP_DS1990ScanCB(flagmask_t, owdi_t *) ;
+int	OWP_DS1990ScanCB(fm_t, owdi_t *) ;
 int	OWP_DS1990ScanAll(epw_t * psEWP) ;
 
 #ifdef __cplusplus

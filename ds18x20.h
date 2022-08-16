@@ -70,10 +70,10 @@ void ds18x20ReportAll(void) ;
 
 struct rule_t ;
 int	ds18x20ConfigMode (struct rule_t *, int Xcur, int Xmax);
-int	ds18x20EnumerateCB(flagmask_t sFM, owdi_t * psOW);
+int	ds18x20EnumerateCB(fm_t sFM, owdi_t * psOW);
 int	ds18x20Enumerate(void);
 
-int	ds18x20Print_CB(flagmask_t FlagMask, ds18x20_t * psDS18X20);
+int	ds18x20Print_CB(fm_t FlagMask, ds18x20_t * psDS18X20);
 
 struct epw_t ;
 int	ds18x20StepOneStart(epw_t * psEWP) ;
