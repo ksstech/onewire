@@ -70,7 +70,7 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 			IF_PL(debugTRACK && ioB1GET(dbgOWscan), " -> P=%d\r\n", psOW->PhyBus) ;
 			return ;
 		}
-		IF_PL(debugTRACK && ioB1GET(dbgOWscan), "\r\n") ;
+		IF_PL(debugTRACK && ioB1GET(dbgOWscan), strCRLF) ;
 	}
 	#endif
 	SL_ERR("Invalid Logical Ch=%d", LogBus) ;
@@ -114,7 +114,7 @@ int	OWP_PrintROM_CB(fm_t FlagMask, ow_rom_t * psOW_ROM) {
 		iRV += printfx_nolock("#%u ", FlagMask.uCount);
 	iRV += printfx_nolock("%02X/%M/%02X", psOW_ROM->HexChars[owFAMILY], &psOW_ROM->HexChars[owAD0], psOW_ROM->HexChars[owCRC]);
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\r\n");
+		iRV += printfx_nolock(strCRLF);
 	printfx_unlock();
 	return iRV;
 }
@@ -124,7 +124,7 @@ int	OWP_Print1W_CB(fm_t FlagMask, owdi_t * psOW) {
 	printfx_lock();
 	iRV += printfx_nolock("  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\r\n");
+		iRV += printfx_nolock(strCRLF);
 	printfx_unlock();
 	return iRV;
 }
@@ -140,7 +140,7 @@ int	OWP_PrintChan_CB(fm_t FlagMask, owbi_t * psCI) {
 	if (psCI->ds18any)
 		iRV += printfx_nolock("DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
 	if (FlagMask.bNL)
-		iRV += printfx_nolock("\r\n");
+		iRV += printfx_nolock(strCRLF);
 	printfx_unlock();
 	return iRV;
 }

@@ -206,7 +206,7 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 void ds248xReport(ds248x_t * psDS248X) {
 	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
 	for (int Reg = 0; Reg < ds248xREG_NUM; ds248xReportRegister(psDS248X, Reg++));
-	P("\r\n") ;
+	P(strCRLF);
 }
 
 /**

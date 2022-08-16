@@ -338,7 +338,7 @@ int	ds18x20Print_CB(fm_t FlagMask, ds18x20_t * psDS18X20) {
 	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
 		iRV += printfx(" Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK") ;
 	if (FlagMask.bNL)
-		iRV += printfx("\r\n") ;
+		iRV += printfx(strCRLF) ;
 	return iRV ;
 }
 
@@ -444,5 +444,5 @@ void ds18x20ReportAll(void) {
 		ds18x20Print_CB(sFM, &psaDS18X20[i]) ;
 	}
 	if (Fam10_28Count)
-		printfx("\r\n");
+		printfx(strCRLF);
 }
