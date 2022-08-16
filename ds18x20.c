@@ -166,7 +166,7 @@ int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const u8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF } ;
-	uint16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]) ;
+	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0 ;
 	if (debugTRACK && ioB1GET(dbgDS1820)) {
 		fm_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
@@ -188,7 +188,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 		psDS18X20->Res = Res ;
 		return 1 ;										// changed, must write
 	}
-	RETURN_MX("Invalid Family/Resolution", erINVALID_VALUE);
+	RETURN_MX("Invalid Family/Resolution", erINV_VALUE);
 }
 
 int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
@@ -199,12 +199,12 @@ int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 		psDS18X20->Thi = Hi ;
 		return 1 ;										// changed, must write
 	}
-	RETURN_MX("Invalid Lo/Hi alarm limits", erINVALID_VALUE);
+	RETURN_MX("Invalid Lo/Hi alarm limits", erINV_VALUE);
 }
 
 int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	if (psaDS18X20 == NULL)
-		RETURN_MX("No DS18x20 enumerated", erINVALID_OPERATION);
+		RETURN_MX("No DS18x20 enumerated", erINV_OPERATION);
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	int iRV = erFAILURE, iRVx = erFAILURE;
 	u8_t	AI = psR->ActIdx ;
@@ -214,7 +214,7 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	u32_t wr	= psR->para.x32[AI][3].u32;
 	IF_P(debugTRACK && ioB1GET(ioMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%d hi=%d res=%d wr=%d\r\n", Xcur, Xmax, lo, hi, res, wr);
 
-	IF_RETURN_MX(wr != 0 && wr != 1, "Invalid persist flag, not 0/1", erINVALID_MODE);
+	IF_RETURN_MX(wr != 0 && wr != 1, "Invalid persist flag, not 0/1", erINV_MODE);
 	do {
 		ds18x20_t * psDS18X20 = &psaDS18X20[Xcur] ;
 		if (OWP_BusSelect(&psDS18X20->sOW) == 1) {
@@ -248,7 +248,6 @@ const vt_enum_t	sDS18X20Func = {
 	.work	= ds18x20GetWork,
 	.reset	= ds18x20SetDefault,
 	.sense	= ds18x20SetSense,
-	.get	= xEpGetValue,
 };
 
 epw_t * ds18x20GetWork(int x) {
@@ -282,10 +281,7 @@ int	ds18x20EnumerateCB(fm_t sFM, owdi_t * psOW) {
 
 	epw_t * psEWS = &psDS18X20->sEWx;
 	memset(psEWS, 0, sizeof(epw_t));
-	psEWS->var.def.cv.vf = vfFXX;
-	psEWS->var.def.cv.vt = vtVALUE;
-	psEWS->var.def.cv.vs = vs32B;
-	psEWS->var.def.cv.vc = 1;
+	psEWS->var.def = SETDEF_CVAR(0, 0, vtVALUE, cvF32, 1);
 	psEWS->idx = sFM.uCount;
 	psEWS->uri = URI_DS18X20;
 	ds18x20Initialize(psDS18X20);
@@ -308,11 +304,8 @@ int	ds18x20Enumerate(void) {
 
 	// Init primary EWP endpoint (leave fSecSNS = 0 to force parallel sensing
 	epw_t * psEWP = &table_work[URI_DS18X20];
-	psEWP->var.def.cv.pntr = 1;
-	psEWP->var.def.cv.vf = vfFXX;
-	psEWP->var.def.cv.vs = vs32B;
+	psEWP->var.def = SETDEF_CVAR(0, 1, vtVALUE, cvF32, Fam10_28Count);
 	psEWP->var.def.cv.ve = 1;							// Enumerated type
-	psEWP->var.def.cv.vc = Fam10_28Count;
 	psEWP->var.val.ps.psCX = &sDS18X20Func;
 	psEWP->Tsns	= psEWP->Rsns = ds18x20T_SNS_NORM;
 	psEWP->uri = URI_DS18X20 ;							// Used in OWPlatformEndpoints()
@@ -419,8 +412,10 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 	int	i = (int) pvTimerGetTimerID(pxHandle);
 	do {												// Handle all sensors on this BUS
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];
-		if (ds18x20ReadSP(psDS18X20, 2) == 1) ds18x20ConvertTemperature(psDS18X20);
-		else SL_ERR("Read/Convert failed");
+		if (ds18x20ReadSP(psDS18X20, 2) == 1)
+			ds18x20ConvertTemperature(psDS18X20);
+		else
+			SL_ERR("Read/Convert failed");
 		++i ;
 		// no more sensors or different device - release bus, exit loop
 		if ((i == Fam10_28Count) || (psDS18X20->sOW.DevNum != psaDS18X20[i].sOW.DevNum)) {
