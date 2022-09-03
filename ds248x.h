@@ -66,10 +66,11 @@ enum {													// STATus register bitmap
 // See http://www.catb.org/esr/structure-packing/
 // Also http://c0x.coding-guidelines.com/6.7.2.1.html
 
-typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
-	i2c_di_t *			psI2C ;							// size = 4
-	SemaphoreHandle_t	mux ;
-	TimerHandle_t		tmr ;
+typedef struct ds248x_t {		// DS248X I2C <> 1Wire bridge
+	i2c_di_t * psI2C;									// size = 4
+	SemaphoreHandle_t mux;
+	TimerHandle_t th;
+	StaticTimer_t ts;
 	union {												// size = 5
 		struct __attribute__((packed)) {
 			union {
@@ -114,10 +115,10 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	u8_t PrvConf[8];
 	#endif
 } ds248x_t;
-#if		(configPRODUCTION == 0)
-	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 40);
+#if (configPRODUCTION == 0)
+	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 84);
 #else
-	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 24) ;
+	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 68);
 #endif
 
 // #################################### Public Data structures #####################################

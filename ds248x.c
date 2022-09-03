@@ -463,7 +463,7 @@ int	ds248xConfig(i2c_di_t * psI2C_DI) {
 	ds248xReConfig(psI2C_DI);
 
 	void ds18x20StepThreeRead(TimerHandle_t) ;
-	psDS248X->tmr = xTimerCreate("ds248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead) ;
+	psDS248X->th = xTimerCreateStatic("ds248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
 	return erSUCCESS ;
 }
 
