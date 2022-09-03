@@ -101,15 +101,17 @@ typedef struct ds248x_t {		// DS248X I2C <> 1Wire bridge
 			u8_t Rpadj[5];
 		};
 		u8_t RegX[9];				// 4 + Rpadj[5]
-	} ;
-	u8_t CurChan : 3;				// 0 -> 7
-	u8_t Rptr : 3;					// 0 -> 4
-	u8_t NumChan : 1;				// 0 / 1 / 8
-	u8_t Sp1 : 1;
-	u8_t I2Cnum	: 4;				// index into I2C Device Info table
-	u8_t Lo : 4;
-	u8_t Hi : 4;
-	u8_t Sp2 : 4;
+	};
+	struct __attribute__((packed)) {
+		u8_t CurChan : 3;			// 0 -> 7
+		u8_t Rptr : 3;				// 0 -> 4
+		u8_t NumChan : 1;			// 0 / 1 / 8
+		u8_t Sp1 : 1;
+		u8_t I2Cnum	: 4;			// index into I2C Device Info table
+		u8_t Lo : 4;
+		u8_t Hi : 4;
+		u8_t Sp2 : 4;
+	};
 	#if	(configPRODUCTION == 0)
 	u8_t PrvStat[8];				// previous STAT reg
 	u8_t PrvConf[8];
