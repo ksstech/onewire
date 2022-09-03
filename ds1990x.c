@@ -48,7 +48,7 @@ int	OWP_DS1990ScanCB(fm_t sFM, owdi_t * psOW) {
 	seconds_t NowRead = xTimeStampAsSeconds(sTSZ.usecs);
 	u8_t LogChan = OWP_BusP2L(psOW);
 	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan);
-	u8_t Dly = ioB4GET(ioDS1990Dly);
+	u8_t Dly = ioB4GET(dlyDS1990);
 	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) &&
 		(NowRead - psOW_CI->LastRead) <= Dly) {
 		IF_P(debugTRACK && ioB1GET(dbgDS1990x), "Tag repeat %ds\r\n", Dly);
