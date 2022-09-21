@@ -241,7 +241,7 @@ u8_t OWCheckCRC(u8_t * buf, u8_t buflen) {
 		}
 	}
 	if (shift_reg)
-		SL_ERR("CRC=%x (%d) FAIL %`-+B", shift_reg, buflen, buflen, buf) ;
+		SL_ERR("CRC=%x (%d) FAIL %'-+hhY", shift_reg, buflen, buflen, buf) ;
 	return shift_reg ? 0 : 1 ;
 }
 

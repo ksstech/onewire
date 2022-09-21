@@ -240,7 +240,7 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(fm_t, void *, owdi_t *), void * pVoid
 			OWTargetSetup(&sOW, Family) ;
 			iRV = OWSearch(&sOW, 0) ;
 			if (iRV > 0 && (sOW.ROM.HexChars[owFAMILY] != Family)) {
-				IF_PL(debugTRACK && ioB1GET(dbgOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, &sOW.ROM.HexChars[owFAMILY]) ;
+				IF_PL(debugTRACK && ioB1GET(dbgOWscan), "Family %02hhX wanted, %02hhX found\r\n", Family, &sOW.ROM.HexChars[owFAMILY]) ;
 				OWP_BusRelease(&sOW) ;
 				continue ;
 			}
