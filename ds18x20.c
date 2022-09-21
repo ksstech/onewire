@@ -208,10 +208,10 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	int iRV = erFAILURE, iRVx = erFAILURE;
 	u8_t	AI = psR->ActIdx ;
-	u32_t lo	= psR->para.x32[AI][0].u32;
-	u32_t hi	= psR->para.x32[AI][1].u32;
+	i32_t lo = psR->para.x32[AI][0].i32;
+	i32_t hi = psR->para.x32[AI][1].i32;
 	u32_t res = psR->para.x32[AI][2].u32;
-	u32_t wr	= psR->para.x32[AI][3].u32;
+	u32_t wr = psR->para.x32[AI][3].u32;
 	IF_P(debugTRACK && ioB1GET(dbgMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%ld hi=%ld res=%lu wr=%lu\r\n",
 			Xcur, Xmax, lo, hi, res, wr);
 
