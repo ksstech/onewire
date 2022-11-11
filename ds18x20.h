@@ -29,18 +29,18 @@ DUMB_STATIC_ASSERT(sizeof(fam28) == 4);
 typedef struct {					// DS1820/S20/B20 9/12 bit Temp sensors
 	owdi_t	sOW ;					// address of enumerated sensor (size = 12)
 	epw_t	sEWx ;					// size = 32
-	union {						// Scratchpad
+	union {							// Scratchpad
 		struct {
-			u8_t Tlsb, Tmsb;	// last RAM sample
-			u8_t Thi, Tlo;		// Integer portion of Lo & Hi alarm thresholds
+			u8_t Tlsb, Tmsb;		// last RAM sample
+			u8_t Thi, Tlo;			// Integer portion of Lo & Hi alarm thresholds
 			union { fam10 fam10; fam28 fam28; };
-			u8_t CRC;			// calculated CRC of previous 8 bytes
+			u8_t CRC;				// calculated CRC of previous 8 bytes
 		};
 		u8_t RegX[9];
 	};
 	struct {
-		u8_t Idx : 3;			// Endpoint index (0->7) of this specific device
-		u8_t Res : 2;			// Resolution 0=9b 1=10b 2=11b 3=12b
+		u8_t Idx : 3;				// Endpoint index (0->7) of this specific device
+		u8_t Res : 2;				// Resolution 0=9b 1=10b 2=11b 3=12b
 		u8_t SBits : 3;
 	};
 } ds18x20_t;
