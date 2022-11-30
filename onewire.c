@@ -4,9 +4,11 @@
  */
 
 #include "hal_variables.h"
+
 #include "onewire.h"
 #include "ds248x.h"
-#include "endpoint_id.h"
+#include "endpoints.h"
+
 #include "printfx.h"
 #include "syslog.h"
 #include "x_errors_events.h"

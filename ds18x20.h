@@ -5,7 +5,7 @@
 
 #pragma		once
 
-#include	"endpoint_struct.h"
+#include	"endpoints.h"
 
 #ifdef __cplusplus
 	extern "C" {

@@ -11,7 +11,6 @@
 #include	"ds18x20.h"
 #include	"endpoints.h"
 
-#include	"options.h"
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"					// timing debugging

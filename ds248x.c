@@ -7,7 +7,6 @@
 #include	"ds248x.h"
 #include	"onewire.h"
 #include	"FreeRTOS_Support.h"
-#include	"options.h"
 #include	"printfx.h"
 #include	"syslog.h"
 #include	"systiming.h"								// timing debugging
