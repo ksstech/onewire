@@ -2,7 +2,7 @@
  * Copyright (c) 2017-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
-#pragma		once
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,7 +87,7 @@ typedef union ow_rom_t {
 } ow_rom_t;
 DUMB_STATIC_ASSERT( sizeof(ow_rom_t) == 8);
 
-typedef	struct {
+typedef	struct __attribute__((packed)) {
 	ow_rom_t ROM;					// size = 8
 	u8_t crc8;
 	s8_t LD;						// Last Discrepancy (bit #)
@@ -100,7 +100,7 @@ typedef	struct {
 		u8_t PSU:1;					// 1=External Power
 	};
 } owdi_t;
-//DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12);
+DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12);
 
 // ################################ Generic 1-Wire LINK API's ######################################
 

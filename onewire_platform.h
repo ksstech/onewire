@@ -4,7 +4,11 @@
 
 #pragma		once
 
-#include	"onewire.h"
+#include "hal_config.h"
+#include "include/onewire.h"
+#include "include/ds1990x.h"
+#include "include/ds18x20.h"
+#include "include/ds248x.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,15 +25,15 @@ extern "C" {
 /* Bus related info, ie last device read (ROM & timestamp)
  * Used to avoid re-reading a device (primarily DS1990X type) too regularly.
  */
-typedef struct owbi_t {
+typedef struct __attribute__((packed)) owbi_t {
 	seconds_t	LastRead;			// size=4
 	ow_rom_t	LastROM;			// size=8
-	union {
+	union __attribute__((packed)) {
 		struct { u8_t ds18b20:4, ds18s20:4; };
 		u8_t ds18any;
 	};
 } owbi_t;
-//DUMB_STATIC_ASSERT(sizeof(owbi_t) == 13);
+DUMB_STATIC_ASSERT(sizeof(owbi_t) == 13);
 
 // #################################### Public Data structures #####################################
 

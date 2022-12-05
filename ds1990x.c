@@ -5,7 +5,6 @@
 
 #include	"hal_variables.h"
 #include	"onewire_platform.h"
-#include	"task_events.h"
 #include	"endpoints.h"
 
 #include	"printfx.h"
@@ -28,7 +27,9 @@
 
 // ################################# Platform related variables ####################################
 
-u8_t Family01Count = 0 ;
+#if (halHAS_DS1990X > 0)
+	u8_t Family01Count = 0 ;
+#endif
 
 // ################################# Application support functions #################################
 

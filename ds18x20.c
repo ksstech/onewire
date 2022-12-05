@@ -4,11 +4,7 @@
  */
 
 #include	"hal_variables.h"
-
 #include	"onewire_platform.h"
-#include	"onewire.h"
-#include	"ds248x.h"
-#include	"ds18x20.h"
 #include	"endpoints.h"
 
 #include	"printfx.h"
@@ -81,7 +77,7 @@
 // ###################################### Local variables ##########################################
 
 ds18x20_t *	psaDS18X20 = NULL;
-u8_t	Fam10Count = 0, Fam28Count = 0, Fam10_28Count = 0;
+u8_t Fam10Count = 0, Fam28Count = 0, Fam10_28Count = 0;
 
 // #################################### Local ONLY functions #######################################
 
@@ -296,7 +292,7 @@ int	ds18x20EnumerateCB(fm_t sFM, owdi_t * psOW) {
 }
 
 int	ds18x20Enumerate(void) {
-	u8_t	ds18x20NumDev = 0;
+	u8_t ds18x20NumDev = 0;
 	Fam10_28Count = Fam10Count + Fam28Count;
 	SL_INFO("DS18x20 found %d devices", Fam10_28Count) ;
 	IF_SYSTIMER_INIT(debugTIMING, stDS1820A, stMILLIS, "DS1820A", 10, 1000) ;

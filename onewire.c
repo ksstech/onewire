@@ -4,9 +4,7 @@
  */
 
 #include "hal_variables.h"
-
-#include "onewire.h"
-#include "ds248x.h"
+#include "onewire_platform.h"
 #include "endpoints.h"
 
 #include "printfx.h"

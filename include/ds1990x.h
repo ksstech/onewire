@@ -20,7 +20,9 @@ extern "C" {
 
 // ###################################### Public variables #########################################
 
-extern u8_t	Family01Count;
+#if (halHAS_DS1990X > 0)
+	extern u8_t	Family01Count;
+#endif
 
 // ###################################### Public functions #########################################
 

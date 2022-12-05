@@ -4,8 +4,8 @@
  */
 
 #include	"hal_variables.h"
-#include	"ds248x.h"
-#include	"onewire.h"
+#include	"onewire_platform.h"
+
 #include	"FreeRTOS_Support.h"
 #include	"printfx.h"
 #include	"syslog.h"
@@ -88,8 +88,10 @@ static const uint16_t Rwpu[16]	= { 500, 500, 500, 500, 500, 500, 1000, 1000, 100
 
 // ##################################### Global variables ##########################################
 
-u8_t ds248xCount	= 0;
-ds248x_t * psaDS248X = NULL;
+#if (halHAS_DS248X > 0)
+	u8_t ds248xCount	= 0;
+	ds248x_t * psaDS248X = NULL;
+#endif
 
 // ##################################### Forward declarations ######################################
 

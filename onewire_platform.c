@@ -3,18 +3,15 @@
  * Copyright (c) 2020-2022 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include	"hal_variables.h"
-#include	"onewire_platform.h"
-#include	"ds248x.h"
-#include	"ds18x20.h"
-#include	"ds1990x.h"
-#include	"task_events.h"
-#include	"endpoints.h"
-#include	"printfx.h"
-#include	"syslog.h"
-#include	"systiming.h"								// timing debugging
-#include	"x_errors_events.h"
-#include	"x_utilities.h"								// vShowActivity
+#include "hal_variables.h"
+#include "onewire_platform.h"
+#include "endpoints.h"
+
+#include "printfx.h"
+#include "syslog.h"
+#include "systiming.h"								// timing debugging
+#include "x_errors_events.h"
+#include "x_utilities.h"								// vShowActivity
 
 // ################################ Global/Local Debug macros ######################################
 
@@ -154,12 +151,12 @@ int	OWP_PrintChan_CB(fm_t FlagMask, owbi_t * psCI) {
 int	OWP_Count_CB(fm_t FlagCount, owdi_t * psOW) {
 	switch (psOW->ROM.HexChars[owFAMILY]) {
 	#if (halHAS_DS1990X > 0)							// DS1990A/R, 2401/11 devices
-	case OWFAMILY_01:	++Family01Count ;	return 1 ;
+	case OWFAMILY_01: ++Family01Count; return 1;
 	#endif
 
 	#if (halHAS_DS18X20 > 0)							// DS18x20 Thermometers
-	case OWFAMILY_10:	++Fam10Count ;		return 1 ;
-	case OWFAMILY_28:	++Fam28Count ;		return 1 ;
+	case OWFAMILY_10: ++Fam10Count; return 1;
+	case OWFAMILY_28: ++Fam28Count; return 1;
 	#endif
 
 	default: SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.HexChars[owFAMILY]) ;

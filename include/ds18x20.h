@@ -48,7 +48,9 @@ typedef struct {					// DS1820/S20/B20 9/12 bit Temp sensors
 
 // ###################################### Public variables #########################################
 
-extern u8_t Fam10Count, Fam28Count;
+#if (halHAS_DS18X20 > 0)
+	extern u8_t Fam10Count, Fam28Count;
+#endif
 
 // ###################################### Public functions #########################################
 
