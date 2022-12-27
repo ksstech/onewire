@@ -3,15 +3,15 @@
  * Copyright (c) 2018-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include	"hal_variables.h"
-#include	"onewire_platform.h"
-#include	"endpoints.h"
+#include "hal_variables.h"
+#if (halHAS_DS18X20 > 0)
+#include "onewire_platform.h"
+#include "printfx.h"
+#include "rules.h"
+#include "syslog.h"
+#include "systiming.h"					// timing debugging
 
-#include	"printfx.h"
-#include	"syslog.h"
-#include	"systiming.h"					// timing debugging
-
-#include	"x_errors_events.h"
+#include "x_errors_events.h"
 
 #define	debugFLAG					0xF000
 
@@ -442,3 +442,4 @@ void ds18x20ReportAll(void) {
 	if (Fam10_28Count)
 		printfx(strCRLF);
 }
+#endif
