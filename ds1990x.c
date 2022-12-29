@@ -4,6 +4,7 @@
  */
 
 #include	"hal_variables.h"
+#if (halHAS_DS1990X > 0)
 #include	"onewire_platform.h"
 #include	"endpoints.h"
 
@@ -72,3 +73,4 @@ int	OWP_DS1990ScanAll(epw_t * psEWP) {
 	IF_SYSTIMER_STOP(debugTIMING, stDS1990) ;
 	return iRV;
 }
+#endif
