@@ -3,7 +3,7 @@
  * Copyright (c) 2018-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
-#pragma		once
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
