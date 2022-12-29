@@ -1,11 +1,9 @@
 /*
+ * ds248x.h
  * Copyright 2020-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
-#pragma		once
-
-#include <stdint.h>
-#include "hal_i2c.h"
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
