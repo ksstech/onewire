@@ -3,15 +3,16 @@
  * Copyright (c) 2020-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include	"hal_variables.h"
-#include	"onewire_platform.h"
+#include "main.h"
+#if (halHAS_DS248X > 0)
+#include "onewire_platform.h"
 
-#include	"FreeRTOS_Support.h"
-#include	"printfx.h"
-#include	"syslog.h"
-#include	"systiming.h"								// timing debugging
-#include	"x_errors_events.h"
-#include	"x_string_general.h"
+#include "FreeRTOS_Support.h"
+#include "printfx.h"
+#include "syslog.h"
+#include "systiming.h"								// timing debugging
+#include "x_errors_events.h"
+#include "x_string_general.h"
 
 // ##################################### Developer notes ###########################################
 /*
@@ -607,3 +608,4 @@ u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) {
 	IF_SYSTIMER_STOP(debugTIMING, stDS248xST) ;
 	return psDS248X->Rstat ;
 }
+#endif
