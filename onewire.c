@@ -4,8 +4,8 @@
  */
 
 #include "hal_variables.h"
+#if (halHAS_ONEWIRE > 0)
 #include "onewire_platform.h"
-#include "endpoints.h"
 
 #include "printfx.h"
 #include "syslog.h"
@@ -326,3 +326,4 @@ u64_t OWAddr2Value(ow_rom_t * psROM) {
 	}
 	return U64;
 }
+#endif
