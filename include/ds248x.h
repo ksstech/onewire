@@ -67,7 +67,9 @@ enum {													// STATus register bitmap
 typedef struct ds248x_t {		// DS248X I2C <> 1Wire bridge
 	i2c_di_t * psI2C;									// size = 4
 	SemaphoreHandle_t mux;
+	#if (halHAS_DS18X20 > 0)
 	TimerHandle_t th;
+	#endif
 	StaticTimer_t ts;
 	union {												// size = 5
 		struct __attribute__((packed)) {

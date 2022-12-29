@@ -463,9 +463,10 @@ int	ds248xConfig(i2c_di_t * psI2C_DI) {
 	if (psI2C_DI->Type == i2cDEV_DS2482_800)
 		psDS248X->NumChan = 1;							// 0=1Ch, 1=8Ch
 	ds248xReConfig(psI2C_DI);
-
+	#if (halHAS_DS18X20 > 0)
 	void ds18x20StepThreeRead(TimerHandle_t) ;
 	psDS248X->th = xTimerCreateStatic("ds248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
+	#endif
 	return erSUCCESS ;
 }
 
