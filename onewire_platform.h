@@ -2,13 +2,17 @@
  * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
-#pragma		once
+#pragma once
 
 #include "hal_config.h"
+#include "hal_i2c.h"
+#include "endpoints.h"
+
 #include "include/onewire.h"
+#include "include/ds248x.h"
 #include "include/ds1990x.h"
 #include "include/ds18x20.h"
-#include "include/ds248x.h"
+
 
 #ifdef __cplusplus
 extern "C" {
