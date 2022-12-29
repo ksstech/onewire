@@ -53,6 +53,7 @@ owbi_t * psOWP_BusGetPointer(u8_t LogBus) {
 void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (LogBus < OWP_NumBus)) ;
 	#if	(halHAS_DS248X > 0)
+	extern u8_t ds248xCount;
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
 		IF_PL(debugTRACK && ioB1GET(dbgOWscan), "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi) ;
@@ -278,6 +279,7 @@ int	OWP_Config(void) {
 	 * For each technology enumerate each physical device and the logical channels on each device before
 	 * moving on to the next device (same type) or next technology */
 	#if (halHAS_DS248X > 0)
+	extern u8_t ds248xCount;
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i] ;
 		psDS248X->Lo = OWP_NumBus ;

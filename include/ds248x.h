@@ -120,10 +120,7 @@ typedef struct ds248x_t {		// DS248X I2C <> 1Wire bridge
 
 // #################################### Public Data structures #####################################
 
-#if (halHAS_DS248X > 0)
-	extern u8_t ds248xCount;
-	extern ds248x_t * psaDS248X;
-#endif
+extern ds248x_t * psaDS248X;
 
 // ################################ DS248X I2C Read/Write support ##################################
 
