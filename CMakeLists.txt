@@ -9,7 +9,7 @@ set( requires
 )
 set( priv_requires 
 	commands
-	printfx rtos-support stringsX syslog systiming 
+	main printfx rtos-support stringsX syslog systiming 
 )
 
 idf_component_register(
