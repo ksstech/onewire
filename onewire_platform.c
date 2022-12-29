@@ -3,9 +3,8 @@
  * Copyright (c) 2020-2022 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_variables.h"
+#include "main.h"
 #include "onewire_platform.h"
-#include "endpoints.h"
 
 #include "printfx.h"
 #include "syslog.h"
