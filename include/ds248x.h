@@ -117,11 +117,6 @@ typedef struct ds248x_t {		// DS248X I2C <> 1Wire bridge
 	u8_t PrvConf[8];
 	#endif
 } ds248x_t;
-#if (configPRODUCTION == 0)
-	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 84);
-#else
-	DUMB_STATIC_ASSERT(sizeof(ds248x_t) == 68);
-#endif
 
 // #################################### Public Data structures #####################################
 
