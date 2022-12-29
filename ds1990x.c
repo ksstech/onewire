@@ -29,7 +29,7 @@
 // ################################# Platform related variables ####################################
 
 #if (halHAS_DS1990X > 0)
-	u8_t Family01Count = 0 ;
+	u8_t Fam01Count = 0 ;
 #endif
 
 // ################################# Application support functions #################################

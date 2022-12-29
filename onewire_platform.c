@@ -150,7 +150,8 @@ int	OWP_PrintChan_CB(fm_t FlagMask, owbi_t * psCI) {
 int	OWP_Count_CB(fm_t FlagCount, owdi_t * psOW) {
 	switch (psOW->ROM.HexChars[owFAMILY]) {
 	#if (halHAS_DS1990X > 0)							// DS1990A/R, 2401/11 devices
-	case OWFAMILY_01: ++Family01Count; return 1;
+	extern u8_t	Fam01Count;
+	case OWFAMILY_01: ++Fam01Count; return 1;
 	#endif
 
 	#if (halHAS_DS18X20 > 0)							// DS18x20 Thermometers
