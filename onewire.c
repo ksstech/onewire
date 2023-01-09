@@ -250,7 +250,8 @@ u8_t OWCheckCRC(u8_t * buf, u8_t buflen) {
 			sr_lsb		= shift_reg & 0x01 ;
 			fb_bit		= (data_bit ^ sr_lsb) & 0x01 ;
 			shift_reg	= shift_reg >> 1 ;
-			if (fb_bit) shift_reg = shift_reg ^ 0x8c ;
+			if (fb_bit)
+				shift_reg = shift_reg ^ 0x8c ;
 		}
 	}
 	if (shift_reg)
@@ -298,22 +299,22 @@ int OWResetCommand(owdi_t * psOW, u8_t Command, bool Skip, bool Pwr) {
  *		  0 : device not present
  */
 int	OWVerify(owdi_t * psOW) {
-	owdi_t	backup ;
-	memcpy((void *) &backup, (const void *) psOW, sizeof(owdi_t)) ;
-	psOW->LD	= 64 ;				// set search to find the same device
-	psOW->LDF	= 0 ;
+	owdi_t	backup;
+	memcpy((void *) &backup, (const void *) psOW, sizeof(owdi_t));
+	psOW->LD = 64;					// set search to find the same device
+	psOW->LDF = 0;
 
-	int	iRV = OWSearch(psOW, 0) ;
+	int	iRV = OWSearch(psOW, 0);
 	if (iRV == 1) {
 		for (int i = 0; i < sizeof(ow_rom_t); ++i) {
 			if (backup.ROM.HexChars[i] != psOW->ROM.HexChars[i]) {
-				iRV = 0 ;
-				break ;
+				iRV = 0;
+				break;
 			}
 		}
 	}
-	memcpy((void *) psOW, (const void *) &backup, sizeof(owdi_t)) ;			// restore the search state
-	return iRV ;										// return the result of the verify
+	memcpy((void *) psOW, (const void *) &backup, sizeof(owdi_t));			// restore the search state
+	return iRV;											// return the result of the verify
 }
 
 u64_t OWAddr2Value(ow_rom_t * psROM) {
