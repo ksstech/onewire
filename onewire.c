@@ -39,7 +39,7 @@
  * @return	1 if presence pulse(s) detected, device(s) reset
  *			0 if no presence pulse(s) detected
  */
-int OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]) ; }
+int OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]); }
 
 // ############################### Bit/Byte/Block Read/Write #######################################
 

@@ -74,9 +74,10 @@ extern "C" {
 
 // ######################################## Enumerations ###########################################
 
-enum { owADDR_MATCH, owADDR_SKIP } ;
-enum { owSPEED_STANDARD, owSPEED_ODRIVE	} ;
-enum { owPOWER_STANDARD, owPOWER_STRONG	} ;
+enum { owBUS_DS248x, owBUS_RMT };
+enum { owADDR_MATCH, owADDR_SKIP };
+enum { owSPEED_STANDARD, owSPEED_ODRIVE	};
+enum { owPOWER_STANDARD, owPOWER_STRONG	};
 enum { owFAM28_RES9B, owFAM28_RES10B, owFAM28_RES11B, owFAM28_RES12B };
 enum { owFAMILY, owAD0, owAD1, owAD2, owAD3, owAD4, owAD5, owCRC };
 
