@@ -3,7 +3,7 @@
  * Copyright (c) 2020-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include	"hal_variables.h"
+#include	"main.h"
 #if (halHAS_DS1990X > 0)
 #include	"onewire_platform.h"
 #include	"endpoints.h"
