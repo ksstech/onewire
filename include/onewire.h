@@ -90,8 +90,8 @@ DUMB_STATIC_ASSERT( sizeof(ow_rom_t) == 8);
 
 typedef	struct __attribute__((packed)) {
 	ow_rom_t ROM;					// size = 8
-	s8_t LD;						// Last Discrepancy (bit #)
-	s8_t LFD;						// Last Family Discrepancy (bit #)
+	u8_t LD;						// Last Discrepancy (bit #)
+	u8_t LFD;						// Last Family Discrepancy (bit #)
 	struct __attribute__((packed)) {
 		u8_t LDF:1;					// Last Device Flag
 		u8_t DevNum:2;				// index into 1W DevInfo table

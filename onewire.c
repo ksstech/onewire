@@ -135,9 +135,8 @@ static u8_t OWUpdateCRC8(u8_t crc8, u8_t data) {
  *			there are no devices on the 1-Wire Net.
  */
 int OWSearch(owdi_t * psOW, bool alarm_only) {
-	u8_t u8SrcDir, u8Status, u8ByteMask = 1;
-	s8_t i8SrcRes = 0, i8IdBitNum = 1, i8LastZero = 0, i8ByteNum = 0;
-	psOW->crc8 = 0;
+	u8_t BitNum = 1, LastZero = 0, u8SrcDir, u8Status, u8ByteMask = 1;
+	s8_t i8SrcRes = 0, i8ByteNum = 0;
 	u8_t crc8 = 0;
 	if (psOW->LDF == 0) {								// if the last call was not the last device
 		if (OWReset(psOW) == 0) {						// any device there?
@@ -150,10 +149,10 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 		do {
 		// if this discrepancy is before the Last Discrepancy
 		// on a previous next then pick the same as last time
-			if (i8IdBitNum < psOW->LD) {
+			if (BitNum < psOW->LD) {
 				u8SrcDir = ((psOW->ROM.HexChars[i8ByteNum] & u8ByteMask) > 0) ? 1 : 0 ;
 			} else {									// if equal to last pick 1, if not then pick 0
-				u8SrcDir = (i8IdBitNum == psOW->LD) ? 1 : 0 ;
+				u8SrcDir = (BitNum == psOW->LD) ? 1 : 0;
 			}
 			u8Status = ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], u8SrcDir) ;
 			s8_t i8IdBit = ((u8Status & ds248xSTAT_SBR) == ds248xSTAT_SBR);
@@ -163,15 +162,15 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 				break ;
 			} else {
 				if ((!i8IdBit) && (!i8IdBitCmp) && (u8SrcDir == 0)) {
-					i8LastZero = i8IdBitNum ;
-					if (i8LastZero < 9)
-						psOW->LFD = i8LastZero ;
+					LastZero = BitNum ;
+					if (LastZero < 9)
+						psOW->LFD = LastZero ;
 				}
 				if (u8SrcDir == 1)
 					psOW->ROM.HexChars[i8ByteNum] |= u8ByteMask ;
 				else
 					psOW->ROM.HexChars[i8ByteNum] &= ~u8ByteMask;
-				++i8IdBitNum ;						// increment the byte counter id_bit_number
+				++BitNum ;						// increment the byte counter id_bit_number
 				u8ByteMask <<= 1 ;					// adjust mask for next bit
 				if (u8ByteMask == 0) {				// if mask is 0 byte is done
 					crc8 = OWUpdateCRC8(crc8, psOW->ROM.HexChars[i8ByteNum]);  // Accumulate CRC
@@ -181,8 +180,8 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 			}
 		} while(i8ByteNum < sizeof(ow_rom_t));			// loop till 8 bytes done
 
-		if (!((i8IdBitNum < 65) || (psOW->crc8 != 0))) {// search successful ?
-			psOW->LD = i8LastZero;						// yes
+		if (!((BitNum < 65) || (crc8 != 0))) {			// search successful ?
+			psOW->LD = LastZero;						// yes
 			if (psOW->LD == 0) 							// last discrepancy?
 				psOW->LDF = 1;							// set flag
 			i8SrcRes = 1;								// status = FOUND !!!
