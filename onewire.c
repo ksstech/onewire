@@ -107,6 +107,18 @@ void OWFamilySkipSetup(owdi_t * psOW) {
 }
 
 /**
+ * @brief	Update CRC8 with byte value provided (See Application Note 27)
+ * @param	data
+ * @return	Returns current crc8 value
+ */
+static u8_t OWUpdateCRC8(u8_t crc8, u8_t data) {
+	crc8 ^= data;
+	for (int i = 0; i < BITS_IN_BYTE; ++i)
+		crc8 = (crc8 & 1) ? (crc8 >> 1) ^ 0x8c : (crc8 >> 1);
+	return crc8;
+}
+
+/**
  * The 'OWSearch' function does a general search.  This function
  * continues from the previous search state. The search state
  * can be reset by using the 'OWFirst' function.
@@ -125,6 +137,7 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 	u8_t u8SrcDir, u8Status, u8ByteMask = 1;
 	s8_t i8SrcRes = 0, i8IdBitNum = 1, i8LastZero = 0, i8ByteNum = 0;
 	psOW->crc8 = 0;
+	u8_t crc8 = 0;
 	if (psOW->LDF == 0) {								// if the last call was not the last device
 		if (OWReset(psOW) == 0) {						// any device there?
 			psOW->LD	= 0 ;							// no, reset the search
@@ -160,7 +173,7 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 				++i8IdBitNum ;						// increment the byte counter id_bit_number
 				u8ByteMask <<= 1 ;					// adjust mask for next bit
 				if (u8ByteMask == 0) {				// if mask is 0 byte is done
-					OWCalcCRC8(psOW, psOW->ROM.HexChars[i8ByteNum]);  // Accumulate CRC
+					crc8 = OWUpdateCRC8(crc8, psOW->ROM.HexChars[i8ByteNum]);  // Accumulate CRC
 					++i8ByteNum ;					// Next ROM byte
 					u8ByteMask = 1 ;					// Reset the mask
 				}
@@ -243,21 +256,6 @@ u8_t OWCheckCRC(u8_t * buf, u8_t buflen) {
 	if (shift_reg)
 		SL_ERR("CRC=%x (%d) FAIL %'-+hhY", shift_reg, buflen, buflen, buf) ;
 	return shift_reg ? 0 : 1 ;
-}
-
-/**
- * OWCalcCRC8() - Calculate the CRC8 of the byte value provided with the current 'crc8' value
- * @brief	See Application Note 27
- * @param	data
- * @return				Returns current crc8 value
- */
-u8_t OWCalcCRC8(owdi_t * psOW, u8_t data) {
-	psOW->crc8 = psOW->crc8 ^ data;
-	for (int i = 0; i < BITS_IN_BYTE; ++i) {
-		if (psOW->crc8 & 1)	psOW->crc8 = (psOW->crc8 >> 1) ^ 0x8c;
-		else 				psOW->crc8 = (psOW->crc8 >> 1);
-	}
-	return psOW->crc8;
 }
 
 /**
