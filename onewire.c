@@ -88,11 +88,11 @@ void OWReadBlock(owdi_t * psOW, u8_t * pBuf, int Len) {
  * If no (more) devices of 'family_code' can be found return first device of next family
  */
 void OWTargetSetup(owdi_t * psOW, u8_t family_code) {
-	psOW->ROM.Value	= 0ULL ;				// reset all ROM fields
-	psOW->ROM.HexChars[owFAMILY] = family_code ;
-	psOW->LD = 64 ;
-	psOW->LFD = 0 ;
-	psOW->LDF = 0 ;
+	psOW->ROM.Value	= 0ULL;								// reset all ROM fields
+	psOW->ROM.HexChars[owFAMILY] = family_code;
+	psOW->LD = 64;
+	psOW->LFD = 0;
+	psOW->LDF = 0;
 }
 
 /**
@@ -101,9 +101,10 @@ void OWTargetSetup(owdi_t * psOW, u8_t family_code) {
  * Will find the first device of the next family.
  */
 void OWFamilySkipSetup(owdi_t * psOW) {
-	psOW->LD = psOW->LFD ;			// set the Last discrepancy to last family discrepancy
-	psOW->LFD = 0 ;					// clear the last family discrepancy
-	if (psOW->LD == 0) psOW->LDF = 1 ;	// check for end of list
+	psOW->LD = psOW->LFD;			// set Last discrepancy to last family discrepancy
+	psOW->LFD = 0;					// clear the last family discrepancy
+	if (psOW->LD == 0)
+		psOW->LDF = 1;				// check for end of list
 }
 
 /**
@@ -140,10 +141,10 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 	u8_t crc8 = 0;
 	if (psOW->LDF == 0) {								// if the last call was not the last device
 		if (OWReset(psOW) == 0) {						// any device there?
-			psOW->LD	= 0 ;							// no, reset the search
-			psOW->LDF	= 0 ;
-			psOW->LFD	= 0 ;
-			return 0 ;
+			psOW->LD = 0;								// no, reset the search
+			psOW->LDF = 0;
+			psOW->LFD = 0;
+			return 0;
 		}
 		OWWriteByte(psOW, alarm_only ? OW_CMD_SEARCHALARM : OW_CMD_SEARCHROM);
 		do {
@@ -178,13 +179,13 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
 					u8ByteMask = 1 ;					// Reset the mask
 				}
 			}
-		} while(i8ByteNum < sizeof(ow_rom_t));	// loop till 8 bytes done
+		} while(i8ByteNum < sizeof(ow_rom_t));			// loop till 8 bytes done
 
 		if (!((i8IdBitNum < 65) || (psOW->crc8 != 0))) {// search successful ?
 			psOW->LD = i8LastZero;						// yes
 			if (psOW->LD == 0) 							// last discrepancy?
 				psOW->LDF = 1;							// set flag
-			i8SrcRes = 1 ;								// status = FOUND !!!
+			i8SrcRes = 1;								// status = FOUND !!!
 		}
 	}
 
@@ -204,10 +205,10 @@ int OWSearch(owdi_t * psOW, bool alarm_only) {
  *		  0 : no device present
  */
 int	OWFirst(owdi_t * psOW, bool alarm_only) {
-	psOW->LD	= 0 ;					// reset the search state
-	psOW->LFD	= 0 ;
-	psOW->LDF	= 0 ;
-	return OWSearch(psOW, alarm_only) ;
+	psOW->LD = 0;					// reset the search state
+	psOW->LFD = 0;
+	psOW->LDF = 0;
+	return OWSearch(psOW, alarm_only);
 }
 
 /**
