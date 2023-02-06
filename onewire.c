@@ -39,7 +39,10 @@
  * @return	1 if presence pulse(s) detected, device(s) reset
  *			0 if no presence pulse(s) detected
  */
-int OWReset(owdi_t * psOW) { return ds248xOWReset(&psaDS248X[psOW->DevNum]); }
+int OWReset(owdi_t * psOW) {
+	return ds248xOWReset(&psaDS248X[psOW->DevNum]);
+//	return psOW->Type ? rmtOWReset(&psaRMT[psOW->DevNum]) : ds248xOWReset(&psaDS248X[psOW->DevNum]);
+}
 
 // ############################### Bit/Byte/Block Read/Write #######################################
 
@@ -65,7 +68,9 @@ bool OWReadBit(owdi_t * psOW) { return ds248xOWTouchBit(&psaDS248X[psOW->DevNum]
  * @param	Byte
  * @return	status register value after write
  */
-u8_t OWWriteByte(owdi_t * psOW, u8_t Byte) { return ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte) ; }
+u8_t OWWriteByte(owdi_t * psOW, u8_t Byte) {
+	return ds248xOWWriteByte(&psaDS248X[psOW->DevNum], Byte);
+}
 
 /**
  * Reads 8 bits of communication from the 1-Wire Net
