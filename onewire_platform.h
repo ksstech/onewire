@@ -8,15 +8,15 @@
 #include "hal_i2c.h"
 #include "endpoints.h"
 
-#include "include/onewire.h"
-#include "include/ds248x.h"
-#include "include/ds1990x.h"
-#include "include/ds18x20.h"
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include "priv/onewire.h"
+#include "priv/ds248x.h"
+#include "priv/ds1990x.h"
+#include "priv/ds18x20.h"
+#include "priv/esp_rmt.h"
 
 // ############################################# Macros ############################################
 
