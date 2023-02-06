@@ -5,10 +5,6 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // ################################### DS248X 1-Wire Commands ######################################
 
 #define ds248xCMD_DRST   			0xF0				// Device Reset (525nS)
@@ -160,7 +156,3 @@ u8_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
  * Returns � The DS248x status byte result from the triplet command
  */
 u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) ;
-
-#ifdef __cplusplus
-}
-#endif

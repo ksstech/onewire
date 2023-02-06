@@ -5,10 +5,6 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* https://www.maximintegrated.com/en/products/ibutton/software/1wire/wirekit.cfm
  * https://www.maximintegrated.com/en/app-notes/index.mvp/id/74
  *
@@ -94,14 +90,19 @@ typedef	struct __attribute__((packed)) {
 	u8_t LD;						// Last Discrepancy (bit #)
 	u8_t LFD;						// Last Family Discrepancy (bit #)
 	struct __attribute__((packed)) {
-		u8_t LDF:1;					// Last Device Flag
-		u8_t DevNum:2;				// index into 1W DevInfo table
 		u8_t PhyBus:3;
+		u8_t DevNum:2;				// index into 1W DevInfo table
+		u8_t Type:1;
+		u8_t LDF:1;					// Last Device Flag
 		u8_t OD:1;					// 1=OverDrive supported
 		u8_t PSU:1;					// 1=External Power
+		u8_t Spare:7;
 	};
 } owdi_t;
-DUMB_STATIC_ASSERT(sizeof(owdi_t) == 11);
+DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12);
+
+// LD must be same or bigger size as LFD
+// i8LastZero, check
 
 // ################################ Generic 1-Wire LINK API's ######################################
 
@@ -138,7 +139,3 @@ int OWResetCommand(owdi_t * psOW, u8_t Command, bool Skip, bool Pwr) ;
 int	OWVerify(owdi_t * psOW) ;
 
 u64_t OWAddr2Value(ow_rom_t * psROM);
-
-#ifdef __cplusplus
-}
-#endif

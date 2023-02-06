@@ -5,10 +5,6 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // ############################################# Macros ############################################
 
 
@@ -26,7 +22,3 @@ extern "C" {
 void ds1990xConfig(void) ;
 int	OWP_DS1990ScanCB(fm_t, owdi_t *) ;
 int	OWP_DS1990ScanAll(epw_t * psEWP) ;
-
-#ifdef __cplusplus
-}
-#endif

@@ -1,15 +1,9 @@
 /*
- * Copyright (c) 2018-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * Copyright (c) 2018-23 Andre M. Maree/KSS Technologies (Pty) Ltd.
  * ds18x20.h
  */
 
 #pragma		once
-
-#include	"endpoints.h"
-
-#ifdef __cplusplus
-	extern "C" {
-#endif
 
 // ######################################## Enumerations ###########################################
 
@@ -80,7 +74,3 @@ int	ds18x20Print_CB(fm_t FlagMask, ds18x20_t * psDS18X20);
 struct epw_t ;
 int	ds18x20StepOneStart(epw_t * psEWP) ;
 int	ds18x20StartAllInOne(struct epw_t * psEPW) ;
-
-#ifdef __cplusplus
-	}
-#endif
