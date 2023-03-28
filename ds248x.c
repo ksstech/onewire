@@ -209,6 +209,9 @@ void ds248xReport(ds248x_t * psDS248X) {
 	halI2C_DeviceReport((void *) psDS248X->psI2C) ;
 	for (int Reg = 0; Reg < ds248xREG_NUM; ds248xReportRegister(psDS248X, Reg++));
 	P(strCRLF);
+	#if (halHAS_DS18X20 > 0)
+	xRtosReportTimer(NULL, psDS248X->th);
+	#endif
 }
 
 /**
