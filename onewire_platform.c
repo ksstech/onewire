@@ -107,7 +107,7 @@ int	OWP_PrintROM_CB(fm_t FlagMask, ow_rom_t * psOW_ROM) {
 	printfx_lock();
 	if (FlagMask.bRT)
 		iRV += printfx_nolock("%!.R: ", RunTime);
-	if (FlagMask.bCount)
+	if (FlagMask.bTskNum)
 		iRV += printfx_nolock("#%u ", FlagMask.uCount);
 	iRV += printfx_nolock("%02X/%M/%02X", psOW_ROM->HexChars[owFAMILY], &psOW_ROM->HexChars[owAD0], psOW_ROM->HexChars[owCRC]);
 	if (FlagMask.bNL)
