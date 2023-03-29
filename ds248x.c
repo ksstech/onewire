@@ -3,11 +3,12 @@
  * Copyright (c) 2020-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "main.h"
-#if (halHAS_DS248X > 0)
-#include "onewire_platform.h"
+#include "hal_config.h"
 
+#if (halHAS_DS248X > 0)
 #include "FreeRTOS_Support.h"
+#include "onewire_platform.h"
+#include "options.h"
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging

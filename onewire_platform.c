@@ -3,9 +3,10 @@
  * Copyright (c) 2020-2022 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "main.h"
-#include "onewire_platform.h"
+#include "hal_config.h"
 
+#include "onewire_platform.h"
+#include "options.h"
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging

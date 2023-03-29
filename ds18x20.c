@@ -3,14 +3,15 @@
  * Copyright (c) 2018-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "main.h"
+#include "hal_config.h"
+
 #if (halHAS_DS18X20 > 0)
 #include "onewire_platform.h"
+#include "options.h"
 #include "printfx.h"
 #include "rules.h"
 #include "syslog.h"
 #include "systiming.h"					// timing debugging
-
 #include "x_errors_events.h"
 
 #define	debugFLAG					0xF000
