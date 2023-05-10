@@ -391,7 +391,7 @@ int	ds18x20StepTwoBusConvert(ds18x20_t * psDS18X20, int i) {
 	return 0 ;
 }
 
-int ds18x20StepOneStart(epw_t * psEWx) {			// Step 1: Start CONVERT on each physical bus
+int ds18x20Sense(epw_t * psEWx) {					// Step 1: Start CONVERT on each physical bus
 	u8_t	PrevDev = 0xFF ;						// where 1+ DS18x20 has been enumerated on.
 	for (int i = 0; i < Fam10_28Count; ++i) {		// Although sense is configured on primary level,
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];		// log can be different for each instance

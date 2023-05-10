@@ -72,5 +72,5 @@ int	ds18x20Enumerate(void);
 int	ds18x20Print_CB(fm_t FlagMask, ds18x20_t * psDS18X20);
 
 struct epw_t ;
-int	ds18x20StepOneStart(epw_t * psEWP) ;
+int	ds18x20Sense(epw_t * psEWP) ;
 int	ds18x20StartAllInOne(struct epw_t * psEPW) ;
