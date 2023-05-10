@@ -29,24 +29,24 @@
 // ################################# Platform related variables ####################################
 
 #if (halHAS_DS1990X > 0)
-	u8_t Fam01Count = 0 ;
+	u8_t Fam01Count = 0;
 #endif
 
 // ################################# Application support functions #################################
 
 void ds1990xConfig(void) {
-	epw_t * psEWP = &table_work[URI_DS1990X] ;
+	epw_t * psEWP = &table_work[URI_DS1990X];
 	psEWP->var.def = SETDEF_CVAR(0, 0, vtVALUE, cvU32, 1);
 	psEWP->Tsns = psEWP->Rsns = DS1990X_T_SNS;
-	psEWP->uri = URI_DS1990X ;		// Used in OWPlatformEndpoints()
-	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990x", 1, 100) ;
+	psEWP->uri = URI_DS1990X;		// Used in OWPlatformEndpoints()
+	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990x", 1, 100);
 }
 
 // #################################### 1W Platform support ########################################
 
 /* To avoid registering multiple reads if iButton is held in place too long we enforce a
  * period of 'x' seconds within which successive reads of the same tag will be ignored */
-int	OWP_DS1990ScanCB(fm_t sFM, owdi_t * psOW) {
+int	ds1990SenseCB(fm_t sFM, owdi_t * psOW) {
 	seconds_t NowRead = xTimeStampAsSeconds(sTSZ.usecs);
 	u8_t LogChan = OWP_BusP2L(psOW);
 	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan);
@@ -55,22 +55,22 @@ int	OWP_DS1990ScanCB(fm_t sFM, owdi_t * psOW) {
 		(NowRead - psOW_CI->LastRead) <= Dly) {
 		IF_P(debugTRACK && ioB1GET(dbgDS1990x), "Tag repeat %ds\r\n", Dly);
 	} else {
-		psOW_CI->LastROM.Value	= psOW->ROM.Value ;
-		psOW_CI->LastRead		= NowRead ;
-		xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits) ;
-		portYIELD() ;
+		psOW_CI->LastROM.Value	= psOW->ROM.Value;
+		psOW_CI->LastRead		= NowRead;
+		xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits);
+		portYIELD();
 		if (debugTRACK && ioB1GET(dbgDS1990x)) {
 			sFM.bRT = 1; sFM.bNL = 1;
 			OWP_Print1W_CB(sFM, psOW);
 		}
 	}
-	return erSUCCESS ;
+	return erSUCCESS;
 }
 
-int	OWP_DS1990ScanAll(epw_t * psEWP) {
-	IF_SYSTIMER_START(debugTIMING, stDS1990) ;
-	int iRV = OWP_Scan(OWFAMILY_01, OWP_DS1990ScanCB) ;
-	IF_SYSTIMER_STOP(debugTIMING, stDS1990) ;
+int	ds1990Sense(epw_t * psEWP) {
+	IF_SYSTIMER_START(debugTIMING, stDS1990);
+	int iRV = OWP_Scan(OWFAMILY_01, ds1990SenseCB);
+	IF_SYSTIMER_STOP(debugTIMING, stDS1990);
 	return iRV;
 }
 #endif
