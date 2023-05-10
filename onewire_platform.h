@@ -5,7 +5,7 @@
 #pragma once
 
 #include "hal_config.h"
-#include "hal_i2c.h"
+#include "hal_i2cm.h"
 #include "endpoints.h"
 
 #ifdef __cplusplus
