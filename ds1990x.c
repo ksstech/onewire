@@ -36,7 +36,7 @@
 
 void ds1990xConfig(void) {
 	epw_t * psEWP = &table_work[URI_DS1990X];
-	psEWP->var.def = SETDEF_CVAR(0, 0, vtVALUE, cvU32, 1);
+	psEWP->var.def = SETDEF_CVAR(0, 0, vtVALUE, cvU32, 1, 0);
 	psEWP->Tsns = psEWP->Rsns = DS1990X_T_SNS;
 	psEWP->uri = URI_DS1990X;		// Used in OWPlatformEndpoints()
 	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990x", 1, 100);
