@@ -1,9 +1,8 @@
 /*
- * ds248x.c
- * Copyright (c) 2020-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
+ * ds248x.c - Copyright (c) 2020-23 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_config.h"
+#include "hal_variables.h"
 
 #if (halHAS_DS248X > 0)
 #include "FreeRTOS_Support.h"
@@ -32,7 +31,7 @@
 
 // ######################################## Build macros ###########################################
 
-#define	ds248xLOCK_DIS				0
+#define	ds248xLOCK_DIS				0					// no locking
 #define	ds248xLOCK_IO				1					// un/locked on I2C access level
 #define	ds248xLOCK_BUS				2					// un/locked on Bus select level
 #define	ds248xLOCK					ds248xLOCK_DIS
