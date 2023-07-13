@@ -1,9 +1,8 @@
 /*
- * ds1990x.c
- * Copyright (c) 2020-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
+ * ds1990x.c - Copyright (c) 2020-23 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_config.h"
+#include "hal_variables.h"
 
 #if (halHAS_DS1990X > 0)
 #include "endpoints.h"
@@ -46,7 +45,7 @@ void ds1990xConfig(void) {
 
 /* To avoid registering multiple reads if iButton is held in place too long we enforce a
  * period of 'x' seconds within which successive reads of the same tag will be ignored */
-int	ds1990SenseCB(fm_t sFM, owdi_t * psOW) {
+int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
 	seconds_t NowRead = xTimeStampAsSeconds(sTSZ.usecs);
 	u8_t LogChan = OWP_BusP2L(psOW);
 	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan);
@@ -60,8 +59,9 @@ int	ds1990SenseCB(fm_t sFM, owdi_t * psOW) {
 		xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits);
 		portYIELD();
 		if (debugTRACK && ioB1GET(dbgDS1990x)) {
-			sFM.bRT = 1; sFM.bNL = 1;
-			OWP_Print1W_CB(sFM, psOW);
+			psR->sFM.bRT = 1;
+			psR->sFM.bNL = 1;
+			OWP_Print1W_CB(psR, psOW);
 		}
 	}
 	return erSUCCESS;

@@ -3,7 +3,7 @@
  * Copyright (c) 2018-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_config.h"
+#include "hal_variables.h"
 
 #if (halHAS_DS18X20 > 0)
 #include "onewire_platform.h"
@@ -162,11 +162,11 @@ int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const u8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF };
+	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
 	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0;
 	if (debugTRACK && ioB1GET(dbgDS1820)) {
-		fm_t sFM = { .u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
-		ds18x20Print_CB(sFM, psDS18X20);
+		ds18x20Print_CB(&sRprt, psDS18X20);
 	}
 	return 1;
 }
@@ -271,15 +271,15 @@ void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 	psEWP->Rsns = psEWP->Tsns;							// restart SNS timer
 }
 
-int	ds18x20EnumerateCB(fm_t sFM, owdi_t * psOW) {
-	ds18x20_t * psDS18X20 = &psaDS18X20[sFM.uCount];
+int	ds18x20EnumerateCB(report_t * psR, owdi_t * psOW) {
+	ds18x20_t * psDS18X20 = &psaDS18X20[psR->sFM.uCount];
 	memcpy(&psDS18X20->sOW, psOW, sizeof(owdi_t));
-	psDS18X20->Idx = sFM.uCount;
+	psDS18X20->Idx = psR->sFM.uCount;
 
 	epw_t * psEWS = &psDS18X20->sEWx;
 	memset(psEWS, 0, sizeof(epw_t));
 	psEWS->var.def = SETDEF_CVAR(0, 0, vtVALUE, cvF32, 1, 0);
-	psEWS->idx = sFM.uCount;
+	psEWS->idx = psR->sFM.uCount;
 	psEWS->uri = URI_DS18X20;
 	ds18x20Initialize(psDS18X20);
 
@@ -326,14 +326,17 @@ int	ds18x20Enumerate(void) {
 	return iRV;										// number of devices enumerated
 }
 
-int	ds18x20Print_CB(fm_t FlagMask, ds18x20_t * psDS18X20) {
-	int iRV = OWP_Print1W_CB((fm_t) (FlagMask.u32Val & ~mfbNL), &psDS18X20->sOW);
-	iRV += printfx(" Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
+int	ds18x20Print_CB(report_t * psR, ds18x20_t * psDS18X20) {
+	u32_t U32 = psR->sFM.u32Val;
+	psR->sFM.bNL = 0;
+	int iRV = OWP_Print1W_CB(psR, &psDS18X20->sOW);
+	psR->sFM.bNL = ((fm_t)U32).bNL;
+	iRV += wprintfx(psR, " Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
 		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9);
 	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
 		iRV += printfx(" Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK");
-	if (FlagMask.bNL)
+	if (psR->sFM.bNL)
 		iRV += printfx(strCRLF);
 	return iRV;
 }
@@ -432,14 +435,16 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 
 // ######################################### Reporting #############################################
 
-void ds18x20ReportAll(void) {
+int ds18x20ReportAll(report_t * psR) {
+	report_t sRprt = { .pcBuf = NULL, .Size = 0, .sFM.u32Val = 0 };
+	if (psR == NULL) psR = &sRprt;
+	int iRV = 0;
 	for (int i = 0; i < Fam10_28Count; ++i) {
-		if (i == 0)
-			printfx("\r# DS18x20 #\r\n");
-		fm_t sFM = { .u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i) };
-		ds18x20Print_CB(sFM, &psaDS18X20[i]);
+		psR->sFM.u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i);
+		if (i == 0) iRV += wprintfx(psR, "\r# DS18x20 #\r\n");
+		iRV += ds18x20Print_CB(psR, &psaDS18X20[i]);
 	}
-	if (Fam10_28Count)
-		printfx(strCRLF);
+	if (Fam10_28Count) iRV += wprintfx(psR, strCRLF);
+	return iRV;
 }
 #endif

@@ -43,9 +43,9 @@ owb_rmt_t * psaRMT = NULL;
 
 // #################################### DS248x debug/reporting #####################################
 
-void ds248xReport(owb_rmt_t * psRMT) {}
+void ow_rmtReport(report_t * psR, owb_rmt_t * psRMT) {}
 
-void ds248xReportAll(void) {}
+void ow_rmtReportAll(report_t * psR) {}
 
 // ################################## DS248x-x00 1-Wire functions ##################################
 

@@ -132,39 +132,33 @@ int	ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
 	return iRV;
 }
 
-int ds248xReportStatus(u8_t Val1, u8_t Val2) {
+int ds248xReportStatus(report_t * psR, u8_t Val1, u8_t Val2) {
 	const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" };
-	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x000000FF, StatNames, makeMASK08x24(0,0,0,0,0,0,0,1,0));
-	int iRV = P("%s\r\n", pcBuf);
-	vRtosFree(pcBuf);
-	return iRV;
+	return xBitMapDecodeChanges(psR, Val1, Val2, 0x000000FF, StatNames);
 }
 
-int ds248xReportConfig(u8_t Val1, u8_t Val2) {
+int ds248xReportConfig(report_t * psR, u8_t Val1, u8_t Val2) {
 	const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" };
-	char * pcBuf = pcBitMapDecodeChanges(Val1, Val2, 0x0000000F, ConfNames, makeMASK08x24(0,0,0,0,0,0,0,1,0));
-	int iRV = P("%s\r\n", pcBuf);
-	vRtosFree(pcBuf);
-	return iRV;
+	return xBitMapDecodeChanges(psR, Val1, Val2, 0x0000000F, ConfNames);
 }
 
 /**
  * Display register contents, decode status & configuration
  */
-int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
+int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 	int iRV = 0, Chan;
 	switch (Reg) {
 	case ds248xREG_STAT:
 		#if	(configPRODUCTION == 0)
 		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
-			iRV += P("STAT(0-%u)=0x%02X  ", i, psDS248X->PrvStat[i]);
-			iRV += ds248xReportStatus(0, psDS248X->PrvStat[i]);
+			iRV += wprintfx(psR, "STAT(0-%u)=0x%02X  ", i, psDS248X->PrvStat[i]);
+			iRV += ds248xReportStatus(psR, 0, psDS248X->PrvStat[i]);
 		}
 		#endif
 		break;
 
 	case ds248xREG_DATA:
-		iRV += P("DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata);
+		iRV += wprintfx(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata);
 		break;
 
 	case ds248xREG_CHAN:
@@ -173,12 +167,12 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan);
 		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]);
-		iRV = P("CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\r\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]);
+		iRV += wprintfx(psR, "CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\r\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]);
 		break;
 
 	case ds248xREG_CONF:
-		iRV += P("CONF(3)=0x%02X  ", psDS248X->Rconf);
-		iRV += ds248xReportConfig(0, psDS248X->Rconf);
+		iRV += wprintfx(psR, "CONF(3)=0x%02X  ", psDS248X->Rconf);
+		iRV += ds248xReportConfig(psR, 0, psDS248X->Rconf);
 		break;
 
 	case ds248xREG_PADJ:
@@ -187,16 +181,16 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 		ds248xReadRegister(psDS248X, Reg);
 		ds248x_padj_t sPadj;
 		sPadj.RadjX = psDS248X->Rpadj[0];
-		iRV += P("PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
+		iRV += wprintfx(psR, "PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
 				sPadj.OD ? CHR_1 : CHR_0, Trstl[sPadj.VAL] * (sPadj.OD ? 1 : 10));
 		sPadj.RadjX = psDS248X->Rpadj[1];
-		iRV += P(" | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
+		iRV += wprintfx(psR, " | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
 		sPadj.RadjX = psDS248X->Rpadj[2];
-		iRV += P(" | tWOL=%.1fuS", sPadj.OD ? (double) Twol1[sPadj.VAL] / 10.0 : (double) Twol0[sPadj.VAL]);
+		iRV += wprintfx(psR, " | tWOL=%.1fuS", sPadj.OD ? (double) Twol1[sPadj.VAL] / 10.0 : (double) Twol0[sPadj.VAL]);
 		sPadj.RadjX = psDS248X->Rpadj[3];
-		iRV += P(" | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
+		iRV += wprintfx(psR, " | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
 		sPadj.RadjX = psDS248X->Rpadj[4];
-		iRV += P(" | rWPU=%f ohm\r\n", (double) Rwpu[sPadj.VAL]);
+		iRV += wprintfx(psR, " | rWPU=%f ohm\r\n", (double) Rwpu[sPadj.VAL]);
 		break;
 	}
 	return iRV;
@@ -205,20 +199,22 @@ int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) {
 /**
  * Report decoded status of a specific device, all registers
  */
-void ds248xReport(ds248x_t * psDS248X) {
-	halI2C_DeviceReport((void *) psDS248X->psI2C);
-	for (int Reg = 0; Reg < ds248xREG_NUM; ds248xReportRegister(psDS248X, Reg++));
+int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
+	int iRV = halI2C_DeviceReport(psR, (void *) psDS248X->psI2C);
+	for (int Reg = 0; Reg < ds248xREG_NUM; iRV += ds248xReportRegister(psR, psDS248X, Reg++));
 	#if (halHAS_DS18X20 > 0)
-	xRtosReportTimer(NULL, psDS248X->th);
+	iRV += xRtosReportTimer(psR, psDS248X->th);
 	#endif
-	P(strCRLF);
+	return iRV;
 }
 
 /**
  * Report decoded status of all devices & registers
  */
-void ds248xReportAll(void) {
-	for (int i = 0; i < ds248xCount; ds248xReport(&psaDS248X[i++]));
+int ds248xReportAll(report_t * psR) {
+	int iRV = 0;
+	for (int i = 0; i < ds248xCount; iRV += ds248xReport(psR, &psaDS248X[i++]));
+	return iRV;
 }
 
 int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
@@ -233,9 +229,9 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 				u8_t Mask = DS248Xmask[ioB2GET(dbgDS248X) - 1];
 				u8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
 				if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
-					P("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
+					printfx("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
 						psDS248X->CurChan, StatX, psDS248X->Rstat);
-					ds248xReportStatus(StatX, psDS248X->Rstat);
+					ds248xReportStatus(NULL, StatX, psDS248X->Rstat);
 				}
 			}
 			psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat;
@@ -259,8 +255,8 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 			if (ioB2GET(dbgDS248X)) {
 				u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];
 				if (psDS248X->Rconf != ConfX) {
-					P("D=%d C=%u x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
-					ds248xReportConfig(ConfX, psDS248X->Rconf);
+					printfx("D=%d C=%u x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
+					ds248xReportConfig(NULL, ConfX, psDS248X->Rconf);
 				}
 			}
 			psDS248X->PrvConf[psDS248X->CurChan] = psDS248X->Rconf;

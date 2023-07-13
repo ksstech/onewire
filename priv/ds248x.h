@@ -42,7 +42,7 @@ enum {													// DS248X register numbers
 	ds248xREG_CONF,										// CONFiguration (all)
 	ds248xREG_PADJ,										// Port Adjust (DS2484 only)
 	ds248xREG_NUM,
-} ;
+};
 
 enum {													// STATus register bitmap
 	ds248xSTAT_1WB		= (1 << 0),						// 1W Busy
@@ -53,7 +53,7 @@ enum {													// STATus register bitmap
 	ds248xSTAT_SBR		= (1 << 5),						// Single Bit Received
 	ds248xSTAT_TSB		= (1 << 6),						// Triple Search Bit
 	ds248xSTAT_DIR		= (1 << 7),						// DIRection
-} ;
+};
 
 // ######################################### Structures ############################################
 
@@ -81,7 +81,7 @@ typedef struct ds248x_t {		// DS248X I2C <> 1Wire bridge
 			/*MSB*/	u8_t DIR : 1;	// DIRection
 				};
 				u8_t Rstat;
-			} ;
+			};
 			u8_t Rdata;
 			u8_t Rchan;				// Code read back after ChanSel
 			union {
@@ -91,9 +91,9 @@ typedef struct ds248x_t {		// DS248X I2C <> 1Wire bridge
 					u8_t SPU : 1;	// Strong Pull Up
 					u8_t OWS : 1;	// 1-Wire Speed
 			/*MSB*/	u8_t RES1 : 4;
-				} ;
+				};
 				u8_t Rconf;
-			} ;
+			};
 			u8_t Rpadj[5];
 		};
 		u8_t RegX[9];				// 4 + Rpadj[5]
@@ -126,10 +126,10 @@ extern ds248x_t * psaDS248X;
 
 // ###################################### Device debug support #####################################
 
-int	ds248xReset(ds248x_t * psDS248X) ;
-int	ds248xReportRegister(ds248x_t * psDS248X, int Reg) ;
-void ds248xReport(ds248x_t * psDS248X) ;
-void ds248xReportAll(void) ;
+int	ds248xReset(ds248x_t * psDS248X);
+int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg);
+int ds248xReport(report_t * psR, ds248x_t * psDS248X);
+int ds248xReportAll(report_t * psR);
 
 // ############################### Identify, test and configure ####################################
 
@@ -139,14 +139,14 @@ void ds248xReConfig(i2c_di_t * psI2C_DI);
 
 // ############################## DS248X-x00 1-Wire support functions ##############################
 
-int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Chan) ;
-void ds248xBusRelease(ds248x_t * psDS248X) ;
-int	ds248xOWReset(ds248x_t * psDS248X) ;
-int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed) ;
-int	ds248xOWLevel(ds248x_t * psDS248X, bool level) ;
-bool ds248xOWTouchBit(ds248x_t * psDS248X, bool bit) ;
-u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t sendbyte) ;
-u8_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
+int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Chan);
+void ds248xBusRelease(ds248x_t * psDS248X);
+int	ds248xOWReset(ds248x_t * psDS248X);
+int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed);
+int	ds248xOWLevel(ds248x_t * psDS248X, bool level);
+bool ds248xOWTouchBit(ds248x_t * psDS248X, bool bit);
+u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t sendbyte);
+u8_t	ds248xOWReadByte(ds248x_t * psDS248X);
 /**
  * Use the DS248x help command '1-Wire triplet' to perform one bit of a 1-Wire
  * search. This command does two read bits and one write bit. The write bit
@@ -155,4 +155,4 @@ u8_t	ds248xOWReadByte(ds248x_t * psDS248X) ;
  *
  * Returns � The DS248x status byte result from the triplet command
  */
-u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) ;
+u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir);
