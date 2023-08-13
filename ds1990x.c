@@ -54,8 +54,8 @@ int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
 		(NowRead - psOW_CI->LastRead) <= Dly) {
 		IF_P(debugTRACK && ioB1GET(dbgDS1990x), "Tag repeat %ds\r\n", Dly);
 	} else {
-		psOW_CI->LastROM.Value	= psOW->ROM.Value;
-		psOW_CI->LastRead		= NowRead;
+		psOW_CI->LastROM.Value = psOW->ROM.Value;
+		psOW_CI->LastRead = NowRead;
 		xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits);
 		portYIELD();
 		if (debugTRACK && ioB1GET(dbgDS1990x)) {
