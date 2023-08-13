@@ -82,6 +82,7 @@ enum { owFAMILY, owAD0, owAD1, owAD2, owAD3, owAD4, owAD5, owCRC };
 typedef union ow_rom_t {
 	u64_t	Value;
 	u8_t	HexChars[8];
+	struct { u8_t FAM; u8_t TAG[6]; u8_t CRC; };
 } ow_rom_t;
 DUMB_STATIC_ASSERT( sizeof(ow_rom_t) == 8);
 
