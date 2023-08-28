@@ -133,9 +133,9 @@ int ds248xReportAll(report_t * psR);
 
 // ############################### Identify, test and configure ####################################
 
-int	ds248xIdentify(i2c_di_t * psI2C_DI);
-int	ds248xConfig(i2c_di_t * psI2C_DI);
-void ds248xReConfig(i2c_di_t * psI2C_DI);
+int	ds248xIdentify(i2c_di_t * psI2C);
+int	ds248xConfig(i2c_di_t * psI2C);
+int ds248xReConfig(i2c_di_t * psI2C);
 
 // ############################## DS248X-x00 1-Wire support functions ##############################
 

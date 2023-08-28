@@ -413,42 +413,42 @@ void ds248xBusRelease(ds248x_t * psDS248X) {
  * ds248xIdentify() - device reset+register reads to ascertain exact device type
  * @return	erSUCCESS if supported device was detected, if not erFAILURE
  */
-int	ds248xIdentify(i2c_di_t * psI2C_DI) {
+int	ds248xIdentify(i2c_di_t * psI2C) {
 	ds248x_t sDS248X = { 0 };		// temporary device structure
-	psI2C_DI->TRXmS	= 10;
-	psI2C_DI->CLKuS = 400;			// Max 13000 (13mS)
-	psI2C_DI->Test	= 1;			// and halI2C modules
-	sDS248X.psI2C	= psI2C_DI;		// link to I2C device discovered
+	psI2C->TRXmS	= 10;
+	psI2C->CLKuS = 400;			// Max 13000 (13mS)
+	psI2C->Test	= 1;			// and halI2C modules
+	sDS248X.psI2C	= psI2C;		// link to I2C device discovered
 	if (ds248xReset(&sDS248X) == 1) {
-		psI2C_DI->Type = i2cDEV_DS2484;
+		psI2C->Type = i2cDEV_DS2484;
 		int iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ);
 		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) {	// PADJ=OK & PAR=000 & OD=0
-			psI2C_DI->DevIdx = ds248xCount++;			// valid DS2484
+			psI2C->DevIdx = ds248xCount++;			// valid DS2484
 		} else {
-			psI2C_DI->Type = i2cDEV_DS2482_800;			// assume -800 there
+			psI2C->Type = i2cDEV_DS2482_800;			// assume -800 there
 			iRV = ds248xReadRegister(&sDS248X, ds248xREG_CHAN);
 			if (iRV == 0) {								// CSR read FAIL
-				psI2C_DI->Type = i2cDEV_DS2482_10X;		// NOT YET TESTED !!!!
-				psI2C_DI->DevIdx = ds248xCount++;		// valid 2482-10x
+				psI2C->Type = i2cDEV_DS2482_10X;		// NOT YET TESTED !!!!
+				psI2C->DevIdx = ds248xCount++;		// valid 2482-10x
 			} else if (sDS248X.Rchan == ds248x_V2N[0]) {// CHAN=0 default
-				psI2C_DI->DevIdx = ds248xCount++;		// valid 2482-800
+				psI2C->DevIdx = ds248xCount++;		// valid 2482-800
 			} else
-				psI2C_DI->Type = i2cDEV_UNDEF;			// not successful, undefined
+				psI2C->Type = i2cDEV_UNDEF;			// not successful, undefined
 		}
 	}
-	psI2C_DI->Test	= 0;
-	if (psI2C_DI->Type != i2cDEV_UNDEF)
-		psI2C_DI->Speed = i2cSPEED_400;
+	psI2C->Test	= 0;
+	if (psI2C->Type != i2cDEV_UNDEF)
+		psI2C->Speed = i2cSPEED_400;
 	#if (ds248xLOCK == ds248xLOCK_IO)
 	if (sDS248X.mux)
 		vSemaphoreDelete(sDS248X.mux);
 	#endif
-	return (psI2C_DI->Type == i2cDEV_UNDEF) ? erFAILURE : erSUCCESS;
+	return (psI2C->Type == i2cDEV_UNDEF) ? erFAILURE : erSUCCESS;
 }
 
-int	ds248xConfig(i2c_di_t * psI2C_DI) {
+int	ds248xConfig(i2c_di_t * psI2C) {
 	if (psaDS248X == NULL) {							// 1st time here...
-		IF_myASSERT(debugPARAM, psI2C_DI->DevIdx == 0);
+		IF_myASSERT(debugPARAM, psI2C->DevIdx == 0);
 		psaDS248X = pvRtosMalloc(ds248xCount * sizeof(ds248x_t));
 		memset(psaDS248X, 0, ds248xCount * sizeof(ds248x_t));
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xIO, stMICROS, "DS248xIO", 300, 2700);
@@ -457,16 +457,15 @@ int	ds248xConfig(i2c_di_t * psI2C_DI) {
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xRD, stMICROS, "DS248xRD", 300, 3000);
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xST, stMICROS, "DS248xST", 500, 4400);
 	}
-	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx];
-	psDS248X->psI2C = psI2C_DI;
-	if (psI2C_DI->Type == i2cDEV_DS2482_800)
+	ds248x_t * psDS248X = &psaDS248X[psI2C->DevIdx];
+	psDS248X->psI2C = psI2C;
+	if (psI2C->Type == i2cDEV_DS2482_800)
 		psDS248X->NumChan = 1;							// 0=1Ch, 1=8Ch
-	ds248xReConfig(psI2C_DI);
 	#if (halHAS_DS18X20 > 0)
 	void ds18x20StepThreeRead(TimerHandle_t);
 	psDS248X->th = xTimerCreateStatic("ds248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
 	#endif
-	return erSUCCESS;
+	return ds248xReConfig(psI2C);
 }
 
 /**
@@ -476,13 +475,14 @@ int	ds248xConfig(i2c_di_t * psI2C_DI) {
  *	Presence pulse masking (cPPM) = off (0)		[Discontinued, support removed]
  *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
  */
-void ds248xReConfig(i2c_di_t * psI2C_DI) {
-	ds248x_t * psDS248X = &psaDS248X[psI2C_DI->DevIdx];
+int ds248xReConfig(i2c_di_t * psI2C) {
+	ds248x_t * psDS248X = &psaDS248X[psI2C->DevIdx];
 	ds248xReset(psDS248X);
 	psDS248X->Rconf	= 0;
 	psDS248X->APU = 1;									// LSBit
 	ds248xWriteConfig(psDS248X);
 	IF_myASSERT(debugRESULT, psDS248X->APU == 1);
+	return erSUCCESS;
 }
 
 // ################################## DS248x-x00 1-Wire functions ##################################
