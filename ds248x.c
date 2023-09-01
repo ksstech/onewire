@@ -150,10 +150,12 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 	switch (Reg) {
 	case ds248xREG_STAT:
 		#if	(configPRODUCTION == 0)
+		iRV += wprintfx(psR, "STAT(0)");
 		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
-			iRV += wprintfx(psR, "STAT(0-%u)=0x%02X  ", i, psDS248X->PrvStat[i]);
+			iRV += wprintfx(psR, " #%u:", i, psDS248X->PrvStat[i]);
 			iRV += ds248xReportStatus(psR, 0, psDS248X->PrvStat[i]);
 		}
+		iRV += wprintfx(psR, strCRLF);
 		#endif
 		break;
 
