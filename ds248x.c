@@ -281,7 +281,7 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
 	setSYSFLAGS(sfDS248X);
 	#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0);
-	int iRV = halI2CM_Queue(psDS248X->psI2C, i2cR_B,
+	int iRV = halI2C_QueuepsDS248X->psI2C, i2cR_B,
 			NULL, 0,
 			&psDS248X->RegX[psDS248X->Rptr], SO_MEM(ds248x_t, Rconf),
 			(i2cq_p1_t) NULL, (i2cq_p2_t) NULL);
@@ -298,7 +298,7 @@ int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSize, 
 	setSYSFLAGS(sfDS248X);
 	#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0);
-	int iRV = halI2CM_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr],
+	int iRV = hhalI2C_QueuesDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr],
 		psDS248X->Rptr == ds248xREG_PADJ ? SO_MEM(ds248x_t, Rpadj) : 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) NULL);
 	#if (ds248xLOCK == ds248xLOCK_IO)
 	clrSYSFLAGS(sfDS248X);
@@ -557,7 +557,7 @@ bool ds248xOWTouchBit(ds248x_t * psDS248X, bool Bit) {
  *	NS	560		860		635
  *	OD	88		388		163
  */
-u8_t	ds248xOWWriteByte(ds248x_t * psDS248X, u8_t Byte) {
+u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t Byte) {
 	// 1-Wire Write Byte (Case B)
 	//	S AD,0 [A] 1WWB [A] DD [A] Sr AD,1 [A] [Status] A [Status] A\ P
 	//										   \--------/
