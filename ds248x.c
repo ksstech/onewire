@@ -125,7 +125,7 @@ int	ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
 		return 0;
 	}
 	psDS248X->Rptr = Reg;
-	u8_t	cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg };
+	u8_t cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg };
 	IF_SYSTIMER_START(debugTIMING, stDS248xIO);
 	int iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0);
 	IF_SYSTIMER_STOP(debugTIMING, stDS248xIO);
@@ -159,13 +159,10 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		#endif
 		break;
 
-	case ds248xREG_DATA:
-		iRV += wprintfx(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata);
-		break;
+	case ds248xREG_DATA: iRV += wprintfx(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata); break;
 
 	case ds248xREG_CHAN:
-		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800)
-			break;
+		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800) break;
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan);
 		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]);
@@ -178,8 +175,7 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		break;
 
 	case ds248xREG_PADJ:
-		if (psDS248X->psI2C->Type != i2cDEV_DS2484)
-			break;
+		if (psDS248X->psI2C->Type != i2cDEV_DS2484) break;
 		ds248xReadRegister(psDS248X, Reg);
 		ds248x_padj_t sPadj;
 		sPadj.RadjX = psDS248X->Rpadj[0];
@@ -221,8 +217,8 @@ int ds248xReportAll(report_t * psR) {
 
 int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 	int iRV = 1;
-	if (psDS248X->Rptr == ds248xREG_STAT) {		// STATus register
-		if (psDS248X->OWB) {					// Check for error in case not blocking in I2C task
+	if (psDS248X->Rptr == ds248xREG_STAT) {				// STATus register
+		if (psDS248X->OWB) {							// Check for error in case not blocking in I2C task
 			iRV = ds248xLogError(psDS248X, "OWB");
 		} else {
 			#if	(configPRODUCTION == 0)
@@ -240,8 +236,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 			#endif
 		}
 	} else if (psDS248X->Rptr == ds248xREG_CONF) {		// CONFiguration register
-		if (Value == 0xC3)
-			return iRV;									// Just read CONF, no change
+		if (Value == 0xC3) return iRV;					// Just read CONF, no change
 		Value &= 0x0F;
 		if (Value != psDS248X->Rconf) {
 			ds248x_conf_t sConf = { .Rconf = Value };
@@ -292,6 +287,11 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
 	return iRV == erSUCCESS ? ds248xCheckRead(psDS248X, 0xFF) : 0;
 }
 
+/**
+ * @brief
+ * @param
+ * @return	1 if OK, 0 if error
+ */
 int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSize, u32_t uSdly) {
 	#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
