@@ -397,7 +397,6 @@ int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
 
 void ds248xBusRelease(ds248x_t * psDS248X) {
 	#if (ds248xLOCK == ds248xLOCK_BUS)
-	clrSYSFLAGS(sfDS248X);
 	xRtosSemaphoreGive(&psDS248X->mux);
 	#endif
 }
