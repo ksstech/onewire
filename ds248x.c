@@ -5,6 +5,7 @@
 #include "hal_variables.h"
 
 #if (halHAS_DS248X > 0)
+#include "hal_i2c_common.h"
 #include "FreeRTOS_Support.h"
 #include "onewire_platform.h"
 #include "options.h"
@@ -90,7 +91,7 @@ static const uint16_t Rwpu[16]	= { 500, 500, 500, 500, 500, 500, 1000, 1000, 100
 // ##################################### Global variables ##########################################
 
 #if (halHAS_DS248X > 0)
-	u8_t ds248xCount	= 0;
+	u8_t ds248xCount = 0;
 	ds248x_t * psaDS248X = NULL;
 #endif
 
@@ -152,10 +153,10 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		#if	(configPRODUCTION == 0)
 		iRV += wprintfx(psR, "STAT(0)");
 		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
-			iRV += wprintfx(psR, " #%u:", i, psDS248X->PrvStat[i]);
+			iRV += wprintfx(psR, "\t#%u:", i, psDS248X->PrvStat[i]);
 			iRV += ds248xReportStatus(psR, 0, psDS248X->PrvStat[i]);
 		}
-		iRV += wprintfx(psR, strCRLF);
+//		iRV += wprintfx(psR, strCRLF);
 		#endif
 		break;
 
@@ -461,11 +462,10 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	}
 	ds248x_t * psDS248X = &psaDS248X[psI2C->DevIdx];
 	psDS248X->psI2C = psI2C;
-	if (psI2C->Type == i2cDEV_DS2482_800)
-		psDS248X->NumChan = 1;							// 0=1Ch, 1=8Ch
+	if (psI2C->Type == i2cDEV_DS2482_800) psDS248X->NumChan = 1;	// 0=1Ch, 1=8Ch
 	#if (halHAS_DS18X20 > 0)
 	void ds18x20StepThreeRead(TimerHandle_t);
-	psDS248X->th = xTimerCreateStatic("ds248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
+	psDS248X->th = xTimerCreateStatic("tmrDS248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
 	#endif
 	return ds248xReConfig(psI2C);
 }
