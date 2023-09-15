@@ -4,10 +4,9 @@
 
 #include "hal_variables.h"
 
-#if (halHAS_DS1990X > 0)
+#if (halHAS_ONEWIRE > 0) && (halHAS_DS1990X > 0)
 #include "endpoints.h"
 #include "onewire_platform.h"
-#include "options.h"
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
