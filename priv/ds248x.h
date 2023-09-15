@@ -60,8 +60,10 @@ enum {													// STATus register bitmap
 // See http://www.catb.org/esr/structure-packing/
 // Also http://c0x.coding-guidelines.com/6.7.2.1.html
 
+struct i2c_di_t;
+
 typedef struct ds248x_t {		// DS248X I2C <> 1Wire bridge
-	i2c_di_t * psI2C;									// size = 4
+	struct i2c_di_t * psI2C;							// size = 4
 	SemaphoreHandle_t mux;
 	#if (halHAS_DS18X20 > 0)
 	TimerHandle_t th;
@@ -133,9 +135,9 @@ int ds248xReportAll(report_t * psR);
 
 // ############################### Identify, test and configure ####################################
 
-int	ds248xIdentify(i2c_di_t * psI2C);
-int	ds248xConfig(i2c_di_t * psI2C);
-int ds248xReConfig(i2c_di_t * psI2C);
+int	ds248xIdentify(struct i2c_di_t * psI2C);
+int	ds248xConfig(struct i2c_di_t * psI2C);
+int ds248xReConfig(struct i2c_di_t * psI2C);
 
 // ############################## DS248X-x00 1-Wire support functions ##############################
 
