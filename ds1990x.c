@@ -27,9 +27,7 @@
 
 // ################################# Platform related variables ####################################
 
-#if (halHAS_DS1990X > 0)
-	u8_t Fam01Count = 0;
-#endif
+u8_t Fam01Count = 0;
 
 // ################################# Application support functions #################################
 
@@ -39,6 +37,7 @@ void ds1990xConfig(void) {
 	psEWP->Tsns = psEWP->Rsns = DS1990X_T_SNS;
 	psEWP->uri = URI_DS1990X;		// Used in OWPlatformEndpoints()
 	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990x", 1, 100);
+	xRtosSetDevice(devMASK_DS1990X);
 }
 
 // #################################### 1W Platform support ########################################
