@@ -1,11 +1,9 @@
 /*
- * Copyright 2018-21 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * onewire_platform.h - Copyright (c) 2018-23 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma once
 
-#include "hal_config.h"
-#include "hal_i2c_common.h"
 #include "endpoints.h"
 
 #ifdef __cplusplus
