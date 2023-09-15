@@ -86,7 +86,7 @@ typedef union ow_rom_t {
 } ow_rom_t;
 DUMB_STATIC_ASSERT( sizeof(ow_rom_t) == 8);
 
-typedef	struct __attribute__((packed)) {
+typedef	struct __attribute__((packed)) owdi_t {
 	ow_rom_t ROM;					// size = 8
 	u8_t LD;						// Last Discrepancy (bit #)
 	u8_t LFD;						// Last Family Discrepancy (bit #)
