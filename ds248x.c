@@ -410,35 +410,41 @@ void ds248xBusRelease(ds248x_t * psDS248X) {
  */
 int	ds248xIdentify(i2c_di_t * psI2C) {
 	ds248x_t sDS248X = { 0 };		// temporary device structure
-	psI2C->TRXmS	= 10;
-	psI2C->CLKuS = 400;			// Max 13000 (13mS)
-	psI2C->Test	= 1;			// and halI2C modules
-	sDS248X.psI2C	= psI2C;		// link to I2C device discovered
+	sDS248X.psI2C = psI2C;
+	psI2C->Speed = i2cSPEED_400;
+	psI2C->TObus = 25;
+	psI2C->Test	= 1;
+	int iRV = erFAILURE;
 	if (ds248xReset(&sDS248X) == 1) {
-		psI2C->Type = i2cDEV_DS2484;
-		int iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ);
-		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) {	// PADJ=OK & PAR=000 & OD=0
-			psI2C->DevIdx = ds248xCount++;			// valid DS2484
-		} else {
-			psI2C->Type = i2cDEV_DS2482_800;			// assume -800 there
+		psI2C->Type = i2cDEV_DS2484;					// assume
+		iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ);
+		// PADJ=OK & PAR=000 & OD=0, valid DS2484
+		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110)
+			goto done;
+		else {
+			psI2C->Type = i2cDEV_DS2482_10X;
 			iRV = ds248xReadRegister(&sDS248X, ds248xREG_CHAN);
-			if (iRV == 0) {								// CSR read FAIL
-				psI2C->Type = i2cDEV_DS2482_10X;		// NOT YET TESTED !!!!
-				psI2C->DevIdx = ds248xCount++;		// valid 2482-10x
-			} else if (sDS248X.Rchan == ds248x_V2N[0]) {// CHAN=0 default
-				psI2C->DevIdx = ds248xCount++;		// valid 2482-800
-			} else
-				psI2C->Type = i2cDEV_UNDEF;			// not successful, undefined
+			if (iRV == 0) {								// type already set to DS2482-10X
+				goto done;								// CSR read FAIL, 2482-10x, NOT YET TESTED !!!
+			} else if (sDS248X.Rchan == ds248x_V2N[0]) {// CHAN=0 default, valid 2482-800
+				psI2C->Type = i2cDEV_DS2482_800;
+				iRV = erSUCCESS;
+			} else {
+				psI2C->Type = i2cDEV_UNDEF;
+				iRV = erINV_WHOAMI;	// undefined
+			}
 		}
 	}
-	psI2C->Test	= 0;
-	if (psI2C->Type != i2cDEV_UNDEF)
-		psI2C->Speed = i2cSPEED_400;
+done:
 	#if (ds248xLOCK == ds248xLOCK_IO)
-	if (sDS248X.mux)
-		vSemaphoreDelete(sDS248X.mux);
+	if (sDS248X.mux) vSemaphoreDelete(sDS248X.mux);
 	#endif
-	return (psI2C->Type == i2cDEV_UNDEF) ? erFAILURE : erSUCCESS;
+	if (psI2C->Type != i2cDEV_UNDEF) {
+		psI2C->DevIdx = ds248xCount++;
+		psI2C->IDok = 1;
+		psI2C->Test	= 0;
+	}
+	return iRV;
 }
 
 /**
