@@ -2,13 +2,11 @@
  * ds248x.c - Copyright (c) 2020-23 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_variables.h"
-
-#if (halHAS_DS248X > 0)
+#include "hal_config.h"
 #include "hal_i2c_common.h"
+#include "hal_options.h"
 #include "FreeRTOS_Support.h"
 #include "onewire_platform.h"
-#include "options.h"
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
@@ -90,10 +88,8 @@ static const uint16_t Rwpu[16]	= { 500, 500, 500, 500, 500, 500, 1000, 1000, 100
 
 // ##################################### Global variables ##########################################
 
-#if (halHAS_DS248X > 0)
-	u8_t ds248xCount = 0;
-	ds248x_t * psaDS248X = NULL;
-#endif
+u8_t ds248xCount = 0;
+ds248x_t * psaDS248X = NULL;
 
 // ##################################### Forward declarations ######################################
 
@@ -216,6 +212,11 @@ int ds248xReportAll(report_t * psR) {
 	return iRV;
 }
 
+/**
+ * @brief
+ * @param
+ * @return
+ */
 int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 	int iRV = 1;
 	if (psDS248X->Rptr == ds248xREG_STAT) {				// STATus register
@@ -263,7 +264,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 	} else if (psDS248X->Rptr == ds248xREG_CHAN && (psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan])) {
 		char caBuf[36];
-		snprintf(caBuf, sizeof(caBuf)," CHAN (0x%02X vs 0x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
+		snprintf(caBuf, sizeof(caBuf)," CHAN (x%02X vs x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
 		iRV = ds248xLogError(psDS248X, caBuf);
 	}
 	return iRV;
@@ -320,14 +321,14 @@ int ds248xReset(ds248x_t * psDS248X) {
 	//  [] indicates from slave
 	//  SS status byte to read to verify state
 	u8_t cChr = ds248xCMD_DRST;
-	psDS248X->Rptr	= ds248xREG_STAT;					// After ReSeT pointer set to STATus register
+	psDS248X->Rptr = ds248xREG_STAT;					// After ReSeT pointer set to STATus register
 	IF_SYSTIMER_START(debugTIMING, stDS248xIO);
 	ds248xI2C_WriteDelayRead(psDS248X, &cChr, sizeof(cChr), 0);
 	IF_SYSTIMER_STOP(debugTIMING, stDS248xIO);
-	psDS248X->Rdata		= 0;
-	psDS248X->Rconf		= 0;							// all bits cleared (default) config
-	psDS248X->CurChan	= 0;
-	psDS248X->Rchan		= ds248x_V2N[0];				// DS2482-800 specific
+	psDS248X->Rdata = 0;
+	psDS248X->Rconf = 0;								// all bits cleared (default) config
+	psDS248X->CurChan = 0;
+	psDS248X->Rchan = ds248x_V2N[0];					// DS2482-800 specific
 	memset(psDS248X->Rpadj, 0, SO_MEM(ds248x_t, Rpadj));// DS2484 specific
 	return psDS248X->RST;
 }
@@ -383,7 +384,7 @@ int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
 		 *  RR channel read back
 		 */
 		u8_t cBuf[2] = { ds2482CMD_CHSL, (~Bus << 4) | Bus };	// calculate Channel value
-		psDS248X->Rptr	= ds248xREG_CHAN;
+		psDS248X->Rptr = ds248xREG_CHAN;
 		psDS248X->CurChan = Bus;			// save in advance will auto reset if error
 		IF_SYSTIMER_START(debugTIMING, stDS248xIO);
 		iRV = ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0);
@@ -494,15 +495,14 @@ int ds248xReConfig(i2c_di_t * psI2C) {
  */
 int	ds248xOWReset(ds248x_t * psDS248X) {
 	// DS2482-800 datasheet page 7 para 2
-	if (psDS248X->SPU == owPOWER_STRONG)
-		ds248xOWLevel(psDS248X, owPOWER_STANDARD);
+	if (psDS248X->SPU == owPOWER_STRONG) ds248xOWLevel(psDS248X, owPOWER_STANDARD);
 	// 1-Wire reset (Case B)
 	//	S AD,0 [A] 1WRS [A] Sr AD,1 [A] [Status] A [Status] A\ P
 	//									\--------/
 	//						Repeat until 1WB bit has changed to 0
 	//  [] indicates from slave
 	u8_t cChr = ds248xCMD_1WRS;
-	psDS248X->Rptr	= ds248xREG_STAT;
+	psDS248X->Rptr = ds248xREG_STAT;
 	IF_SYSTIMER_START(debugTIMING, stDS248x1R);
 	ds248xI2C_WriteDelayRead(psDS248X, &cChr, sizeof(cChr), psDS248X->OWS ? owDELAY_RST_OD : owDELAY_RST);
 	IF_SYSTIMER_STOP(debugTIMING, stDS248x1R);
@@ -536,7 +536,7 @@ bool ds248xOWTouchBit(ds248x_t * psDS248X, bool Bit) {
 	//  [] indicates from slave
 	//  BB indicates byte containing bit value in msbit
 	u8_t cBuf[2] = { ds248xCMD_1WSB, Bit << 7 };
-	psDS248X->Rptr	= ds248xREG_STAT;
+	psDS248X->Rptr = ds248xREG_STAT;
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_SB_OD : owDELAY_SB);
 	return psDS248X->SBR;
 }
@@ -556,7 +556,7 @@ u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t Byte) {
 	//  [] indicates from slave
 	//  DD data to write
 	u8_t cBuf[2] = { ds248xCMD_1WWB, Byte };
-	psDS248X->Rptr	= ds248xREG_STAT;
+	psDS248X->Rptr = ds248xREG_STAT;
 	IF_SYSTIMER_START(debugTIMING, stDS248xWR);
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_WB_OD : owDELAY_WB);
 	IF_SYSTIMER_STOP(debugTIMING, stDS248xWR);
@@ -594,11 +594,10 @@ u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) {
 	//				Repeat until 1WB bit has changed to 0
 	//  [] indicates from slave
 	//  SS indicates byte containing search direction bit value in msbit
-	u8_t	cBuf[2] = { ds248xCMD_1WT, u8Dir ? 0x80 : 0x00 };
-	psDS248X->Rptr	= ds248xREG_STAT;
+	u8_t cBuf[2] = { ds248xCMD_1WT, u8Dir ? 0x80 : 0x00 };
+	psDS248X->Rptr = ds248xREG_STAT;
 	IF_SYSTIMER_START(debugTIMING, stDS248xST);
 	ds248xI2C_WriteDelayRead(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_ST_OD : owDELAY_ST);
 	IF_SYSTIMER_STOP(debugTIMING, stDS248xST);
 	return psDS248X->Rstat;
 }
-#endif
