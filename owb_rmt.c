@@ -1,6 +1,5 @@
 /*
- * ds248x.c
- * Copyright (c) 2020-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
+ * owb_rmt.c - Copyright (c) 2020-23 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
 #include "hal_config.h"
@@ -8,7 +7,7 @@
 #if (halRMT_1W > 0)
 #include "FreeRTOS_Support.h"
 #include "onewire_platform.h"
-#include "options.h"
+#include "hal_options.h"
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
