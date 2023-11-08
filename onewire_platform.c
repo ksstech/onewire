@@ -3,7 +3,8 @@
  * Copyright (c) 2020-2022 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_variables.h"
+#include "hal_config.h"
+#include "hal_options.h"
 
 #include "onewire_platform.h"
 #include "printfx.h"
