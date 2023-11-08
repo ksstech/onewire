@@ -2,10 +2,11 @@
  * ds1990x.c - Copyright (c) 2020-23 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_variables.h"
+#include "hal_config.h"
 
 #if (halHAS_ONEWIRE > 0) && (halHAS_DS1990X > 0)
 #include "endpoints.h"
+#include "hal_options.h"
 #include "onewire_platform.h"
 #include "printfx.h"
 #include "syslog.h"
