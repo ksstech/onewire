@@ -3,11 +3,11 @@
  * Copyright (c) 2018-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_variables.h"
+#include "hal_config.h"
 
 #if (halHAS_DS18X20 > 0)
+#include "hal_options.h"
 #include "onewire_platform.h"
-#include "options.h"
 #include "printfx.h"
 #include "rules.h"
 #include "syslog.h"
@@ -154,8 +154,7 @@ int	ds18x20Initialize(ds18x20_t * psDS18X20) {
 int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 	psDS18X20->Thi	= 75;
 	psDS18X20->Tlo	= 70;
-	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
-		psDS18X20->fam28.Conf = 0x7F;	// 12 bit resolution
+	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28) psDS18X20->fam28.Conf = 0x7F;	// 12 bit resolution
 	ds18x20WriteSP(psDS18X20);
 	return ds18x20Initialize(psDS18X20);
 }
@@ -165,9 +164,7 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
 	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0;
-	if (debugTRACK && ioB1GET(dbgDS1820)) {
-		ds18x20Print_CB(&sRprt, psDS18X20);
-	}
+	if (debugTRACK && ioB1GET(dbgDS1820))  ds18x20Print_CB(&sRprt, psDS18X20);
 	return 1;
 }
 
@@ -199,8 +196,7 @@ int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 }
 
 int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
-	if (psaDS18X20 == NULL)
-		RETURN_MX("No DS18x20 enumerated", erINV_OPERATION);
+	if (psaDS18X20 == NULL) RETURN_MX("No DS18x20 enumerated", erINV_OPERATION);
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	int iRV = erFAILURE, iRVx = erFAILURE;
 	u8_t	AI = psR->ActIdx;
@@ -222,15 +218,13 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 				if (iRVx > erFAILURE) {
 					if (iRV == 1 || iRVx == 1) {	// 1 or both changed in scratchpad
 						iRV = ds18x20WriteSP(psDS18X20);
-						if (wr == 1)
-							ds18x20WriteEE(psDS18X20);
+						if (wr == 1) ds18x20WriteEE(psDS18X20);
 					}
 				}
 			}
 			OWP_BusRelease(&psDS18X20->sOW);
 		}
-		if (iRVx < erSUCCESS)
-			break;
+		if (iRVx < erSUCCESS) break;
 	} while (++Xcur < Xmax);
 	return iRV < erSUCCESS? iRV : iRVx;
 }
@@ -263,10 +257,8 @@ void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 	 * time is 750mSec (per bus or device) at normal (not overdrive) bus speed.
 	 * When we get here the psEWS structure will already having been configured with the
 	 * parameters as supplied, just check & adjust for validity & new min Tsns */
-	if (psEWS->Tsns < ds18x20T_SNS_MIN)
-		psEWS->Tsns = ds18x20T_SNS_MIN;				// default to minimum
-	if (psEWS->Tsns < psEWP->Tsns)
-		psEWP->Tsns = psEWS->Tsns;						// set lowest of EWP/EWS
+	if (psEWS->Tsns < ds18x20T_SNS_MIN) psEWS->Tsns = ds18x20T_SNS_MIN;	// default to minimum
+	if (psEWS->Tsns < psEWP->Tsns) psEWP->Tsns = psEWS->Tsns;			// set lowest of EWP/EWS
 	psEWS->Tsns = 0;									// discard EWS value
 	psEWP->Rsns = psEWP->Tsns;							// restart SNS timer
 }
@@ -317,8 +309,7 @@ int	ds18x20Enumerate(void) {
 		iRV = OWP_Scan(OWFAMILY_28, ds18x20EnumerateCB);
 		if (iRV > 0) ds18x20NumDev += iRV;
 	}
-	if (ds18x20NumDev == Fam10_28Count)
-		iRV = ds18x20NumDev;
+	if (ds18x20NumDev == Fam10_28Count) iRV = ds18x20NumDev;
 	else {
 		SL_ERR("Only %d of %d enumerated!!!", ds18x20NumDev, Fam10_28Count);
 		iRV = erFAILURE;
@@ -336,8 +327,7 @@ int	ds18x20Print_CB(report_t * psR, ds18x20_t * psDS18X20) {
 		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9);
 	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
 		iRV += printfx(" Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK");
-	if (psR->sFM.bNL)
-		iRV += printfx(strCRLF);
+	if (psR->sFM.bNL) iRV += printfx(strCRLF);
 	return iRV;
 }
 
@@ -394,15 +384,11 @@ int	ds18x20StepTwoBusConvert(ds18x20_t * psDS18X20, int i) {
 }
 
 int ds18x20Sense(epw_t * psEWx) {					// Step 1: Start CONVERT on each physical bus
-	u8_t	PrevDev = 0xFF;						// where 1+ DS18x20 has been enumerated on.
+	u8_t PrevDev = 0xFF;							// where 1+ DS18x20 has been enumerated on.
 	for (int i = 0; i < Fam10_28Count; ++i) {		// Although sense is configured on primary level,
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];		// log can be different for each instance
-		if (psDS18X20->sOW.DevNum != PrevDev) {
-			if (ds18x20StepTwoBusConvert(psDS18X20, i) == 1) {
-//				TRACK("DevNum=%d\r\n", psDS18X20->sOW.DevNum);
-				PrevDev = psDS18X20->sOW.DevNum;
-			}
-		}
+		if (psDS18X20->sOW.DevNum != PrevDev)
+			if (ds18x20StepTwoBusConvert(psDS18X20, i) == 1) PrevDev = psDS18X20->sOW.DevNum;
 	}
 	return erSUCCESS;
 }
@@ -411,20 +397,16 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 	int	i = (int) pvTimerGetTimerID(pxHandle);
 	do {												// Handle all sensors on this BUS
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];
-		if (ds18x20ReadSP(psDS18X20, 2) == 1)
-			ds18x20ConvertTemperature(psDS18X20);
-		else
-			SL_ERR("Read/Convert failed");
+		if (ds18x20ReadSP(psDS18X20, 2) == 1) ds18x20ConvertTemperature(psDS18X20);
+		else SL_ERR("Read/Convert failed");
 		++i;
 		// no more sensors or different device - release bus, exit loop
 		if ((i == Fam10_28Count) || (psDS18X20->sOW.DevNum != psaDS18X20[i].sOW.DevNum)) {
-//			TRACK("i=%d  DevNum=%d\r\n", i, psDS18X20->sOW.DevNum);
 			OWP_BusRelease(&psDS18X20->sOW);
 			break;
 		}
 		// more sensors, same device but new bus - release bus, start convert on new bus.
 		if (psDS18X20->sOW.PhyBus != psaDS18X20[i].sOW.PhyBus) {
-//			TRACK("i=%d  DevNum=%d\r\n", i, psDS18X20->sOW.DevNum);
 			OWP_BusRelease(&psDS18X20->sOW);
 			ds18x20StepTwoBusConvert(&psaDS18X20[i], i);
 			break;
@@ -447,4 +429,5 @@ int ds18x20ReportAll(report_t * psR) {
 	if (Fam10_28Count) iRV += wprintfx(psR, strCRLF);
 	return iRV;
 }
+
 #endif
