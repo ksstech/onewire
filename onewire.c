@@ -3,7 +3,8 @@
  * Copyright (c) 2014-2c Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_variables.h"
+#include "hal_config.h"
+
 #if (halHAS_ONEWIRE > 0)
 #include "onewire_platform.h"
 
