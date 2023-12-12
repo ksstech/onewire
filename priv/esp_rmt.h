@@ -1,9 +1,12 @@
 /*
- * esp_rmt.h
- * Copyright 2023 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * esp_rmt.h -  Copyright (c) 2023 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // ######################################## Enumerations ###########################################
 
@@ -39,3 +42,8 @@ bool rmtOWTouchBit(owb_rmt_t * psDS248X, bool bit) ;
 u8_t rmtOWWriteByte(owb_rmt_t * psDS248X, u8_t sendbyte) ;
 u8_t rmtOWReadByte(owb_rmt_t * psDS248X);
 u8_t owb_rmtOWSearchTriplet(owb_rmt_t * psDS248X, u8_t u8Dir) ;
+
+#ifdef __cplusplus
+}
+#endif
+
