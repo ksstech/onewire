@@ -6,15 +6,15 @@
 
 #include "endpoints.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "priv/onewire.h"
 #include "priv/ds248x.h"
 #include "priv/ds1990x.h"
 #include "priv/ds18x20.h"
 #include "priv/esp_rmt.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // ############################################# Macros ############################################
 
