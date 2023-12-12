@@ -1,6 +1,5 @@
 /*
- * onewire.h
- * Copyright (c) 2017-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * onewire.h - Copyright (c) 2017-23 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma once
@@ -18,6 +17,10 @@
  *				[DRST]	[SRP]	[WCFG]	[CHSL]	1WRST	1WWB	1WRB	1WSB	1WT
  *	Duration	525nS	0nS		0nS		0nS		1244uS	8x73uS	8x73uS	1x73uS	3x73uS
  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // ############################################# Macros ############################################
 
@@ -140,3 +143,8 @@ int OWResetCommand(owdi_t * psOW, u8_t Command, bool Skip, bool Pwr) ;
 int	OWVerify(owdi_t * psOW) ;
 
 u64_t OWAddr2Value(ow_rom_t * psROM);
+
+#ifdef __cplusplus
+}
+#endif
+
