@@ -1,9 +1,12 @@
 /*
- * ds248x.h
- * Copyright 2020-22 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * ds248x.h - Copyright 2020-23 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // ################################### DS248X 1-Wire Commands ######################################
 
@@ -164,3 +167,8 @@ u8_t ds248xOWReadByte(ds248x_t * psDS248X);
  * Returns � The DS248x status byte result from the triplet command
  */
 u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir);
+
+#ifdef __cplusplus
+}
+#endif
+
