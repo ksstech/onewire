@@ -1,9 +1,12 @@
 /*
- * Copyright (c) 2018-23 Andre M. Maree/KSS Technologies (Pty) Ltd.
- * ds18x20.h
+ * ds18x20.h - Copyright (c) 2018-23 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
-#pragma		once
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // ######################################## Enumerations ###########################################
 
@@ -63,13 +66,16 @@ int ds18x20ReportAll(report_t * psR);
 
 // ##################################### I2C Task support ##########################################
 
-struct rule_t;;
+struct rule_t;
 int	ds18x20ConfigMode (struct rule_t *, int Xcur, int Xmax);
 int	ds18x20EnumerateCB(report_t * psR, owdi_t * psOW);
 int	ds18x20Enumerate(void);
-
 int	ds18x20Print_CB(report_t * psR, ds18x20_t * psDS18X20);
 
 struct epw_t;;
 int	ds18x20Sense(epw_t * psEWP);;
 int	ds18x20StartAllInOne(struct epw_t * psEPW);;
+
+#ifdef __cplusplus
+}
+#endif
