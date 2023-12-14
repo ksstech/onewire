@@ -1,6 +1,5 @@
 /*
- * onewire_platform.c
- * Copyright (c) 2020-2022 Andre M. Maree / KSS Technologies (Pty) Ltd.
+ * onewire_platform.c - Copyright (c) 2020-23 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
 #include "hal_config.h"
@@ -12,6 +11,8 @@
 #include "systiming.h"								// timing debugging
 #include "x_errors_events.h"
 #include "x_utilities.h"								// vShowActivity
+
+#include <string.h>
 
 // ################################ Global/Local Debug macros ######################################
 

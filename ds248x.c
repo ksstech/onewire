@@ -13,6 +13,8 @@
 #include "x_errors_events.h"
 #include "x_string_general.h"
 
+#include <string.h>
+
 // ##################################### Developer notes ###########################################
 /*
 	Test at 400KHx I2C speed, maybe add auto detect and step up mode in SCAN routine?

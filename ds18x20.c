@@ -14,6 +14,8 @@
 #include "systiming.h"					// timing debugging
 #include "x_errors_events.h"
 
+#include <string.h>
+
 #define	debugFLAG					0xF000
 
 #define	debugREAD					(debugFLAG & 0x0001)

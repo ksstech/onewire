@@ -1,6 +1,5 @@
 /*
- * onewire.c
- * Copyright (c) 2014-2c Andre M. Maree / KSS Technologies (Pty) Ltd.
+ * onewire.c - Copyright (c) 2014-23 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
 #include "hal_config.h"
@@ -11,6 +10,8 @@
 #include "printfx.h"
 #include "syslog.h"
 #include "x_errors_events.h"
+
+#include <string.h>
 
 #define	debugFLAG					0xF000
 
