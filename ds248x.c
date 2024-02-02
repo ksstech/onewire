@@ -1,5 +1,5 @@
 /*
- * ds248x.c - Copyright (c) 2020-23 Andre M. Maree / KSS Technologies (Pty) Ltd.
+ * ds248x.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
 #include "hal_config.h"
@@ -281,10 +281,8 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
 	#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0);
-	int iRV = halI2C_Queue(psDS248X->psI2C, i2cR_B,
-			NULL, 0,
-			&psDS248X->RegX[psDS248X->Rptr], SO_MEM(ds248x_t, Rconf),
-			(i2cq_p1_t) NULL, (i2cq_p2_t) NULL);
+	int iRV = halI2C_Queue(psDS248X->psI2C, i2cR_B, NULL, 0, &psDS248X->RegX[psDS248X->Rptr],
+		SO_MEM(ds248x_t, Rconf), (i2cq_p1_t) NULL, (i2cq_p2_t) NULL);
 	#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreGive(&psDS248X->mux);
 	#endif
