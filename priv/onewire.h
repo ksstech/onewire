@@ -1,5 +1,5 @@
 /*
- * onewire.h - Copyright (c) 2017-23 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * onewire.h - Copyright (c) 2017-24 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma once
@@ -147,4 +147,3 @@ u64_t OWAddr2Value(ow_rom_t * psROM);
 #ifdef __cplusplus
 }
 #endif
-

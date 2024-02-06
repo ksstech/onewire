@@ -1,5 +1,5 @@
 /*
- * ds1990x.c - Copyright (c) 2020-23 Andre M. Maree / KSS Technologies (Pty) Ltd.
+ * ds1990x.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
 #include "hal_config.h"

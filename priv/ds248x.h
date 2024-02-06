@@ -1,5 +1,5 @@
 /*
- * ds248x.h - Copyright 2020-23 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * ds248x.h - Copyright 2020-24 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma once
@@ -171,4 +171,3 @@ u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir);
 #ifdef __cplusplus
 }
 #endif
-

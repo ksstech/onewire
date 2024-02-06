@@ -1,5 +1,5 @@
 /*
- * ds18x20.h - Copyright (c) 2018-23 Andre M. Maree/KSS Technologies (Pty) Ltd.
+ * ds18x20.h - Copyright (c) 2018-24 Andre M. Maree/KSS Technologies (Pty) Ltd.
  */
 
 #pragma once
