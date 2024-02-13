@@ -1,6 +1,4 @@
-/*
- * esp_rmt.h -  Copyright (c) 2023 Andre M. Maree/KSS Technologies (Pty) Ltd.
- */
+// esp_rmt.h -  Copyright (c) 2023-24 Andre M. Maree/KSS Technologies (Pty) Ltd.
 
 #pragma once
 
@@ -16,7 +14,7 @@ extern "C" {
 typedef struct owb_rmt_t {
 	SemaphoreHandle_t mux;
 	StaticTimer_t ts;
-	#if (halHAS_DS18X20 > 0)
+	#if (HAL_DS18X20 > 0)
 	TimerHandle_t th;
 	#endif
 } owb_rmt_t;
@@ -46,4 +44,3 @@ u8_t owb_rmtOWSearchTriplet(owb_rmt_t * psDS248X, u8_t u8Dir) ;
 #ifdef __cplusplus
 }
 #endif
-

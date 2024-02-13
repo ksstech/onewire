@@ -44,7 +44,7 @@ typedef struct __attribute__((packed)) {				// DS1820/S20/B20 9/12 bit Temp sens
 
 // ###################################### Public variables #########################################
 
-#if (halHAS_DS18X20 > 0)
+#if (HAL_DS18X20 > 0)
 	extern u8_t Fam10Count, Fam28Count;
 #endif
 

@@ -68,7 +68,7 @@ struct i2c_di_t;
 typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	struct i2c_di_t * psI2C;		// size = 4
 	SemaphoreHandle_t mux;			// size = 4
-	#if (halHAS_DS18X20 > 0)		// size = 4
+	#if (HAL_DS18X20 > 0)		// size = 4
 	TimerHandle_t th;
 	#define DS18X20x1	sizeof(TimerHandle_t)
 	#else

@@ -4,7 +4,7 @@
 
 #include "hal_config.h"
 
-#if (halHAS_ONEWIRE > 0)
+#if (HAL_ONEWIRE > 0)
 #include "onewire_platform.h"
 
 #include "printfx.h"

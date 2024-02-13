@@ -54,7 +54,7 @@ owbi_t * psOWP_BusGetPointer(u8_t LogBus) {
  */
 void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (LogBus < OWP_NumBus));
-	#if	(halHAS_DS248X > 0)
+	#if	(HAL_DS248X > 0)
 	extern u8_t ds248xCount;
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i];
@@ -159,12 +159,12 @@ int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI) {
  */
 int	OWP_Count_CB(report_t * psR, owdi_t * psOW) {
 	switch (psOW->ROM.HexChars[owFAMILY]) {
-	#if (halHAS_DS1990X > 0)							// DS1990A/R, 2401/11 devices
+	#if (HAL_DS1990X > 0)							// DS1990A/R, 2401/11 devices
 	extern u8_t	Fam01Count;
 	case OWFAMILY_01: ++Fam01Count; return 1;
 	#endif
 
-	#if (halHAS_DS18X20 > 0)							// DS18x20 Thermometers
+	#if (HAL_DS18X20 > 0)							// DS18x20 Thermometers
 	case OWFAMILY_10: ++Fam10Count; return 1;
 	case OWFAMILY_28: ++Fam28Count; return 1;
 	#endif
@@ -291,7 +291,7 @@ int	OWP_Config(void) {
 	/* Start by iterating over each instance of each type of 1-Wire technology (DS248x/RTM/GPIO) supported.
 	 * For each technology enumerate each physical device and the logical channels on each device before
 	 * moving on to the next device (same type) or next technology */
-	#if (halHAS_DS248X > 0)
+	#if (HAL_DS248X > 0)
 	extern u8_t ds248xCount;
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i];
@@ -310,12 +310,12 @@ int	OWP_Config(void) {
 		if (iRV > 0)
 			OWP_NumDev += iRV;
 
-		#if (halHAS_DS18X20 > 0)
+		#if (HAL_DS18X20 > 0)
 		if (Fam10Count || Fam28Count)
 			ds18x20Enumerate(); 	// enumerate & config individually
 		#endif
 
-		#if	(halHAS_DS1990X > 0)
+		#if	(HAL_DS1990X > 0)
 		ds1990xConfig();								// cannot enumerate, simple config
 		#endif
 	}
@@ -324,10 +324,10 @@ int	OWP_Config(void) {
 
 int OWP_Report(report_t * psR) {
 	int iRV = 0;
-	#if (halHAS_DS248X > 0)
+	#if (HAL_DS248X > 0)
 	iRV += ds248xReportAll(psR);
 	#endif
-	#if (halHAS_DS18X20 > 0)
+	#if (HAL_DS18X20 > 0)
 	iRV += ds18x20ReportAll(psR);
 	#endif
 	return iRV;

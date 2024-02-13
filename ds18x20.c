@@ -5,7 +5,7 @@
 
 #include "hal_config.h"
 
-#if (halHAS_DS18X20 > 0)
+#if (HAL_DS18X20 > 0)
 #include "hal_options.h"
 #include "onewire_platform.h"
 #include "printfx.h"

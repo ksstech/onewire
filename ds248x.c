@@ -201,7 +201,7 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 	int iRV = halI2C_DeviceReport(psR, (void *) psDS248X->psI2C);
 	for (int Reg = 0; Reg < ds248xREG_NUM; iRV += ds248xReportRegister(psR, psDS248X, Reg++));
-	#if (halHAS_DS18X20 > 0)
+	#if (HAL_DS18X20 > 0)
 	iRV += xRtosReportTimer(psR, psDS248X->th);
 	#endif
 	return iRV;
@@ -475,7 +475,7 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	if (!psI2C->CFGok) {								// definite 1st time for specific device...
 		psDS248X->psI2C = psI2C;
 		if (psI2C->Type == i2cDEV_DS2482_800) psDS248X->NumChan = 1;	// 0=1Ch, 1=8Ch
-		#if (halHAS_DS18X20 > 0)
+		#if (HAL_DS18X20 > 0)
 		void ds18x20StepThreeRead(TimerHandle_t);
 		psDS248X->th = xTimerCreateStatic("tmrDS248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
 		#endif
