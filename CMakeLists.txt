@@ -3,9 +3,8 @@
 set( srcs "onewire.c" "onewire_platform.c" "ds18x20.c" "ds1990x.c" "ds248x.c" )
 set( include_dirs "." )
 set( priv_include_dirs )
-idf_build_get_property( EXTRA_REQUIRES EXTRA_REQUIRES )
-set( requires "hal_esp32 endpoints ${EXTRA_REQUIRES}" )
-set( priv_requires "commands stringsX printfx syslog systiming" )
+set( requires "main" )
+set( priv_requires )
 
 idf_component_register(
 	SRCS ${srcs}
