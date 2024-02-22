@@ -325,11 +325,11 @@ int	OWVerify(owdi_t * psOW) {
 }
 
 u64_t OWAddr2Value(ow_rom_t * psROM) {
-	u64_t U64 = 0;
+	u64_t U64val = 0;
 	for (int Idx = 0; Idx < SO_MEM(ow_rom_t, TAG); ++Idx) {
-		U64 <<= 8;
-		U64 += psROM->TAG[(SO_MEM(ow_rom_t, TAG) - 1) - Idx];
+		U64val <<= 8;
+		U64val += psROM->TAG[(SO_MEM(ow_rom_t, TAG) - 1) - Idx];
 	}
-	return U64;
+	return U64val;
 }
 #endif

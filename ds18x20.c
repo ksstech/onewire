@@ -1,7 +1,4 @@
-/*
- * ds18x20.c
- * Copyright (c) 2018-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
- */
+// ds18x20.c - Copyright (c) 2018-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_config.h"
 
@@ -321,10 +318,10 @@ int	ds18x20Enumerate(void) {
 }
 
 int	ds18x20Print_CB(report_t * psR, ds18x20_t * psDS18X20) {
-	u32_t U32 = psR->sFM.u32Val;
+	u32_t U32val = psR->sFM.u32Val;
 	psR->sFM.bNL = 0;
 	int iRV = OWP_Print1W_CB(psR, &psDS18X20->sOW);
-	psR->sFM.bNL = ((fm_t)U32).bNL;
+	psR->sFM.bNL = ((fm_t)U32val).bNL;
 	iRV += wprintfx(psR, " Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
 		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9);
