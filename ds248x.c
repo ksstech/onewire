@@ -2,7 +2,7 @@
  * ds248x.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_config.h"
+#include "hal_platform.h"
 #include "hal_i2c_common.h"
 #include "hal_options.h"
 #include "FreeRTOS_Support.h"

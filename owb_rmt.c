@@ -2,7 +2,7 @@
  * owb_rmt.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_config.h"
+#include "hal_platform.h"
 
 #if (halRMT_1W > 0)
 #include "FreeRTOS_Support.h"

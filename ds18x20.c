@@ -1,6 +1,6 @@
 // ds18x20.c - Copyright (c) 2018-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
-#include "hal_config.h"
+#include "hal_platform.h"
 
 #if (HAL_DS18X20 > 0)
 #include "hal_options.h"

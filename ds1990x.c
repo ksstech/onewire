@@ -2,7 +2,7 @@
  * ds1990x.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_config.h"
+#include "hal_platform.h"
 
 #if (HAL_ONEWIRE > 0) && (HAL_DS1990X > 0)
 #include "endpoints.h"

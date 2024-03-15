@@ -2,7 +2,7 @@
  * onewire_platform.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
-#include "hal_config.h"
+#include "hal_platform.h"
 #include "hal_options.h"
 
 #include "onewire_platform.h"
