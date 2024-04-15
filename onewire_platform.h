@@ -1,6 +1,4 @@
-/*
- * onewire_platform.h - Copyright (c) 2018-24 Andre M. Maree/KSS Technologies (Pty) Ltd.
- */
+// onewire_platform.h
 
 #pragma once
 
@@ -49,17 +47,17 @@ int	OWP_BusSelect(owdi_t *);
 void OWP_BusRelease(owdi_t *);
 
 // Common callback handlers
-int	OWP_PrintROM_CB(report_t * psR, ow_rom_t * psROM);
-int	OWP_Print1W_CB(report_t * psR, owdi_t * psOW);
-int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI);
-int	OWP_Count_CB(report_t * psR, owdi_t *);
+int	OWP_PrintROM_CB(struct report_t * psR, ow_rom_t * psROM);
+int	OWP_Print1W_CB(struct report_t * psR, owdi_t * psOW);
+int	OWP_PrintChan_CB(struct report_t * psR, owbi_t * psCI);
+int	OWP_Count_CB(struct report_t * psR, owdi_t *);
 
-int	OWP_Scan(u8_t, int (*)(report_t *, owdi_t *));
-int	OWP_Scan2(u8_t, int (*)(report_t *, void *, owdi_t *), void *);
+int	OWP_Scan(u8_t, int (*)(struct report_t *, owdi_t *));
+int	OWP_Scan2(u8_t, int (*)(struct report_t *, void *, owdi_t *), void *);
 int	OWP_ScanAlarmsFamily(u8_t Family);
 
 int	OWP_Config(void);
-int OWP_Report(report_t * psR);
+int OWP_Report(struct report_t * psR);
 
 #ifdef __cplusplus
 }
