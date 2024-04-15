@@ -139,9 +139,9 @@ extern ds248x_t * psaDS248X;
 // ###################################### Device debug support #####################################
 
 int	ds248xReset(ds248x_t * psDS248X);
-int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg);
-int ds248xReport(report_t * psR, ds248x_t * psDS248X);
-int ds248xReportAll(report_t * psR);
+int	ds248xReportRegister(struct report_t * psR, ds248x_t * psDS248X, int Reg);
+int ds248xReport(struct report_t * psR, ds248x_t * psDS248X);
+int ds248xReportAll(struct report_t * psR);
 
 // ############################### Identify, test and configure ####################################
 
