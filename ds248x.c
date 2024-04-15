@@ -416,24 +416,24 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 	psI2C->Speed = i2cSPEED_400;
 	psI2C->TObus = 25;
 	psI2C->Test	= 1;
+//	psI2C->TOscl = (10000 / sclWAIT_UNIT_US);
+//	ESP_ERROR_CHECK(halI2C_AddDeviceToBus(psI2C));		// remove and re-add with new parameters
 	int iRV = erFAILURE;
 	if (ds248xReset(&sDS248X) == 1) {
 		psI2C->Type = i2cDEV_DS2484;					// assume
 		iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ);
 		// PADJ=OK & PAR=000 & OD=0, valid DS2484
-		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110)
-			goto done;
+		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) goto done;
 		else {
 			psI2C->Type = i2cDEV_DS2482_10X;
 			iRV = ds248xReadRegister(&sDS248X, ds248xREG_CHAN);
-			if (iRV == 0) {								// type already set to DS2482-10X
-				goto done;								// CSR read FAIL, 2482-10x, NOT YET TESTED !!!
-			} else if (sDS248X.Rchan == ds248x_V2N[0]) {// CHAN=0 default, valid 2482-800
+			if (iRV == 0) goto done;					// DS2482-10X CSR read FAIL, 2482-10x, NOT YET TESTED !!!
+			else if (sDS248X.Rchan == ds248x_V2N[0]) {	// CHAN=0 default, valid 2482-800
 				psI2C->Type = i2cDEV_DS2482_800;
 				iRV = erSUCCESS;
 			} else {
 				psI2C->Type = i2cDEV_UNDEF;
-				iRV = erINV_WHOAMI;	// undefined
+				iRV = erINV_WHOAMI;
 			}
 		}
 	}
