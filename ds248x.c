@@ -1,6 +1,4 @@
-/*
- * ds248x.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
- */
+// ds248x.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 #include "hal_i2c_common.h"
@@ -461,7 +459,7 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 
 	if (!psaDS248X) {
 		IF_myASSERT(debugPARAM, psI2C->DevIdx == 0);
-		psaDS248X = pvRtosMalloc(ds248xCount * sizeof(ds248x_t));
+		psaDS248X = malloc(ds248xCount * sizeof(ds248x_t));
 		if (!psaDS248X) return erNO_MEM;
 
 		memset(psaDS248X, 0, ds248xCount * sizeof(ds248x_t));

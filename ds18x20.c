@@ -297,7 +297,7 @@ int	ds18x20Enumerate(void) {
 	psEWP->Tsns	= psEWP->Rsns = ds18x20T_SNS_NORM;
 	psEWP->uri = URI_DS18X20;							// Used in OWPlatformEndpoints()
 
-	psaDS18X20 = pvRtosMalloc(Fam10_28Count * sizeof(ds18x20_t));
+	psaDS18X20 = malloc(Fam10_28Count * sizeof(ds18x20_t));
 	memset(psaDS18X20, 0, Fam10_28Count * sizeof(ds18x20_t));
 	int	iRV = 0;
 	if (Fam10Count) {
