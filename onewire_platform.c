@@ -133,9 +133,12 @@ int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI) {
 		psR->sFM.u32Val |= (U32val & (mfbRT|mfbNL|mfbCOUNT));
 	}
 	iRV += wprintfx(psR, " OW#%d ", psR->sFM.uCount);
-	if (psCI->LastRead) iRV += wprintfx(psR, "%R ", xTimeMakeTimestamp(psCI->LastRead, 0));
-	if (psCI->ds18any) iRV += wprintfx(psR, "DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
-	if (psR->sFM.bNL) iRV += wprintfx(psR, strCRLF);
+	if (psCI->LastRead)
+		iRV += wprintfx(psR, "%R ", xTimeMakeTimestamp(psCI->LastRead, 0));
+	if (psCI->ds18any)
+		iRV += wprintfx(psR, "DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
+	if (psR->sFM.bNL)
+		iRV += wprintfx(psR, strCRLF);
 	return iRV;
 }
 
@@ -149,15 +152,22 @@ int	OWP_Count_CB(report_t * psR, owdi_t * psOW) {
 	switch (psOW->ROM.HexChars[owFAMILY]) {
 	#if (HAL_DS1990X > 0)							// DS1990A/R, 2401/11 devices
 	extern u8_t	Fam01Count;
-	case OWFAMILY_01: ++Fam01Count; return 1;
+	case OWFAMILY_01:
+		++Fam01Count;
+		return 1;
 	#endif
 
 	#if (HAL_DS18X20 > 0)							// DS18x20 Thermometers
-	case OWFAMILY_10: ++Fam10Count; return 1;
-	case OWFAMILY_28: ++Fam28Count; return 1;
+	case OWFAMILY_10:
+		++Fam10Count;
+		return 1;
+	case OWFAMILY_28:
+		++Fam28Count;
+		return 1;
 	#endif
 
-	default: SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.HexChars[owFAMILY]);
+	default:
+		SL_ERR("Invalid/unsupported OW device FAM=%02x", psOW->ROM.HexChars[owFAMILY]);
 	}
 	return 0;
 }
