@@ -104,7 +104,6 @@ void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]);
  */
 int	OWP_PrintROM_CB(report_t * psR, ow_rom_t * psOW_ROM) {
 	int iRV = 0;
-	printfx_lock(psR);
 	if (psR->sFM.bRT)
 		iRV += wprintfx(psR, "%!.R: ", RunTime);
 	if (psR->sFM.bTskNum)
@@ -112,7 +111,6 @@ int	OWP_PrintROM_CB(report_t * psR, ow_rom_t * psOW_ROM) {
 	iRV += wprintfx(psR, "%02X/%M/%02X", psOW_ROM->HexChars[owFAMILY], &psOW_ROM->HexChars[owAD0], psOW_ROM->HexChars[owCRC]);
 	if (psR->sFM.bNL)
 		iRV += wprintfx(psR, strCRLF);
-	printfx_unlock(psR);
 	return iRV;
 }
 
@@ -121,10 +119,8 @@ int	OWP_Print1W_CB(report_t * psR, owdi_t * psOW) {
 	psR->sFM.u32Val &= ~mfbNL;
 	int iRV = OWP_PrintROM_CB(psR, &psOW->ROM);
 	psR->sFM.bNL = ((fm_t) U32val).bNL;
-	printfx_lock(psR);
 	iRV += wprintfx(psR, "  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
 	if (psR->sFM.bNL) iRV += wprintfx(psR, strCRLF);
-	printfx_unlock(psR);
 	return iRV;
 }
 
@@ -136,12 +132,10 @@ int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI) {
 		iRV += OWP_PrintROM_CB(psR, &psCI->LastROM);
 		psR->sFM.u32Val |= (U32val & (mfbRT|mfbNL|mfbCOUNT));
 	}
-	printfx_lock(psR);
 	iRV += wprintfx(psR, " OW#%d ", psR->sFM.uCount);
 	if (psCI->LastRead) iRV += wprintfx(psR, "%R ", xTimeMakeTimestamp(psCI->LastRead, 0));
 	if (psCI->ds18any) iRV += wprintfx(psR, "DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
 	if (psR->sFM.bNL) iRV += wprintfx(psR, strCRLF);
-	printfx_unlock(psR);
 	return iRV;
 }
 
