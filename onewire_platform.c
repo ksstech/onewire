@@ -134,7 +134,7 @@ int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI) {
 	}
 	iRV += wprintfx(psR, " OW#%d ", psR->sFM.uCount);
 	if (psCI->LastRead)
-		iRV += wprintfx(psR, "%R ", xTimeMakeTimestamp(psCI->LastRead, 0));
+		iRV += wprintfx(psR, "%R ", xTimeMakeTimeStamp(psCI->LastRead, 0));
 	if (psCI->ds18any)
 		iRV += wprintfx(psR, "DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
 	if (psR->sFM.bNL)
