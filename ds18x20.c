@@ -88,7 +88,8 @@ u8_t Fam10Count = 0, Fam28Count = 0, Fam10_28Count = 0;
  * @return	Power status
  */
 bool ds18x20CheckPower(ds18x20_t * psDS18X20) {
-	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_PSU, owADDR_SKIP, 0) == 0) return 0;
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_PSU, owADDR_SKIP, 0) == 0)
+		return 0;
 	psDS18X20->sOW.PSU = OWReadBit(&psDS18X20->sOW);	// 0=parasitic 1=external
 	return psDS18X20->sOW.PSU;
 }
@@ -107,7 +108,8 @@ bool ds18x20CheckPower(ds18x20_t * psDS18X20) {
  *	Total Time	1969/10808 for temperature
  */
 int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) {
-	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_SP, owADDR_MATCH, 0) == 0) return 0;
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_SP, owADDR_MATCH, 0) == 0)
+		return 0;
 	OWReadBlock(&psDS18X20->sOW, psDS18X20->RegX, Len);
 	IF_PL(debugSPAD, "%'-hhY ", Len, psDS18X20->RegX);
 	// If full SP read, verify CRC else terminate read
@@ -117,7 +119,8 @@ int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) {
 }
 
 int	ds18x20WriteSP(ds18x20_t * psDS18X20) {
-	if (OWResetCommand(&psDS18X20->sOW, DS18X20_WRITE_SP, owADDR_MATCH, 0) == 0) return 0;
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_WRITE_SP, owADDR_MATCH, 0) == 0)
+		return 0;
 	int Len = (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28) ? 3 : 2;	// Thi, Tlo [+Conf]
 	OWWriteBlock(&psDS18X20->sOW, (u8_t *) &psDS18X20->Thi, Len);
 	IF_PL(debugSPAD, "%'-hhY ", Len, psDS18X20->RegX);
@@ -125,7 +128,8 @@ int	ds18x20WriteSP(ds18x20_t * psDS18X20) {
 }
 
 int	ds18x20WriteEE(ds18x20_t * psDS18X20) {
-	if (OWResetCommand(&psDS18X20->sOW, DS18X20_COPY_SP, owADDR_MATCH, 1) == 0) return 0;
+	if (OWResetCommand(&psDS18X20->sOW, DS18X20_COPY_SP, owADDR_MATCH, 1) == 0)
+		return 0;
 	vTaskDelay(pdMS_TO_TICKS(ds18x20DELAY_SP_COPY));
 	OWLevel(&psDS18X20->sOW, owPOWER_STANDARD);
 	return 1;
@@ -154,7 +158,8 @@ int	ds18x20Initialize(ds18x20_t * psDS18X20) {
 int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 	psDS18X20->Thi	= 75;
 	psDS18X20->Tlo	= 70;
-	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28) psDS18X20->fam28.Conf = 0x7F;	// 12 bit resolution
+	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
+		psDS18X20->fam28.Conf = 0x7F;					// 12 bit resolution
 	ds18x20WriteSP(psDS18X20);
 	return ds18x20Initialize(psDS18X20);
 }
@@ -164,7 +169,8 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
 	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0;
-	if (debugTRACK && ioB1GET(dbgDS1820))  ds18x20Print_CB(&sRprt, psDS18X20);
+	if (debugTRACK && ioB1GET(dbgDS1820)) 
+		ds18x20Print_CB(&sRprt, psDS18X20);
 	return 1;
 }
 
@@ -218,13 +224,16 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 				if (iRVx > erFAILURE) {
 					if (iRV == 1 || iRVx == 1) {	// 1 or both changed in scratchpad
 						iRV = ds18x20WriteSP(psDS18X20);
-						if (wr == 1) ds18x20WriteEE(psDS18X20);
+						if (wr == 1) {
+							ds18x20WriteEE(psDS18X20);
+						}
 					}
 				}
 			}
 			OWP_BusRelease(&psDS18X20->sOW);
 		}
-		if (iRVx < erSUCCESS) break;
+		if (iRVx < erSUCCESS)
+			break;
 	} while (++Xcur < Xmax);
 	return iRV < erSUCCESS? iRV : iRVx;
 }
@@ -257,8 +266,10 @@ void ds18x20SetSense(epw_t * psEWP, epw_t * psEWS) {
 	 * time is 750mSec (per bus or device) at normal (not overdrive) bus speed.
 	 * When we get here the psEWS structure will already having been configured with the
 	 * parameters as supplied, just check & adjust for validity & new min Tsns */
-	if (psEWS->Tsns < ds18x20T_SNS_MIN) psEWS->Tsns = ds18x20T_SNS_MIN;	// default to minimum
-	if (psEWS->Tsns < psEWP->Tsns) psEWP->Tsns = psEWS->Tsns;			// set lowest of EWP/EWS
+	if (psEWS->Tsns < ds18x20T_SNS_MIN)
+		psEWS->Tsns = ds18x20T_SNS_MIN;					// default to minimum
+	if (psEWS->Tsns < psEWP->Tsns)
+		psEWP->Tsns = psEWS->Tsns;						// set lowest of EWP/EWS
 	psEWS->Tsns = 0;									// discard EWS value
 	psEWP->Rsns = psEWP->Tsns;							// restart SNS timer
 }
@@ -277,8 +288,8 @@ int	ds18x20EnumerateCB(report_t * psR, owdi_t * psOW) {
 
 	owbi_t * psOW_CI = psOWP_BusGetPointer(OWP_BusP2L(psOW));
 	switch(psOW->ROM.HexChars[owFAMILY]) {
-	case OWFAMILY_10: psOW_CI->ds18s20++;	break;
-	case OWFAMILY_28: psOW_CI->ds18b20++;	break;
+	case OWFAMILY_10: psOW_CI->ds18s20++; break;
+	case OWFAMILY_28: psOW_CI->ds18b20++; break;
 	default: IF_myASSERT(debugRESULT, 0);
 	}
 	return 1;											// number of devices enumerated
@@ -303,14 +314,19 @@ int	ds18x20Enumerate(void) {
 	int	iRV = 0;
 	if (Fam10Count) {
 		iRV = OWP_Scan(OWFAMILY_10, ds18x20EnumerateCB);
-		if (iRV > 0) ds18x20NumDev += iRV;
+		if (iRV > 0) {
+			ds18x20NumDev += iRV;
+		}
 	}
 	if (Fam28Count) {
 		iRV = OWP_Scan(OWFAMILY_28, ds18x20EnumerateCB);
-		if (iRV > 0) ds18x20NumDev += iRV;
+		if (iRV > 0) {
+			ds18x20NumDev += iRV;
+		}
 	}
-	if (ds18x20NumDev == Fam10_28Count) iRV = ds18x20NumDev;
-	else {
+	if (ds18x20NumDev == Fam10_28Count) {
+		iRV = ds18x20NumDev;
+	} else {
 		SL_ERR("Only %d of %d enumerated!!!", ds18x20NumDev, Fam10_28Count);
 		iRV = erFAILURE;
 	}
@@ -389,8 +405,11 @@ int ds18x20Sense(epw_t * psEWx) {					// Step 1: Start CONVERT on each physical 
 	u8_t PrevDev = 0xFF;							// where 1+ DS18x20 has been enumerated on.
 	for (int i = 0; i < Fam10_28Count; ++i) {		// Although sense is configured on primary level,
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];		// log can be different for each instance
-		if (psDS18X20->sOW.DevNum != PrevDev)
-			if (ds18x20StepTwoBusConvert(psDS18X20, i) == 1) PrevDev = psDS18X20->sOW.DevNum;
+		if (psDS18X20->sOW.DevNum != PrevDev) {
+			if (ds18x20StepTwoBusConvert(psDS18X20, i) == 1) {
+				PrevDev = psDS18X20->sOW.DevNum;
+			}
+		}
 	}
 	return erSUCCESS;
 }
@@ -399,8 +418,11 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 	int	i = (int) pvTimerGetTimerID(pxHandle);
 	do {												// Handle all sensors on this BUS
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];
-		if (ds18x20ReadSP(psDS18X20, 2) == 1) ds18x20ConvertTemperature(psDS18X20);
-		else SL_ERR("Read/Convert failed");
+		if (ds18x20ReadSP(psDS18X20, 2) == 1) {
+			ds18x20ConvertTemperature(psDS18X20);
+		} else {
+			SL_ERR("Read/Convert failed");
+		}
 		++i;
 		// no more sensors or different device - release bus, exit loop
 		if ((i == Fam10_28Count) || (psDS18X20->sOW.DevNum != psaDS18X20[i].sOW.DevNum)) {
@@ -421,14 +443,17 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 
 int ds18x20ReportAll(report_t * psR) {
 	report_t sRprt = { .pcBuf = NULL, .Size = 0, .sFM.u32Val = 0 };
-	if (psR == NULL) psR = &sRprt;
+	if (psR == NULL)
+		psR = &sRprt;
 	int iRV = 0;
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		psR->sFM.u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i);
-		if (i == 0) iRV += wprintfx(psR, "\r# DS18x20 #\r\n");
+		if (i == 0)
+			iRV += wprintfx(psR, "\r# DS18x20 #\r\n");
 		iRV += ds18x20Print_CB(psR, &psaDS18X20[i]);
 	}
-	if (Fam10_28Count) iRV += wprintfx(psR, strCRLF);
+	if (Fam10_28Count)
+		iRV += wprintfx(psR, strCRLF);
 	return iRV;
 }
 

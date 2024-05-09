@@ -115,7 +115,8 @@ int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
  *	OD	0		300		75
  */
 int	ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
-	if (psDS248X->psI2C->Test) goto skip;
+	if (psDS248X->psI2C->Test)
+		goto skip;
 	// check for validity of CHAN (only DS2482-800) and PADJ (only DS2484)
 	if ((Reg == ds248xREG_CHAN && psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
 		(Reg == ds248xREG_PADJ && psDS248X->psI2C->Type != i2cDEV_DS2484)) {
@@ -148,20 +149,22 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 	int iRV = 0, Chan;
 	switch (Reg) {
 	case ds248xREG_STAT:
-		#if	(configPRODUCTION == 0)
+	#if	(configPRODUCTION == 0)
 		iRV += wprintfx(psR, "STAT(0)");
 		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
 			iRV += wprintfx(psR, "\t#%u:", i, psDS248X->PrvStat[i]);
 			iRV += ds248xReportStatus(psR, 0, psDS248X->PrvStat[i]);
 		}
-//		iRV += wprintfx(psR, strCRLF);
-		#endif
+	#endif
 		break;
 
-	case ds248xREG_DATA: iRV += wprintfx(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata); break;
+	case ds248xREG_DATA:
+		iRV += wprintfx(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata);
+		break;
 
 	case ds248xREG_CHAN:
-		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800) break;
+		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800)
+			break;
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan);
 		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]);
@@ -174,7 +177,8 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		break;
 
 	case ds248xREG_PADJ:
-		if (psDS248X->psI2C->Type != i2cDEV_DS2484) break;
+		if (psDS248X->psI2C->Type != i2cDEV_DS2484)
+			break;
 		ds248xReadRegister(psDS248X, Reg);
 		ds248x_padj_t sPadj;
 		sPadj.RadjX = psDS248X->Rpadj[0];
@@ -199,9 +203,9 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 	int iRV = halI2C_DeviceReport(psR, (void *) psDS248X->psI2C);
 	for (int Reg = 0; Reg < ds248xREG_NUM; iRV += ds248xReportRegister(psR, psDS248X, Reg++));
-	#if (HAL_DS18X20 > 0)
+#if (HAL_DS18X20 > 0)
 	iRV += xRtosReportTimer(psR, psDS248X->th);
-	#endif
+#endif
 	iRV += wprintfx(psR, strCRLF);
 	return iRV;
 }
@@ -276,15 +280,15 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 // ################################ Local ONLY utility functions ###################################
 
 int	ds248xI2C_Read(ds248x_t * psDS248X) {
-	#if (ds248xLOCK == ds248xLOCK_IO)
+#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
-	#endif
+#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0);
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cR_B, NULL, 0, &psDS248X->RegX[psDS248X->Rptr],
 		SO_MEM(ds248x_t, Rconf), (i2cq_p1_t) NULL, (i2cq_p2_t) NULL);
-	#if (ds248xLOCK == ds248xLOCK_IO)
+#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreGive(&psDS248X->mux);
-	#endif
+#endif
 	return iRV == erSUCCESS ? ds248xCheckRead(psDS248X, 0xFF) : 0;
 }
 
@@ -294,15 +298,15 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
  * @return	1 if OK, 0 if error
  */
 int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSize, u32_t uSdly) {
-	#if (ds248xLOCK == ds248xLOCK_IO)
+#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
-	#endif
+#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0);
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr],
 		psDS248X->Rptr == ds248xREG_PADJ ? SO_MEM(ds248x_t, Rpadj) : 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) NULL);
-	#if (ds248xLOCK == ds248xLOCK_IO)
+#if (ds248xLOCK == ds248xLOCK_IO)
 	xRtosSemaphoreGive(&psDS248X->mux);
-	#endif
+#endif
 	return iRV == erSUCCESS ? ds248xCheckRead(psDS248X, (TxSize > 1) ? pTxBuf[1] : 0xFF) : 0;
 }
 
@@ -406,7 +410,7 @@ void ds248xBusRelease(ds248x_t * psDS248X) {
 // ################### Identification, Diagnostics & Configuration functions #######################
 
 /**
- * ds248xIdentify() - device reset+register reads to ascertain exact device type
+ * @brief	device reset+register reads to ascertain exact device type
  * @return	erSUCCESS if supported device was detected, if not erFAILURE
  */
 int	ds248xIdentify(i2c_di_t * psI2C) {
@@ -422,12 +426,14 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 		psI2C->Type = i2cDEV_DS2484;					// assume
 		iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ);
 		// PADJ=OK & PAR=000 & OD=0, valid DS2484
-		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) goto done;
-		else {
+		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) {
+			goto done;
+		} else {
 			psI2C->Type = i2cDEV_DS2482_10X;
 			iRV = ds248xReadRegister(&sDS248X, ds248xREG_CHAN);
-			if (iRV == 0) goto done;					// DS2482-10X CSR read FAIL, 2482-10x, NOT YET TESTED !!!
-			else if (sDS248X.Rchan == ds248x_V2N[0]) {	// CHAN=0 default, valid 2482-800
+			if (iRV == 0) {
+				goto done;					// DS2482-10X CSR read FAIL, 2482-10x, NOT YET TESTED !!!
+			} else if (sDS248X.Rchan == ds248x_V2N[0]) {	// CHAN=0 default, valid 2482-800
 				psI2C->Type = i2cDEV_DS2482_800;
 				iRV = erSUCCESS;
 			} else {
@@ -438,7 +444,9 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 	}
 done:
 	#if (ds248xLOCK == ds248xLOCK_IO)
-	if (sDS248X.mux) vSemaphoreDelete(sDS248X.mux);
+	if (sDS248X.mux) {
+		vSemaphoreDelete(sDS248X.mux);
+	}
 	#endif
 	if (psI2C->Type != i2cDEV_UNDEF) {
 		psI2C->DevIdx = ds248xCount++;
