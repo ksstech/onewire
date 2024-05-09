@@ -120,7 +120,8 @@ int	OWP_Print1W_CB(report_t * psR, owdi_t * psOW) {
 	int iRV = OWP_PrintROM_CB(psR, &psOW->ROM);
 	psR->sFM.bNL = ((fm_t) U32val).bNL;
 	iRV += wprintfx(psR, "  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
-	if (psR->sFM.bNL) iRV += wprintfx(psR, strCRLF);
+	if (psR->sFM.bNL) 
+		iRV += wprintfx(psR, strCRLF);
 	return iRV;
 }
 
