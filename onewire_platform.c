@@ -195,7 +195,11 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 	int	iRV = erSUCCESS;
 	u32_t uCount = 0;
 	owdi_t sOW;
-	report_t sRprt = { .pcBuf = NULL, .Size = 0, .sFM.u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,0) };
+	report_t sRprt = {
+		.pcBuf = NULL,
+		.Size = repSIZE_SET(0,0,0,0,sgrANSI,0,0),
+		.sFM.u32Val = makeMASK09x23(0,1,0,0,0,0,0,0,0,0),
+	};
 	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
 		memset(&sOW, 0, sizeof(owdi_t));
 		OWP_BusL2P(&sOW, LogBus);
@@ -205,7 +209,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 				iRV = OWSearch(&sOW, 0);
 				if (iRV > 0 && (sOW.ROM.HexChars[owFAMILY] != Family)) {
 					// Strictly speaking should never get here, iRV must be 0 if same family not found
-					IF_P(debugTRACK && ioB1GET(dbgOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, sOW.ROM.HexChars[owFAMILY]);
+					IF_PX(debugTRACK && ioB1GET(dbgOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, sOW.ROM.HexChars[owFAMILY]);
 					OWP_BusRelease(&sOW);
 					continue;
 				}

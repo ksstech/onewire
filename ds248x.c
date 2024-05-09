@@ -232,7 +232,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 				u8_t Mask = DS248Xmask[ioB2GET(dbgDS248X) - 1];
 				u8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
 				if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
-					printfx("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
+					wprintfx(NULL, "D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
 						psDS248X->CurChan, StatX, psDS248X->Rstat);
 					ds248xReportStatus(NULL, StatX, psDS248X->Rstat);
 				}
@@ -250,14 +250,14 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 							: (psDS248X->SPU != sConf.SPU) ? "SPU"
 							: ((psDS248X->psI2C->Type == i2cDEV_DS2484) && (psDS248X->PDN != sConf.PDN)) ? "PDN"
 							: (psDS248X->APU != sConf.APU) ? "APU" : "???";
-			snprintf(caBuf, sizeof(caBuf), "W=x%.2x  R=x%.2x (%s)", Value, psDS248X->Rconf, pcMess);
+			snprintfx(caBuf, sizeof(caBuf), "W=x%.2x  R=x%.2x (%s)", Value, psDS248X->Rconf, pcMess);
 			iRV = ds248xLogError(psDS248X, caBuf);
 		} else {
 			#if	(configPRODUCTION == 0)
 			if (ioB2GET(dbgDS248X)) {
 				u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];
 				if (psDS248X->Rconf != ConfX) {
-					printfx("D=%d C=%u x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
+					wprintfx(NULL, "D=%d C=%u x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
 					ds248xReportConfig(NULL, ConfX, psDS248X->Rconf);
 				}
 			}
@@ -267,7 +267,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 	} else if (psDS248X->Rptr == ds248xREG_CHAN && (psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan])) {
 		char caBuf[36];
-		snprintf(caBuf, sizeof(caBuf)," CHAN (x%02X vs x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
+		snprintfx(caBuf, sizeof(caBuf)," CHAN (x%02X vs x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
 		iRV = ds248xLogError(psDS248X, caBuf);
 	}
 	return iRV;

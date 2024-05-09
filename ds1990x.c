@@ -49,7 +49,7 @@ int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
 	u8_t Dly = ioB4GET(dlyDS1990);
 	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) &&
 		(NowRead - psOW_CI->LastRead) <= Dly) {
-		IF_P(debugTRACK && ioB1GET(dbgDS1990x), "Tag repeat %ds\r\n", Dly);
+		IF_PX(debugTRACK && ioB1GET(dbgDS1990x), "Tag repeat %ds\r\n", Dly);
 	} else {
 		psOW_CI->LastROM.Value = psOW->ROM.Value;
 		psOW_CI->LastRead = NowRead;
