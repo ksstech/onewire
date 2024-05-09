@@ -419,8 +419,6 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 	psI2C->Speed = i2cSPEED_400;
 	psI2C->TObus = 25;
 	psI2C->Test	= 1;
-//	psI2C->TOscl = (10000 / sclWAIT_UNIT_US);
-//	ESP_ERROR_CHECK(halI2C_AddDeviceToBus(psI2C));		// remove and re-add with new parameters
 	int iRV = erFAILURE;
 	if (ds248xReset(&sDS248X) == 1) {
 		psI2C->Type = i2cDEV_DS2484;					// assume
