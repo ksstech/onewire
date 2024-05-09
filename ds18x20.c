@@ -3,6 +3,7 @@
 #include "hal_platform.h"
 
 #if (HAL_DS18X20 > 0)
+#include "hal_memory.h"
 #include "hal_options.h"
 #include "onewire_platform.h"
 #include "printfx.h"

@@ -1,6 +1,7 @@
 // onewire_platform.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
+#include "hal_memory.h"
 #include "hal_options.h"
 
 #include "onewire_platform.h"
@@ -190,7 +191,7 @@ int	OWP_ScanAlarms_CB(report_t * psR, owdi_t * psOW) {
  * @return	number of matching ROM's found (>= 0) or an error code (< 0)
  */
 int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
-	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler));
+	IF_myASSERT(debugPARAM, halCONFIG_inEXE(Handler));
 	int	iRV = erSUCCESS;
 	u32_t uCount = 0;
 	owdi_t sOW;
