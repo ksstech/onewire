@@ -240,7 +240,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 }
 
 int	OWP_Scan2(u8_t Family, int (* Handler)(report_t *, void *, owdi_t *), void * pVoid) {
-	IF_myASSERT(debugPARAM, halCONFIG_inFLASH(Handler));
+	IF_myASSERT(debugPARAM, halMEM_AddrInANY(Handler));
 	int	iRV = erSUCCESS;
 	u32_t uCount = 0;
 	owdi_t sOW;
