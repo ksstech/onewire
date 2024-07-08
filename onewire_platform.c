@@ -68,7 +68,7 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 			IF_PL(debugTRACK && ioB1GET(dbgOWscan), " -> P=%d\r\n", psOW->PhyBus);
 			return;
 		}
-		IF_PL(debugTRACK && ioB1GET(dbgOWscan), strCRLF);
+		IF_PL(debugTRACK && ioB1GET(dbgOWscan), strNL);
 	}
 	#endif
 	SL_ERR("Invalid Logical Ch=%d", LogBus);
@@ -111,7 +111,7 @@ int	OWP_PrintROM_CB(report_t * psR, ow_rom_t * psOW_ROM) {
 		iRV += wprintfx(psR, "#%u ", psR->sFM.uCount);
 	iRV += wprintfx(psR, "%02X/%M/%02X", psOW_ROM->HexChars[owFAMILY], &psOW_ROM->HexChars[owAD0], psOW_ROM->HexChars[owCRC]);
 	if (psR->sFM.bNL)
-		iRV += wprintfx(psR, strCRLF);
+		iRV += wprintfx(psR, strNL);
 	return iRV;
 }
 
@@ -122,7 +122,7 @@ int	OWP_Print1W_CB(report_t * psR, owdi_t * psOW) {
 	psR->sFM.bNL = ((fm_t) U32val).bNL;
 	iRV += wprintfx(psR, "  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
 	if (psR->sFM.bNL) 
-		iRV += wprintfx(psR, strCRLF);
+		iRV += wprintfx(psR, strNL);
 	return iRV;
 }
 
@@ -140,7 +140,7 @@ int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI) {
 	if (psCI->ds18any)
 		iRV += wprintfx(psR, "DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
 	if (psR->sFM.bNL)
-		iRV += wprintfx(psR, strCRLF);
+		iRV += wprintfx(psR, strNL);
 	return iRV;
 }
 
