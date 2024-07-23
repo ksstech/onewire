@@ -1,6 +1,4 @@
-/*
- * onewire.c - Copyright (c) 2014-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
- */
+// onewire.c - Copyright (c) 2014-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 
@@ -37,7 +35,7 @@
 // ################################# Basic 1-Wire operations #######################################
 
 /**
- * Reset all of the devices on the 1-Wire Net and return the result.
+ * @brief	Reset all of the devices on the 1-Wire Net and return the result.
  * @return	1 if presence pulse(s) detected, device(s) reset
  *			0 if no presence pulse(s) detected
  */
@@ -57,9 +55,8 @@ int OWReset(owdi_t * psOW) {
 void OWWriteBit(owdi_t * psOW, bool Bit) { ds248xOWTouchBit(&psaDS248X[psOW->DevNum], Bit); }
 
 /**
- * Read 1 bit of communication from the 1-Wire Net and return the result
- *
- * Returns:  1 bit read from 1-Wire Net
+ * @brief	Read 1 bit of communication from the 1-Wire Net and return the result
+ * @return	1 bit read from 1-Wire Net
  */
 bool OWReadBit(owdi_t * psOW) { return ds248xOWTouchBit(&psaDS248X[psOW->DevNum], 1) ; }
 
@@ -75,7 +72,7 @@ u8_t OWWriteByte(owdi_t * psOW, u8_t Byte) {
 }
 
 /**
- * Reads 8 bits of communication from the 1-Wire Net
+ * @brief	Reads 8 bits of communication from the 1-Wire Net
  * @return	8 bits read from 1-Wire Net
  */
 u8_t OWReadByte(owdi_t * psOW) { return ds248xOWReadByte(&psaDS248X[psOW->DevNum]) ; }
