@@ -41,7 +41,7 @@ static u8_t	OWP_NumBus = 0, OWP_NumDev = 0;
 // ################################# Application support functions #################################
 
 owbi_t * psOWP_BusGetPointer(u8_t LogBus) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaOWBI) && (LogBus < OWP_NumBus));
+	IF_myASSERT(debugPARAM, halMemorySRAM(psaOWBI) && (LogBus < OWP_NumBus));
 	return &psaOWBI[LogBus];
 }
 
@@ -52,7 +52,7 @@ owbi_t * psOWP_BusGetPointer(u8_t LogBus) {
  * @note	Physical device & bus info returned in the psOW structure
  */
 void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psOW) && (LogBus < OWP_NumBus));
+	IF_myASSERT(debugPARAM, halMemorySRAM(psOW) && (LogBus < OWP_NumBus));
 	#if	(HAL_DS248X > 0)
 	extern u8_t ds248xCount;
 	for (int i = 0; i < ds248xCount; ++i) {
@@ -76,7 +76,7 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 }
 
 int	OWP_BusP2L(owdi_t * psOW) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS248X) && halCONFIG_inSRAM(psOW));
+	IF_myASSERT(debugPARAM, halMemorySRAM(psaDS248X) && halMemorySRAM(psOW));
 	ds248x_t * psDS248X = &psaDS248X[psOW->DevNum];
 	#if (buildPLTFRM == HW_AC00)
 	return (psDS248X->Lo + AC00Xlat[psOW->PhyBus]);
@@ -191,7 +191,7 @@ int	OWP_ScanAlarms_CB(report_t * psR, owdi_t * psOW) {
  * @return	number of matching ROM's found (>= 0) or an error code (< 0)
  */
 int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
-	IF_myASSERT(debugPARAM, halCONFIG_inEXE(Handler));
+	IF_myASSERT(debugPARAM, halMemoryEXE(Handler));
 	int	iRV = erSUCCESS;
 	u32_t uCount = 0;
 	owdi_t sOW;
@@ -240,7 +240,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 }
 
 int	OWP_Scan2(u8_t Family, int (* Handler)(report_t *, void *, owdi_t *), void * pVoid) {
-	IF_myASSERT(debugPARAM, halMEM_AddrInANY(Handler));
+	IF_myASSERT(debugPARAM, halMemoryANY(Handler));
 	int	iRV = erSUCCESS;
 	u32_t uCount = 0;
 	owdi_t sOW;

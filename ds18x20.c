@@ -251,7 +251,7 @@ const vt_enum_t	sDS18X20Func = {
 };
 
 epw_t * ds18x20GetWork(int x) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psaDS18X20) && (x < Fam10_28Count));
+	IF_myASSERT(debugPARAM, halMemorySRAM(psaDS18X20) && (x < Fam10_28Count));
 	return &psaDS18X20[x].sEWx;
 }
 
