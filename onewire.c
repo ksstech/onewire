@@ -12,7 +12,6 @@
 #include <string.h>
 
 #define	debugFLAG					0xF000
-
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
@@ -41,7 +40,6 @@
  */
 int OWReset(owdi_t * psOW) {
 	return ds248xOWReset(&psaDS248X[psOW->DevNum]);
-//	return psOW->Type ? rmtOWReset(&psaRMT[psOW->DevNum]) : ds248xOWReset(&psaDS248X[psOW->DevNum]);
 }
 
 // ############################### Bit/Byte/Block Read/Write #######################################
