@@ -15,8 +15,7 @@
 
 // ################################ Global/Local Debug macros ######################################
 
-#define	debugFLAG					0xF003
-
+#define	debugFLAG					0xF000
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
@@ -25,7 +24,7 @@
 // ###################################### General macros ###########################################
 
 
-#if (buildPLTFRM == HW_AC00)
+#if (buildPLTFRM == HW_AC01)
 static const u8_t AC00Xlat[8] = { 3, 2, 1, 0, 4, 5, 6, 7 };
 #endif
 
@@ -60,8 +59,8 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 		IF_PL(debugTRACK && ioB1GET(dbgOWscan), "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi);
 		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi)) {
 			psOW->DevNum = i;
-			#if (buildPLTFRM == HW_AC00)
-			psOW->PhyBus = AC00Xlat[LogBus - psDS248X->Lo];
+			#if (buildPLTFRM == HW_AC01)
+			psOW->PhyBus = allSYSFLAGS(hwAC00) ? AC00Xlat[LogBus - psDS248X->Lo] : LogBus - psDS248X->Lo;
 			#else
 			psOW->PhyBus = LogBus - psDS248X->Lo;
 			#endif
@@ -78,8 +77,8 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 int	OWP_BusP2L(owdi_t * psOW) {
 	IF_myASSERT(debugPARAM, halMemorySRAM(psaDS248X) && halMemorySRAM(psOW));
 	ds248x_t * psDS248X = &psaDS248X[psOW->DevNum];
-	#if (buildPLTFRM == HW_AC00)
-	return (psDS248X->Lo + AC00Xlat[psOW->PhyBus]);
+	#if (buildPLTFRM == HW_AC01)
+	return psDS248X->Lo + (allSYSFLAGS(hwAC00) ? AC00Xlat[psOW->PhyBus] : psOW->PhyBus);
 	#else
 	return psDS248X->Lo + psOW->PhyBus;
 	#endif
