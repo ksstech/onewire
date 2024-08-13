@@ -1,4 +1,4 @@
-// ds18x20.c - Copyright (c) 2018-22 Andre M. Maree / KSS Technologies (Pty) Ltd.
+// ds18x20.c - Copyright (c) 2018-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 
@@ -15,12 +15,7 @@
 #include <string.h>
 
 #define	debugFLAG					0xF000
-
-#define	debugREAD					(debugFLAG & 0x0001)
-#define	debugCONVERT				(debugFLAG & 0x0002)
-#define	debugPOWER					(debugFLAG & 0x0004)
-#define	debugSPAD					(debugFLAG & 0x0008)
-
+#define	debugSPAD					(debugFLAG & 0x0001)
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
