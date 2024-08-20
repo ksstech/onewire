@@ -47,19 +47,14 @@ int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
 	u8_t LogChan = OWP_BusP2L(psOW);
 	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan);
 	u8_t Dly = ioB4GET(dlyDS1990);
-	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) &&
-		(NowRead - psOW_CI->LastRead) <= Dly) {
-		IF_PX(debugTRACK && ioB1GET(dbgDS1990x), "Tag repeat %ds\r\n", Dly);
+	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) && (NowRead - psOW_CI->LastRead) <= Dly) {
+		IF_PX(debugTRACK && ioB1GET(dbgDS1990x), "Tag repeat %ds" strNL, Dly);
 	} else {
+		IF_PX(debugTRACK && ioB1GET(dbgDS1990x), "Tag %-.8hhY L=%d P=%d" strNL, &psOW->ROM, LogChan, psOW->PhyBus);
 		psOW_CI->LastROM.Value = psOW->ROM.Value;
 		psOW_CI->LastRead = NowRead;
 		xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits);
 		portYIELD();
-		if (debugTRACK && ioB1GET(dbgDS1990x)) {
-			psR->sFM.bRT = 1;
-			psR->sFM.bNL = 1;
-			OWP_Print1W_CB(psR, psOW);
-		}
 	}
 	return erSUCCESS;
 }
