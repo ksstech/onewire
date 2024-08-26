@@ -244,7 +244,8 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 			#endif
 		}
 	} else if (psDS248X->Rptr == ds248xREG_CONF) {		// CONFiguration register
-		if (Value == 0xC3) return iRV;					// Just read CONF, no change
+		if (Value == 0xC3)
+			return iRV;									// Just read CONF, no change
 		Value &= 0x0F;
 		if (Value != psDS248X->Rconf) {
 			ds248x_conf_t sConf = { .Rconf = Value };
@@ -461,13 +462,13 @@ done:
  *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
  */
 int	ds248xConfig(i2c_di_t * psI2C) {
-	if (!psI2C->IDok) return erINV_STATE;
-
-	if (!psaDS248X) {
+	if (!psI2C->IDok)
+		return erINV_STATE;
+	if (psaDS248X == NULL) {
 		IF_myASSERT(debugPARAM, psI2C->DevIdx == 0);
 		psaDS248X = malloc(ds248xCount * sizeof(ds248x_t));
-		if (!psaDS248X) return erNO_MEM;
-
+		if (psaDS248X == NULL)
+			return erNO_MEM;
 		memset(psaDS248X, 0, ds248xCount * sizeof(ds248x_t));
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xIO, stMICROS, "DS248xIO", 300, 2700);
 		IF_SYSTIMER_INIT(debugTIMING, stDS248x1R, stMICROS, "DS248x1R", 1400, 18000);
@@ -476,24 +477,26 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xST, stMICROS, "DS248xST", 500, 4400);
 	}
 	ds248x_t * psDS248X = &psaDS248X[psI2C->DevIdx];
-	if (!psI2C->CFGok) {								// definite 1st time for specific device...
+	if (psI2C->CFGok == 0) {							// definite 1st time for specific device...
 		psDS248X->psI2C = psI2C;
-		if (psI2C->Type == i2cDEV_DS2482_800) psDS248X->NumChan = 1;	// 0=1Ch, 1=8Ch
-		#if (HAL_DS18X20 > 0)
+		if (psI2C->Type == i2cDEV_DS2482_800)
+			psDS248X->NumChan = 1;						// 0=1Ch, 1=8Ch
+	#if (HAL_DS18X20 > 0)
 		void ds18x20StepThreeRead(TimerHandle_t);
 		psDS248X->th = xTimerCreateStatic("tmrDS248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
-		#endif
+	#endif
 	}
 
 	psI2C->CFGok = 0;
 	int iRV = ds248xReset(psDS248X);
-	if (iRV != 1) return erINV_DEVICE;
-
+	if (iRV != 1)
+		return erINV_DEVICE;
 	psDS248X->Rconf = 0;
 	psDS248X->APU = 1;								// LSBit
 	iRV = ds248xWriteConfig(psDS248X);
 	IF_myASSERT(debugRESULT, psDS248X->APU == 1);
-	if (iRV < erSUCCESS) goto exit;
+	if (iRV < erSUCCESS)
+		goto exit;
 	psI2C->CFGok = 1;
 	xRtosSetDevice(devMASK_DS248X);					// not and endpoint as such but anyway....
 exit:
@@ -516,7 +519,8 @@ exit:
  */
 int	ds248xOWReset(ds248x_t * psDS248X) {
 	// DS2482-800 datasheet page 7 para 2
-	if (psDS248X->SPU == owPOWER_STRONG) ds248xOWLevel(psDS248X, owPOWER_STANDARD);
+	if (psDS248X->SPU == owPOWER_STRONG)
+		ds248xOWLevel(psDS248X, owPOWER_STANDARD);
 	// 1-Wire reset (Case B)
 	//	S AD,0 [A] 1WRS [A] Sr AD,1 [A] [Status] A [Status] A\ P
 	//									\--------/

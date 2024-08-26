@@ -1,6 +1,4 @@
-/*
- * ds248x.h - Copyright 2020-24 Andre M. Maree/KSS Technologies (Pty) Ltd.
- */
+// ds248x.h
 
 #pragma once
 
