@@ -505,6 +505,7 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	}
 
 	psI2C->CFGok = 0;
+	xRtosClearDevice(devMASK_DS248X);
 	int iRV = ds248xReset(psDS248X);
 	if (iRV != 1)
 		return erINV_DEVICE;
