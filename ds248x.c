@@ -509,13 +509,13 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	if (iRV != 1)
 		return erINV_DEVICE;
 	psDS248X->Rconf = 0;
-	psDS248X->APU = 1;								// LSBit
+	psDS248X->APU = 1;									// LSBit
 	iRV = ds248xWriteConfig(psDS248X);
 	IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 	if (iRV < erSUCCESS)
 		goto exit;
 	psI2C->CFGok = 1;
-	xRtosSetDevice(devMASK_DS248X);					// not and endpoint as such but anyway....
+	xRtosSetDevice(devMASK_DS248X);
 exit:
 	return iRV;
 }
