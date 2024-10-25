@@ -66,12 +66,12 @@ struct i2c_di_t;
 typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	struct i2c_di_t * psI2C;		// size = 4
 	SemaphoreHandle_t mux;			// size = 4
-	#if (HAL_DS18X20 > 0)		// size = 4
+#if (HAL_DS18X20 > 0)		        // size = 4
 	TimerHandle_t th;
 	#define DS18X20x1	sizeof(TimerHandle_t)
-	#else
+#else
 	#define DS18X20x1	0
-	#endif
+#endif
 	StaticTimer_t ts;
 	union {							// size = 9
 		struct {
@@ -114,13 +114,13 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 		u8_t Hi : 4;
 		u8_t Sp2 : 4;
 	};
-	#if	(configPRODUCTION == 0)		// 16 bytes
+#if	(configPRODUCTION == 0)		    // 16 bytes
 	u8_t PrvStat[8];				// previous STAT reg
 	u8_t PrvConf[8];
 	#define DS18X20x2	(16)
-	#else
+#else
 	#define DS18X20x2	0
-	#endif
+#endif
 } ds248x_t;
 DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+ DS18X20x2));
 
