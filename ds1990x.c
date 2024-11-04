@@ -9,8 +9,8 @@
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
-#include "x_errors_events.h"
-#include "x_utilities.h"								// vShowActivity
+#include "errors_events.h"
+#include "utilitiesX.h"								// vShowActivity
 
 #define	debugFLAG					0xF000
 

@@ -8,8 +8,8 @@
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
-#include "x_errors_events.h"
-#include "x_string_general.h"
+#include "errors_events.h"
+#include "string_general.h"
 
 #include <string.h>
 
