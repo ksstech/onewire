@@ -43,7 +43,7 @@ void ds1990xConfig(void) {
 /* To avoid registering multiple reads if iButton is held in place too long we enforce a
  * period of 'x' seconds within which successive reads of the same tag will be ignored */
 int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
-	seconds_t NowRead = xTimeStampAsSeconds(sTSZ.usecs);
+	seconds_t NowRead = xTimeStampSeconds(sTSZ.usecs);
 	u8_t LogChan = OWP_BusP2L(psOW);
 	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan);
 	u8_t Dly = ioB4GET(dlyDS1990);
