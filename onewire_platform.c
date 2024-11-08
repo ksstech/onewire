@@ -99,7 +99,7 @@ void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]);
 
 /**
  * @brief	Print the 1-Wire ROM information
- * @param	FlagCount -
+ * @param	psR - pointer to  report control structure
  * @param	psOW_ROM - pointer to 1-Wire ROM structure
  * @return	number of characters printed
  */
