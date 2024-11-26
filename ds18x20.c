@@ -276,7 +276,7 @@ int	ds18x20EnumerateCB(report_t * psR, owdi_t * psOW) {
 
 	epw_t * psEWS = &psDS18X20->sEWx;
 	memset(psEWS, 0, sizeof(epw_t));
-	psEWS->var.def = SETDEF_CVAR(0, 0, vtVALUE, cvF32, 1, 0);
+	psEWS->var.def = SETDEF_CVAR(0,0,vtVALUE,cvF32,1,0,0);
 	psEWS->idx = psR->sFM.uCount;
 	psEWS->uri = URI_DS18X20;
 	ds18x20Initialize(psDS18X20);
@@ -299,7 +299,7 @@ int	ds18x20Enumerate(void) {
 
 	// Init primary EWP endpoint (leave fSecSNS = 0 to force parallel sensing
 	epw_t * psEWP = &table_work[URI_DS18X20];
-	psEWP->var.def = SETDEF_CVAR(0, 1, vtVALUE, cvF32, Fam10_28Count, 1);
+	psEWP->var.def = SETDEF_CVAR(0,1,vtVALUE,cvF32,Fam10_28Count,1,0);
 	psEWP->var.val.ps.psCX = &sDS18X20Func;
 	psEWP->Tsns	= psEWP->Rsns = ds18x20T_SNS_NORM;
 	psEWP->uri = URI_DS18X20;							// Used in OWPlatformEndpoints()
