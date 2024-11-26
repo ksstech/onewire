@@ -114,8 +114,7 @@ int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
  *	OD	0		300		75
  */
 int	ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
-	if (psDS248X->psI2C->Test)
-		goto skip;
+	if (psDS248X->psI2C->Test)						goto skip;
 	// check for validity of CHAN (only DS2482-800) and PADJ (only DS2484)
 	if ((Reg == ds248xREG_CHAN && psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
 		(Reg == ds248xREG_PADJ && psDS248X->psI2C->Type != i2cDEV_DS2484)) {
@@ -439,8 +438,7 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 		psI2C->Type = i2cDEV_DS2484;					// assume
 		iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ);
 		// PADJ=OK & PAR=000 & OD=0, valid DS2484
-		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) {
-			goto done;
+		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) goto done;
 		} else {
 			psI2C->Type = i2cDEV_DS2482_10X;
 			iRV = ds248xReadRegister(&sDS248X, ds248xREG_CHAN);
