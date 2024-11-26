@@ -458,11 +458,9 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 		iRV = erINV_DEVICE;
 	}
 done:
-	#if (ds248xLOCK == ds248xLOCK_IO)
-	if (sDS248X.mux) {
-		vSemaphoreDelete(sDS248X.mux);
-	}
-	#endif
+#if (ds248xLOCK == ds248xLOCK_IO)
+	if (sDS248X.mux) vSemaphoreDelete(sDS248X.mux);
+#endif
 	if (psI2C->Type != i2cDEV_UNDEF) {
 		psI2C->DevIdx = ds248xCount++;
 		psI2C->IDok = 1;
