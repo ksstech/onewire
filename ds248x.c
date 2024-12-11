@@ -518,7 +518,7 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	}
 
 	psI2C->CFGok = 0;
-	xRtosClearDevice(devMASK_DS248X);
+	halEventUpdateDevice(devMASK_DS248X, 0);
 	int iRV = ds248xReset(psDS248X);
 	if (iRV != 1)									return erINV_DEVICE;
 	psDS248X->Rconf = 0;
@@ -527,7 +527,7 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 	if (iRV < erSUCCESS)							goto exit;
 	psI2C->CFGok = 1;
-	xRtosSetDevice(devMASK_DS248X);
+	halEventUpdateDevice(devMASK_DS248X, 1);
 exit:
 	return iRV;
 }

@@ -61,7 +61,7 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi)) {
 			psOW->DevNum = i;
 			#if (buildPLTFRM == HW_AC01)
-			psOW->PhyBus = allSYSFLAGS(hwAC00) ? AC00Xlat[LogBus - psDS248X->Lo] : LogBus - psDS248X->Lo;
+			psOW->PhyBus = sSysFlags.ac00 ? AC00Xlat[LogBus - psDS248X->Lo] : LogBus - psDS248X->Lo;
 			#else
 			psOW->PhyBus = LogBus - psDS248X->Lo;
 			#endif
@@ -79,7 +79,7 @@ int	OWP_BusP2L(owdi_t * psOW) {
 	IF_myASSERT(debugPARAM, halMemorySRAM((void*) psaDS248X) && halMemorySRAM((void*) psOW));
 	ds248x_t * psDS248X = &psaDS248X[psOW->DevNum];
 	#if (buildPLTFRM == HW_AC01)
-	return psDS248X->Lo + (allSYSFLAGS(hwAC00) ? AC00Xlat[psOW->PhyBus] : psOW->PhyBus);
+	return psDS248X->Lo + (sSysFlags.ac00 ? AC00Xlat[psOW->PhyBus] : psOW->PhyBus);
 	#else
 	return psDS248X->Lo + psOW->PhyBus;
 	#endif

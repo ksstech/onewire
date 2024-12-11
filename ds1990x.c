@@ -36,7 +36,7 @@ void ds1990xConfig(void) {
 	psEWP->Tsns = psEWP->Rsns = DS1990X_T_SNS;
 	psEWP->uri = URI_DS1990X;		// Used in OWPlatformEndpoints()
 	IF_SYSTIMER_INIT(debugTIMING, stDS1990, stMILLIS, "DS1990x", 1, 100);
-	xRtosSetDevice(devMASK_DS1990X);
+	halEventUpdateDevice(devMASK_DS1990X, 1);
 }
 
 // #################################### 1W Platform support ########################################
