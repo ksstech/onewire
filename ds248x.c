@@ -510,8 +510,7 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	ds248x_t * psDS248X = &psaDS248X[psI2C->DevIdx];
 	if (psI2C->CFGok == 0) {							// definite 1st time for specific device...
 		psDS248X->psI2C = psI2C;
-		if (psI2C->Type == i2cDEV_DS2482_800)
-			psDS248X->NumChan = 1;						// 0=1Ch, 1=8Ch
+		if (psI2C->Type == i2cDEV_DS2482_800) psDS248X->NumChan = 1;	// 0=1Ch, 1=8Ch
 	#if (HAL_DS18X20 > 0)
 		void ds18x20StepThreeRead(TimerHandle_t);
 		psDS248X->th = xTimerCreateStatic("tmrDS248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
@@ -521,14 +520,12 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	psI2C->CFGok = 0;
 	xRtosClearDevice(devMASK_DS248X);
 	int iRV = ds248xReset(psDS248X);
-	if (iRV != 1)
-		return erINV_DEVICE;
+	if (iRV != 1)									return erINV_DEVICE;
 	psDS248X->Rconf = 0;
 	psDS248X->APU = 1;									// LSBit
 	iRV = ds248xWriteConfig(psDS248X);
 	IF_myASSERT(debugRESULT, psDS248X->APU == 1);
-	if (iRV < erSUCCESS)
-		goto exit;
+	if (iRV < erSUCCESS)							goto exit;
 	psI2C->CFGok = 1;
 	xRtosSetDevice(devMASK_DS248X);
 exit:

@@ -103,10 +103,9 @@ void OWTargetSetup(owdi_t * psOW, u8_t family_code) {
  * Will find the first device of the next family.
  */
 void OWFamilySkipSetup(owdi_t * psOW) {
-	psOW->LD = psOW->LFD;			// set Last discrepancy to last family discrepancy
-	psOW->LFD = 0;					// clear the last family discrepancy
-	if (psOW->LD == 0)
-		psOW->LDF = 1;				// check for end of list
+	psOW->LD = psOW->LFD;								// set Last discrepancy to last family discrepancy
+	psOW->LFD = 0;										// clear the last family discrepancy
+	if (psOW->LD == 0) psOW->LDF = 1;					// check for end of list
 }
 
 /**

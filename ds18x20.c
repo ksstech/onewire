@@ -164,8 +164,7 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
 	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0;
-	if (debugTRACK && ioB1GET(dbgDS1820)) 
-		ds18x20Print_CB(&sRprt, psDS18X20);
+	if (debugTRACK && ioB1GET(dbgDS1820)) ds18x20Print_CB(&sRprt, psDS18X20);
 	return 1;
 }
 
@@ -219,9 +218,7 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 				if (iRVx > erFAILURE) {
 					if (iRV == 1 || iRVx == 1) {	// 1 or both changed in scratchpad
 						iRV = ds18x20WriteSP(psDS18X20);
-						if (wr == 1) {
-							ds18x20WriteEE(psDS18X20);
-						}
+						if (wr == 1) ds18x20WriteEE(psDS18X20);
 					}
 				}
 			}
