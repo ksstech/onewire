@@ -106,7 +106,7 @@ int	ds18x20ReadSP(ds18x20_t * psDS18X20, int Len) {
 	if (OWResetCommand(&psDS18X20->sOW, DS18X20_READ_SP, owADDR_MATCH, 0) == 0)
 		return 0;
 	OWReadBlock(&psDS18X20->sOW, psDS18X20->RegX, Len);
-	IF_PL(debugSPAD, "%'-hhY ", Len, psDS18X20->RegX);
+	IF_PXL(debugSPAD, "%'-hhY ", Len, psDS18X20->RegX);
 	// If full SP read, verify CRC else terminate read
 	return (Len == SO_MEM(ds18x20_t, RegX))
 			? OWCheckCRC(psDS18X20->RegX, SO_MEM(ds18x20_t, RegX))
@@ -118,7 +118,7 @@ int	ds18x20WriteSP(ds18x20_t * psDS18X20) {
 		return 0;
 	int Len = (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28) ? 3 : 2;	// Thi, Tlo [+Conf]
 	OWWriteBlock(&psDS18X20->sOW, (u8_t *) &psDS18X20->Thi, Len);
-	IF_PL(debugSPAD, "%'-hhY ", Len, psDS18X20->RegX);
+	IF_PXL(debugSPAD, "%'-hhY ", Len, psDS18X20->RegX);
 	return 1;
 }
 
