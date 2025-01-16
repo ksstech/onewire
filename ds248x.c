@@ -493,13 +493,11 @@ done:
  *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
  */
 int	ds248xConfig(i2c_di_t * psI2C) {
-	if (psI2C->IDok == 0)
-		return erINV_STATE;
+	if (psI2C->IDok == 0)							return erINV_STATE;
 	if (psaDS248X == NULL) {
 		IF_myASSERT(debugPARAM, psI2C->DevIdx == 0);
 		psaDS248X = malloc(ds248xCount * sizeof(ds248x_t));
-		if (psaDS248X == NULL)
-			return erNO_MEM;
+		if (psaDS248X == NULL)						return erNO_MEM;
 		memset(psaDS248X, 0, ds248xCount * sizeof(ds248x_t));
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xIO, stMICROS, "DS248xIO", 300, 2700);
 		IF_SYSTIMER_INIT(debugTIMING, stDS248x1R, stMICROS, "DS248x1R", 1400, 18000);
