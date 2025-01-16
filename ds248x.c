@@ -368,7 +368,7 @@ int ds248xReset(ds248x_t * psDS248X) {
 	psDS248X->Rchan = ds248x_V2N[0];					// DS2482-800 specific
 	memset(psDS248X->Rpadj, 0, SO_MEM(ds248x_t, Rpadj));// DS2484 specific
 	if (Retries)
-		SL_WARN("%s after %d retries", psDS248X->RST ? "Success" : "FAILED", Retries);
+		SL_LOG(psDS248X->RST ? SL_SEV_WARNING ? SL_SEV_ERROR, "%s after %d retries", psDS248X->RST ? "Success" : "FAILED", Retries);
 	return psDS248X->RST;
 	#endif
 }
