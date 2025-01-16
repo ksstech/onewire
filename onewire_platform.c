@@ -1,6 +1,8 @@
 // onewire_platform.c - Copyright (c) 2020-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
+
+#if (HAL_ONEWIRE > 0)
 #include "hal_flash.h"
 #include "hal_memory.h"
 #include "hal_options.h"
@@ -333,3 +335,5 @@ int OWP_Report(report_t * psR) {
 	#endif
 	return iRV;
 }
+
+#endif
