@@ -105,35 +105,39 @@ void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]);
  */
 int	OWP_PrintROM_CB(report_t * psR, ow_rom_t * psOW_ROM) {
 	int iRV = 0;
-	if (repFORM_TST(psR, bRT))		iRV += wprintfx(psR, "%!.R: ", halTIMER_ReadRunTime());
-	if (repFORM_TST(psR, bTskNum))	iRV += wprintfx(psR, "#%u ", psR->sFM.uCount);
+	if (fmTST(bRT))				iRV += wprintfx(psR, "%!.R: ", halTIMER_ReadRunTime());
+	if (fmTST(bTskNum))			iRV += wprintfx(psR, "#%u ", psR->sFM.uCount);
 	iRV += wprintfx(psR, "%02X/%M/%02X", psOW_ROM->HexChars[owFAMILY], &psOW_ROM->HexChars[owAD0], psOW_ROM->HexChars[owCRC]);
-	if (repFORM_TST(psR, bNL))		iRV += wprintfx(psR, strNL);
+	if (fmTST(bNL))				iRV += wprintfx(psR, strNL);
 	return iRV;
 }
 
 int	OWP_Print1W_CB(report_t * psR, owdi_t * psOW) {
-	u32_t U32val = psR->sFM.u32Val;
-	psR->sFM.u32Val &= ~mfbNL;
+	fmSAVE();
+	fmSET(bNL, 0);
 	int iRV = OWP_PrintROM_CB(psR, &psOW->ROM);
-	psR->sFM.bNL = ((fm_t) U32val).bNL;
+	fmBACK(bNL);
 	iRV += wprintfx(psR, "  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
-	if (repFORM_TST(psR, bNL)) iRV += wprintfx(psR, strNL);
+	if (fmTST(bNL)) iRV += wprintfx(psR, strNL);
 	return iRV;
 }
 
 int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI) {
 	int iRV = 0;
-	u32_t U32val = psR->sFM.u32Val;
 	if (psCI->LastROM.HexChars[owFAMILY]) {
-		psR->sFM.u32Val &= ~(mfbRT|mfbNL|mfbCOUNT);
+		fmSAVE();
+		fmSET(bRT,0);
+		fmSET(bNL,0);
+		fmSET(bTskNum,0);
 		iRV += OWP_PrintROM_CB(psR, &psCI->LastROM);
-		psR->sFM.u32Val |= (U32val & (mfbRT|mfbNL|mfbCOUNT));
+		fmBACK(bRT);
+		fmBACK(bNL);
+		fmBACK(bTskNum);
 	}
 	iRV += wprintfx(psR, " OW#%d ", psR->sFM.uCount);
 	if (psCI->LastRead)			iRV += wprintfx(psR, "%R ", xTimeMakeTimeStamp(psCI->LastRead, 0));
 	if (psCI->ds18any)			iRV += wprintfx(psR, "DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
-	if (repFORM_TST(psR, bNL))	iRV += wprintfx(psR, strNL);
+	if (fmTST(bNL))				iRV += wprintfx(psR, strNL);
 	return iRV;
 }
 
