@@ -339,7 +339,6 @@ int ds248xReset(ds248x_t * psDS248X) {
 	//	S AD,0 [A] DRST [A] Sr AD,1 [A] [SS] A\ P
 	//  [] indicates from slave
 	//  SS status byte to read to verify state
-	#if (buildNEW_CODE > 1)
 	int Retries = 0;
 	do {
 		u8_t cChr = ds248xCMD_DRST;
@@ -355,22 +354,9 @@ int ds248xReset(ds248x_t * psDS248X) {
 		if (psDS248X->RST == 1) break;					// successful, exit to return
 		vTaskDelay(pdMS_TO_TICKS(10));
 	} while (++Retries < 20);
-	return psDS248X->RST;
-	#else
-	u8_t cChr = ds248xCMD_DRST;
-	psDS248X->Rptr = ds248xREG_STAT;					// After ReSeT pointer set to STATus register
-	IF_SYSTIMER_START(debugTIMING, stDS248xIO);
-	ds248xI2C_WriteDelayRead(psDS248X, &cChr, sizeof(cChr), 0);
-	IF_SYSTIMER_STOP(debugTIMING, stDS248xIO);
-	psDS248X->Rdata = 0;
-	psDS248X->Rconf = 0;								// all bits cleared (default) config
-	psDS248X->CurChan = 0;
-	psDS248X->Rchan = ds248x_V2N[0];					// DS2482-800 specific
-	memset(psDS248X->Rpadj, 0, SO_MEM(ds248x_t, Rpadj));// DS2484 specific
 	if (Retries)
 		SL_LOG(psDS248X->RST ? SL_SEV_WARNING ? SL_SEV_ERROR, "%s after %d retries", psDS248X->RST ? "Success" : "FAILED", Retries);
 	return psDS248X->RST;
-	#endif
 }
 
 /**
