@@ -322,7 +322,7 @@ int	ds18x20Enumerate(void) {
 		SL_ERR("Only %d of %d enumerated!!!", ds18x20NumDev, Fam10_28Count);
 		iRV = erFAILURE;
 	}
-	xRtosSetDevice(devMASK_DS18X20);
+	halEventUpdateDevice(devMASK_DS18X20, 1);
 	return iRV;										// number of devices enumerated
 }
 
