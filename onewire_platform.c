@@ -1,4 +1,4 @@
-// onewire_platform.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
+// onewire_platform.c - Copyright (c) 2020-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 #include "hal_flash.h"
