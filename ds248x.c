@@ -1,6 +1,8 @@
 // ds248x.c - Copyright (c) 2020-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
+
+#if (HAL_DS248X > 0)
 #include "hal_i2c_common.h"
 #include "hal_options.h"
 #include "FreeRTOS_Support.h"
@@ -640,3 +642,5 @@ u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) {
 	IF_SYSTIMER_STOP(debugTIMING, stDS248xST);
 	return psDS248X->Rstat;
 }
+
+#endif
