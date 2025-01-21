@@ -357,7 +357,7 @@ int ds248xReset(ds248x_t * psDS248X) {
 		vTaskDelay(pdMS_TO_TICKS(10));
 	} while (++Retries < 20);
 	if (Retries)
-		SL_LOG(psDS248X->RST ? SL_SEV_WARNING ? SL_SEV_ERROR, "%s after %d retries", psDS248X->RST ? "Success" : "FAILED", Retries);
+		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ERROR, "%s after %d retries", psDS248X->RST ? "Success" : "FAILED", Retries);
 	return psDS248X->RST;
 }
 
