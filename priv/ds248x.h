@@ -114,7 +114,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 		u8_t Hi : 4;
 		u8_t Sp2 : 4;
 	};
-#if	(configPRODUCTION == 0)		    // 16 bytes
+#if	(appPRODUCTION == 0)		    // 16 bytes
 	u8_t PrvStat[8];				// previous STAT reg
 	u8_t PrvConf[8];				// previous CONF reg
 	#define DS18X20x2	(16)

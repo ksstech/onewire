@@ -230,7 +230,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		if (psDS248X->OWB) {							// Check for error in case not blocking in I2C task
 			iRV = ds248xLogError(psDS248X, "OWB");
 		} else {
-			#if	(configPRODUCTION == 0)
+			#if	(appPRODUCTION == 0)
 			if (ioB2GET(dbgDS248X) > 1) {
 				const u8_t DS248Xmask[3] = { 0b00001111, 0b00111111, 0b11111111 };
 				u8_t Mask = DS248Xmask[ioB2GET(dbgDS248X) - 1];
