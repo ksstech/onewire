@@ -136,6 +136,19 @@ extern ds248x_t * psaDS248X;
 
 // ###################################### Device debug support #####################################
 
+/**
+ * @brief		reset device, read & store status
+ * @param[in]	psDS248X required device control/config/status structure
+ * @return		status of RST bit ie 1 or 0
+ * @note	Device Reset
+ * @note	AD,0 [A] DRST [A] Sr AD,1 [A] [SS] A\ P
+ * @note	[] indicates from slave
+ * @note	SS status byte to read to verify state
+ * @note	WDR		100KHz	400KHz
+ * @note	uS-----+------+-------+
+ * @note	NS	0	200		50
+ * @note	OD	0	200		50
+ */
 int	ds248xReset(ds248x_t * psDS248X);
 int	ds248xReportRegister(struct report_t * psR, ds248x_t * psDS248X, int Reg);
 int ds248xReport(struct report_t * psR, ds248x_t * psDS248X);
@@ -143,18 +156,89 @@ int ds248xReportAll(struct report_t * psR);
 
 // ############################### Identify, test and configure ####################################
 
+/**
+ * @brief		device reset+register reads to ascertain exact device type
+ * @param[in]	psDS248X required device control/config/status structure
+ * @return		erSUCCESS if supported device was detected, if not erFAILURE
+ */
 int	ds248xIdentify(struct i2c_di_t * psI2C);
+
+/**
+ * @brief
+ * @param[in]	psDS248X required device control/config/status structure
+ * @return
+ * Sets default device config
+ *	1-Wire speed (c1WS) = standard (0)
+ *	Strong pull-up (cSPU) = off (0)
+ *	Presence pulse masking (cPPM) = off (0)		[Discontinued, support removed]
+ *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
+ */
 int	ds248xConfig(struct i2c_di_t * psI2C);
 
 // ############################## DS248X-x00 1-Wire support functions ##############################
 
+/**
+ * @brief		Select the 1-Wire bus on a DS2482-800.
+ * @param[in]	psDS248X required device control/config/status structure
+ * @param[in] 	Chan
+ * @return		result from ds248xWriteDelayReadCheck(), 1 if bus selected
+ *				0 if device not detected or failure to perform select
+ *
+ *	WWR		100KHz	400KHz
+ *		uS-----+------+-------+
+ *	NS	0	300		75
+ *	OD	0	300		75
+ */
 int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Chan);
+
+/**
+ * @brief		Select the 1-Wire bus on a DS2482-800.
+ * @param[in]	psDS248X required device control/config/status structure
+ */
 void ds248xBusRelease(ds248x_t * psDS248X);
 int	ds248xOWReset(ds248x_t * psDS248X);
 int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed);
+
+/**
+ * @brief
+ * @param[in]	psDS248X required device control/config/status structure
+ * @param[in]	level 0=normal or 1=strong
+ * @return		status of SPU bit
+ * 
+ *	WWR			100KHz	400KHz
+ *				300uS	75uS
+ *		uS-----+------+-------+
+ *	NS	0		300		75
+ *	OD	0		300		75
+ */
 int	ds248xOWLevel(ds248x_t * psDS248X, bool level);
 bool ds248xOWTouchBit(ds248x_t * psDS248X, bool bit);
+
+/**
+ * @brief
+ * @param[in]	psDS248X required device control/config/status structure
+ * @param[in]	sendbyte the value to be written
+ * @return		status of Rstat register
+ * 
+ *	WWDR		100KHz	400KHz
+ *				300uS	75uS
+ *		uS-----+------+-------+
+ *	NS	560		860		635
+ *	OD	88		388		163
+ */
 u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t sendbyte);
+
+/**
+ * @brief
+ * @param[in]	psDS248X required device control/config/status structure
+ * @return		status of Rdata register ie byte read
+ * 
+ *	WRDWWR		100KHz	400KHz
+ *				500uS	125uS
+ *		uS-----+------+-------+
+ *	NS	583		1083	708
+ *	OD	88		588		213
+ */
 u8_t ds248xOWReadByte(ds248x_t * psDS248X);
 /**
  * Use the DS248x help command '1-Wire triplet' to perform one bit of a 1-Wire

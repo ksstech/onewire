@@ -105,7 +105,7 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 /**
  * @brief
  * @param
- * @return
+ * @return	0 if an error, 1 if all OK
  */
 static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 	char caBuf[36];
@@ -209,14 +209,6 @@ static int ds248xWriteDelayReadCheck(ds248x_t * psDS248X, u8_t * pTxBuf, size_t 
 }
 
 /**
- * @brief	reset device, read & store status
- * @return	status of RST bit ie 1 or 0
- *
- *	WDR			100KHz	400KHz
- *				200uS	50uS
- *		uS-----+------+-------+
- *	NS	0		200		50
- *	OD	0		200		50
  */
 static int ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
 	if (psDS248X->psI2C->Test)
@@ -261,19 +253,6 @@ static int ds248xWriteConfig(ds248x_t * psDS248X) {
 	return iRV;
 }
 
-/**
- * @brief	Select the 1-Wire bus on a DS2482-800.
- * @param	psDS248X
- * @param 	Chan
- * @return	1 if bus selected
- *			0 if device not detected or failure to perform select
- *
- *	WWR			100KHz	400KHz
- *				300uS	75uS
- *		uS-----+------+-------+
- *	NS	0		300		75
- *	OD	0		300		75
- */
 // ################### Identification, Diagnostics & Configuration functions #######################
 
 int ds248xReset(ds248x_t * psDS248X) {
@@ -302,12 +281,6 @@ int ds248xReset(ds248x_t * psDS248X) {
 	return psDS248X->RST;
 }
 
-// ################### Identification, Diagnostics & Configuration functions #######################
-
-/**
- * @brief	device reset+register reads to ascertain exact device type
- * @return	erSUCCESS if supported device was detected, if not erFAILURE
- */
 int	ds248xIdentify(i2c_di_t * psI2C) {
 	ds248x_t sDS248X = { 0 };							// temporary device structure
 	sDS248X.psI2C = psI2C;
@@ -349,13 +322,6 @@ done:
 	return erSUCCESS;
 }
 
-/**
- * Sets default device config
- *	1-Wire speed (c1WS) = standard (0)
- *	Strong pull-up (cSPU) = off (0)
- *	Presence pulse masking (cPPM) = off (0)		[Discontinued, support removed]
- *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
- */
 int	ds248xConfig(i2c_di_t * psI2C) {
 	if (psI2C->IDok == 0)
 		return erINV_STATE;
@@ -402,18 +368,6 @@ exit:
 
 // ################################## DS248x-x00 1-Wire functions ##################################
 
-/**
- * @brief	Reset 1W bus
- * @param	psDS248X
- * @param 	Chan
- * @return	1 if device detected, 0 if not
- *
- *	WDR			100KHz	400KHz
- *				200uS	50uS
- *		uS-----+------+-------+
- *	NS	1148	1348	1198
- *	OD	146		346		196
- */
 int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
 	int iRV = 1;
 	#if (ds248xLOCK == ds248xLOCK_BUS)
@@ -469,13 +423,6 @@ int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed) {
 	return psDS248X->OWS;
 }
 
-/**
- *	WWR			100KHz	400KHz
- *				300uS	75uS
- *		uS-----+------+-------+
- *	NS	0		300		75
- *	OD	0		300		75
- */
 int	ds248xOWLevel(ds248x_t * psDS248X, bool level) {
 	psDS248X->SPU = level;
 	ds248xWriteConfig(psDS248X);
@@ -495,13 +442,6 @@ bool ds248xOWTouchBit(ds248x_t * psDS248X, bool Bit) {
 	return psDS248X->SBR;
 }
 
-/**
- *	WWDR		100KHz	400KHz
- *				300uS	75uS
- *		uS-----+------+-------+
- *	NS	560		860		635
- *	OD	88		388		163
- */
 u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t Byte) {
 	// 1-Wire Write Byte (Case B)
 	//	S AD,0 [A] 1WWB [A] DD [A] Sr AD,1 [A] [Status] A [Status] A\ P
@@ -517,13 +457,6 @@ u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t Byte) {
 	return psDS248X->Rstat;
 }
 
-/**
- *	WRDWWR		100KHz	400KHz
- *				500uS	125uS
- *		uS-----+------+-------+
- *	NS	583		1083	708
- *	OD	88		588		213
- */
 u8_t ds248xOWReadByte(ds248x_t * psDS248X) {
 	// 1-Wire Read Bytes (Case C)
 	//	S AD,0 [A] 1WRB [A] Sr AD,1 [A] [Status] A [Status] A\ '
