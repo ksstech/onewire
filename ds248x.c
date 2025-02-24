@@ -97,10 +97,6 @@ static int ResetOK = 0, ResetErr = 0;
 /**
  * Report decoded status of all devices & registers
  */
-int ds248xReportAll(report_t * psR) {
-	int iRV = 0;
-	for (int i = 0; i < ds248xCount; iRV += ds248xReport(psR, &psaDS248X[i++]));
-	return iRV;
 static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 	SL_ERR("Dev=%d  Ch=%d  %s error", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
 	return ds248xReset(psDS248X);
