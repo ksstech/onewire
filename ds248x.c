@@ -218,6 +218,22 @@ static int ds248xWriteDelayReadCheck(ds248x_t * psDS248X, u8_t * pTxBuf, size_t 
  *	NS	0		200		50
  *	OD	0		200		50
  */
+static int ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
+	if (psDS248X->psI2C->Test)
+		goto skip;
+	// check for validity of CHAN (only DS2482-800) and PADJ (only DS2484)
+	if ((Reg == ds248xREG_CHAN && psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
+		(Reg == ds248xREG_PADJ && psDS248X->psI2C->Type != i2cDEV_DS2484)) {
+		SL_ERR("Invalid device/register combo Reg=%d (%s)", Reg, RegNames[Reg]);
+		return erFAILURE;
+	}
+skip:
+	psDS248X->Rptr = Reg;
+	u8_t cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg };
+	IF_SYSTIMER_START(debugTIMING, stDS248xIO);
+	int iRV = ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), 0);
+	IF_SYSTIMER_STOP(debugTIMING, stDS248xIO);
+	return iRV;
 }
 
 /**
