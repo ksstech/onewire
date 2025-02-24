@@ -247,7 +247,7 @@ skip:
  *	NS	0		300		75
  *	OD	0		300		75
  */
-int	ds248xWriteConfig(ds248x_t * psDS248X) {
+static int ds248xWriteConfig(ds248x_t * psDS248X) {
 	// Write configuration (Case A)
 	//	S AD,0 [A] WCFG [A] CF [A] Sr AD,1 [A] [CF] A\ P
 	//  [] indicates from slave
