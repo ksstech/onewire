@@ -258,21 +258,6 @@ int	ds248xWriteConfig(ds248x_t * psDS248X) {
  *	NS	0		300		75
  *	OD	0		300		75
  */
-int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
-	int iRV = 1;
-	#if (ds248xLOCK == ds248xLOCK_BUS)
-	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
-	#endif
-	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800) && (psDS248X->CurChan != Bus))	{					// optimise to avoid unnecessary IO
-		/* Channel Select (Case A)
-		 *	S AD,0 [A] CHSL [A] CC [A] Sr AD,1 [A] [RR] A\ P
-		 *  [] indicates from slave
-		 *  CC channel value
-		 *  RR channel read back
-		 */
-		u8_t cBuf[2] = { ds2482CMD_CHSL, (~Bus << 4) | Bus };	// calculate Channel value
-		psDS248X->Rptr = ds248xREG_CHAN;
-		psDS248X->CurChan = Bus;			// save in advance will auto reset if error
 // ################### Identification, Diagnostics & Configuration functions #######################
 
 int ds248xReset(ds248x_t * psDS248X) {
@@ -283,17 +268,6 @@ int ds248xReset(ds248x_t * psDS248X) {
 		IF_SYSTIMER_START(debugTIMING, stDS248xIO);
 		ds248xWriteDelayRead(psDS248X, &cChr, sizeof(cChr), 0);
 		IF_SYSTIMER_STOP(debugTIMING, stDS248xIO);
-	}
-	#if (ds248xLOCK == ds248xLOCK_BUS)
-	if (iRV == 0) xRtosSemaphoreGive(&psDS248X->mux);	// error, release...
-	#endif
-	return iRV;
-}
-
-void ds248xBusRelease(ds248x_t * psDS248X) {
-	#if (ds248xLOCK == ds248xLOCK_BUS)
-	xRtosSemaphoreGive(&psDS248X->mux);
-	#endif
 		if (psDS248X->RST == 1) {						// ReSeT successful?
 			++ResetOK;									// yes, update counter
 			break;										// break to return
@@ -420,6 +394,38 @@ exit:
  *	NS	1148	1348	1198
  *	OD	146		346		196
  */
+int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
+	int iRV = 1;
+	#if (ds248xLOCK == ds248xLOCK_BUS)
+		xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
+	#endif
+	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800) && (psDS248X->CurChan != Bus))	{	// optimise to avoid unnecessary IO
+		/* Channel Select (Case A)
+		 *	S AD,0 [A] CHSL [A] CC [A] Sr AD,1 [A] [RR] A\ P
+		 *  [] indicates from slave
+		 *  CC channel value
+		 *  RR channel read back
+		 */
+		u8_t cBuf[2] = { ds2482CMD_CHSL, (~Bus << 4) | Bus };	// calculate Channel value
+		psDS248X->Rptr = ds248xREG_CHAN;
+		psDS248X->CurChan = Bus;						// save in advance will auto reset if error
+		IF_SYSTIMER_START(debugTIMING, stDS248xIO);
+		iRV = ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), 0);
+		IF_SYSTIMER_STOP(debugTIMING, stDS248xIO);
+	}
+	#if (ds248xLOCK == ds248xLOCK_BUS)
+		if (iRV == 0)									// if actual IO performed && result is an error
+			xRtosSemaphoreGive(&psDS248X->mux);			// release the lock...
+	#endif
+	return iRV;
+}
+
+void ds248xBusRelease(ds248x_t * psDS248X) {
+	#if (ds248xLOCK == ds248xLOCK_BUS)
+		xRtosSemaphoreGive(&psDS248X->mux);
+	#endif
+}
+
 int	ds248xOWReset(ds248x_t * psDS248X) {
 	// DS2482-800 datasheet page 7 para 2
 	if (psDS248X->SPU == owPOWER_STRONG)
