@@ -93,9 +93,13 @@ u8_t ds248xCount = 0;
 ds248x_t * psaDS248X = NULL;
 static int ResetOK = 0, ResetErr = 0;
 
+// ################################ Local ONLY utility functions ###################################
 
 /**
- * Report decoded status of all devices & registers
+ * @brief
+ * @param[in]	psDS248X required device control/config/status structure
+ * @param[in]	specific error message to log
+ * @return		result from ds248xReset, status of RST bit
  */
 static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 	SL_ERR("Dev=%d  Ch=%d  %s error", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
@@ -209,6 +213,14 @@ static int ds248xWriteDelayReadCheck(ds248x_t * psDS248X, u8_t * pTxBuf, size_t 
 }
 
 /**
+ * @brief	Set the Read Pointer and reads the register
+ *			Once set the pointer remains static to allow reread of same register
+ * @return	erFAILURE if invalid type/register combination; else
+ * 			result from ds248xWriteDelayReadCheck()
+ * @note	WWDR	100KHz	400KHz
+ *			uS-----+------+-------+
+ *			NS	0	300		75
+ *			OD	0	300		75
  */
 static int ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
 	if (psDS248X->psI2C->Test)

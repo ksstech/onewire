@@ -189,7 +189,25 @@ int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Chan);
  * @param[in]	psDS248X required device control/config/status structure
  */
 void ds248xBusRelease(ds248x_t * psDS248X);
+
+/**
+ * @brief		Reset 1W bus
+ * @param[in]	psDS248X required device control/config/status structure
+ * @return		value of PPD bit, 1 if device detected, 0 if not
+ *	WDR			100KHz	400KHz
+ *				200uS	50uS
+ *		uS-----+------+-------+
+ *	NS	1148	1348	1198
+ *	OD	146		346		196
+ */
 int	ds248xOWReset(ds248x_t * psDS248X);
+
+/**
+ * @brief
+ * @param[in]	psDS248X required device control/config/status structure
+ * @param[in]	speed 0=normal or 1=fast
+ * @return		status of OWS bit
+ */
 int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed);
 
 /**
@@ -205,6 +223,13 @@ int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed);
  *	OD	0		300		75
  */
 int	ds248xOWLevel(ds248x_t * psDS248X, bool level);
+
+/**
+ * @brief
+ * @param[in]	psDS248X required device control/config/status structure
+ * @param[in]	bit value to be set
+ * @return		status of SBR bit
+ */
 bool ds248xOWTouchBit(ds248x_t * psDS248X, bool bit);
 
 /**
@@ -233,7 +258,13 @@ u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t sendbyte);
  *	OD	88		588		213
  */
 u8_t ds248xOWReadByte(ds248x_t * psDS248X);
+
 /**
+ * @brief
+ * @param[in]	psDS248X required device control/config/status structure
+ * @param[in]	u8Dir direction to search
+ * @return		value of Rstat register
+ * 
  * Use the DS248x help command '1-Wire triplet' to perform one bit of a 1-Wire
  * search. This command does two read bits and one write bit. The write bit
  * is either the default direction (all device have same bit) or in case of
