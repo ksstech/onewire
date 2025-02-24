@@ -236,8 +236,7 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 				u8_t Mask = DS248Xmask[ioB2GET(dbgDS248X) - 1];
 				u8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
 				if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
-					wprintfx(NULL, "D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx,
-						psDS248X->CurChan, StatX, psDS248X->Rstat);
+					wprintfx(NULL, "D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, StatX, psDS248X->Rstat);
 					ds248xReportStatus(NULL, StatX, psDS248X->Rstat);
 				}
 			}
@@ -284,9 +283,9 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
  * @return
  */
 int	ds248xI2C_Read(ds248x_t * psDS248X) {
-#if (ds248xLOCK == ds248xLOCK_IO)
-	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
-#endif
+	#if (ds248xLOCK == ds248xLOCK_IO)
+		xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
+	#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0);
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cR_B, NULL, 0, &psDS248X->RegX[psDS248X->Rptr],
 		SO_MEM(ds248x_t, Rconf), (i2cq_p1_t) NULL, (i2cq_p2_t) NULL);
@@ -302,9 +301,9 @@ int	ds248xI2C_Read(ds248x_t * psDS248X) {
  * @return
  */
 int	ds248xI2C_WriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSize, u32_t uSdly) {
-#if (ds248xLOCK == ds248xLOCK_IO)
-	xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
-#endif
+	#if (ds248xLOCK == ds248xLOCK_IO)
+		xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
+	#endif
 	IF_myASSERT(debugTRACK, psDS248X->OWB == 0);
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr],
 		psDS248X->Rptr == ds248xREG_PADJ ? SO_MEM(ds248x_t, Rpadj) : 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) NULL);
@@ -461,15 +460,16 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 		iRV = erINV_DEVICE;
 	}
 done:
-#if (ds248xLOCK == ds248xLOCK_IO)
-	if (sDS248X.mux) vSemaphoreDelete(sDS248X.mux);
-#endif
 	if (psI2C->Type != i2cDEV_UNDEF) {
 		psI2C->DevIdx = ds248xCount++;
 		psI2C->IDok = 1;
 		psI2C->Test	= 0;
 	}
 	return iRV;
+	#if (ds248xLOCK == ds248xLOCK_IO)					/* if locking enabled.... */
+		if (sDS248X.mux)								/* mux will be initialised in ds248xReset() */
+			vSemaphoreDelete(sDS248X.mux);				/* thus delete and free up allocation */
+	#endif
 }
 
 /**
@@ -480,11 +480,13 @@ done:
  *	Active pull-up (cAPU) = on (ds2484DCNF_APU = 0x01)
  */
 int	ds248xConfig(i2c_di_t * psI2C) {
-	if (psI2C->IDok == 0)							return erINV_STATE;
+	if (psI2C->IDok == 0)
+		return erINV_STATE;
 	if (psaDS248X == NULL) {
 		IF_myASSERT(debugPARAM, psI2C->DevIdx == 0);
 		psaDS248X = malloc(ds248xCount * sizeof(ds248x_t));
-		if (psaDS248X == NULL)						return erNO_MEM;
+		if (psaDS248X == NULL)
+			return erNO_MEM;
 		memset(psaDS248X, 0, ds248xCount * sizeof(ds248x_t));
 		IF_SYSTIMER_INIT(debugTIMING, stDS248xIO, stMICROS, "DS248xIO", 300, 2700);
 		IF_SYSTIMER_INIT(debugTIMING, stDS248x1R, stMICROS, "DS248x1R", 1400, 18000);
@@ -495,11 +497,12 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	ds248x_t * psDS248X = &psaDS248X[psI2C->DevIdx];
 	if (psI2C->CFGok == 0) {							// definite 1st time for specific device...
 		psDS248X->psI2C = psI2C;
-		if (psI2C->Type == i2cDEV_DS2482_800) psDS248X->NumChan = 1;	// 0=1Ch, 1=8Ch
-	#if (HAL_DS18X20 > 0)
-		void ds18x20StepThreeRead(TimerHandle_t);
-		psDS248X->th = xTimerCreateStatic("tmrDS248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
-	#endif
+		if (psI2C->Type == i2cDEV_DS2482_800)
+			psDS248X->NumChan = 1;						// 0=1Ch, 1=8Ch
+		#if (HAL_DS18X20 > 0)
+			void ds18x20StepThreeRead(TimerHandle_t);
+			psDS248X->th = xTimerCreateStatic("tmrDS248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
+		#endif
 	}
 
 	psI2C->CFGok = 0;
@@ -510,7 +513,8 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	psDS248X->APU = 1;									// LSBit
 	iRV = ds248xWriteConfig(psDS248X);
 	IF_myASSERT(debugRESULT, psDS248X->APU == 1);
-	if (iRV < erSUCCESS)							goto exit;
+	if (iRV < erSUCCESS)
+		goto exit;
 	psI2C->CFGok = 1;
 	halEventUpdateDevice(devMASK_DS248X, 1);
 exit:
