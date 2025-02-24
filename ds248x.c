@@ -367,9 +367,11 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	}
 
 	psI2C->CFGok = 0;
-	halEventUpdateDevice(devMASK_DS248X, 0);
 	int iRV = ds248xReset(psDS248X);
-	if (iRV != 1)									return erINV_DEVICE;
+	if (iRV != 1) {
+		halEventUpdateDevice(devMASK_DS248X, 0);
+		return erINV_DEVICE;
+	}
 	psDS248X->Rconf = 0;
 	psDS248X->APU = 1;									// LSBit
 	iRV = ds248xWriteConfig(psDS248X);
