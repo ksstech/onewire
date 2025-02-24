@@ -75,7 +75,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	StaticTimer_t ts;
 	union {							// size = 9
 		struct {
-			union {
+			union {					// STATus register
 				struct {
 			/*LSB*/	u8_t OWB : 1;	// 1-Wire Busy
 					u8_t PPD : 1;	// Presence Pulse Detected
@@ -88,9 +88,9 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 				};
 				u8_t Rstat;
 			};
-			u8_t Rdata;
-			u8_t Rchan;				// Code read back after ChanSel
-			union {
+			u8_t Rdata;				// DATA register
+			u8_t Rchan;				// DS2482-800 CHANnel SELect
+			union {					// CONFiguration
 				struct {
 			/*LSB*/	u8_t APU : 1;	// Active Pull Up
 					u8_t PDN : 1;	// Pull Down (DS2484 only)
@@ -100,7 +100,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 				};
 				u8_t Rconf;
 			};
-			u8_t Rpadj[5];
+			u8_t Rpadj[5];			// DS2484 ADJustments register
 		};
 		u8_t RegX[9];				// 4 + Rpadj[5]
 	};
@@ -116,7 +116,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	};
 #if	(configPRODUCTION == 0)		    // 16 bytes
 	u8_t PrvStat[8];				// previous STAT reg
-	u8_t PrvConf[8];
+	u8_t PrvConf[8];				// previous CONF reg
 	#define DS18X20x2	(16)
 #else
 	#define DS18X20x2	0
@@ -130,9 +130,9 @@ extern ds248x_t * psaDS248X;
 
 // ################################ DS248X I2C Read/Write support ##################################
 
-
 // ############################## DS248X-x00 CORE support functions ################################
 
+// ############################### Identify, test and configure ####################################
 
 // ###################################### Device debug support #####################################
 
