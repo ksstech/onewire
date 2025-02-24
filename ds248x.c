@@ -298,37 +298,39 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 	psI2C->Speed = i2cSPEED_400;
 	psI2C->TObus = 25;
 	psI2C->Test	= 1;
+	psI2C->Type = i2cDEV_UNDEF;							// unidentified at this stage
 	int iRV;
 	if (ds248xReset(&sDS248X) == 1) {
-		psI2C->Type = i2cDEV_DS2484;					// assume
 		iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ);
-		// PADJ=OK & PAR=000 & OD=0, valid DS2484
-		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) goto done;
-		psI2C->Type = i2cDEV_DS2482_10X;
+		// Read PADJ=OK with PAR=000 & OD=0, valid DS2484
+		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) {
+			psI2C->Type = i2cDEV_DS2484;				// definite DS2484
+			goto done;
+		}
 		iRV = ds248xReadRegister(&sDS248X, ds248xREG_CHAN);
-		// DS2482-10X CSR read FAIL, 2482-10x, NOT YET TESTED !!!
-		if (iRV == erSUCCESS) goto done;
-		if (sDS248X.Rchan == ds248x_V2N[0]) {			// CHAN=0 default, valid 2482-800
-			psI2C->Type = i2cDEV_DS2482_800;
-			iRV = erSUCCESS;
+		// -10x CSR should fail, -800 should succeed...
+		if (iRV != 1) {									// CSR read FAIL
+			psI2C->Type = i2cDEV_DS2482_10X;			// Must be DS2482-10X
+		} else if (sDS248X.Rchan == ds248x_V2N[0]) {	// CSR read OK, CHAN=0 default
+			psI2C->Type = i2cDEV_DS2482_800;			// Must be DS2482-800
 		} else {
-			psI2C->Type = i2cDEV_UNDEF;
-			iRV = erINV_WHOAMI;
+			// remain an unidentified device.....
 		}
 	} else {
-		iRV = erINV_DEVICE;
+		SL_ERR("Dev=%d  Ch=%d  Missing/faulty DS248x !!!", sDS248X.psI2C->DevIdx, sDS248X.CurChan);
 	}
 done:
-	if (psI2C->Type != i2cDEV_UNDEF) {
-		psI2C->DevIdx = ds248xCount++;
-		psI2C->IDok = 1;
-		psI2C->Test	= 0;
-	}
-	return iRV;
 	#if (ds248xLOCK == ds248xLOCK_IO)					/* if locking enabled.... */
 		if (sDS248X.mux)								/* mux will be initialised in ds248xReset() */
 			vSemaphoreDelete(sDS248X.mux);				/* thus delete and free up allocation */
 	#endif
+	psI2C->IgnoreACK = 0;
+	if (psI2C->Type == i2cDEV_UNDEF)
+		return erINV_DEVICE;
+	psI2C->DevIdx = ds248xCount++;
+	psI2C->IDok = 1;
+	psI2C->Test	= 0;
+	return erSUCCESS;
 }
 
 /**
