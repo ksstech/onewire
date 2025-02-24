@@ -107,11 +107,12 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
  * @param
  * @return
  */
-int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
-	int iRV = 1;
-	if (psDS248X->Rptr == ds248xREG_STAT) {				// STATus register
-		if (psDS248X->OWB) {							// Check for error in case not blocking in I2C task
-			iRV = ds248xLogError(psDS248X, "OWB");
+static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
+	char caBuf[36];
+	if (psDS248X->Rptr == ds248xREG_STAT) {				// Check STATus register
+		if (psDS248X->OWB) {							// error if not blocking in I2C task
+			ds248xLogError(psDS248X, "OWB");
+			return 0;
 		} else {
 			#if	(appPRODUCTION == 0)
 			if (ioB2GET(dbgDS248X) > 1) {
@@ -128,19 +129,19 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		}
 	} else if (psDS248X->Rptr == ds248xREG_CONF) {		// CONFiguration register
 		if (Value == 0xC3)
-			return iRV;									// Just read CONF, no change
+			goto done;									// Just read CONF, no change
 		Value &= 0x0F;
 		if (Value != psDS248X->Rconf) {
 			ds248x_conf_t sConf = { .Rconf = Value };
-			char caBuf[36];
 			char * pcMess	= (psDS248X->OWS != sConf.OWS) ? "OWS"
 							: (psDS248X->SPU != sConf.SPU) ? "SPU"
 							: ((psDS248X->psI2C->Type == i2cDEV_DS2484) && (psDS248X->PDN != sConf.PDN)) ? "PDN"
 							: (psDS248X->APU != sConf.APU) ? "APU" : "???";
 			snprintfx(caBuf, sizeof(caBuf), "W=x%.2x  R=x%.2x (%s)", Value, psDS248X->Rconf, pcMess);
-			iRV = ds248xLogError(psDS248X, caBuf);
-		} else {
-			#if	(configPRODUCTION == 0)
+			ds248xLogError(psDS248X, caBuf);
+			return 0;
+		} else {					// No error in CONF....
+			#if	(appPRODUCTION == 0)
 			if (ioB2GET(dbgDS248X)) {
 				u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];
 				if (psDS248X->Rconf != ConfX) {
@@ -153,11 +154,12 @@ int	ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		}
 		IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 	} else if (psDS248X->Rptr == ds248xREG_CHAN && (psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan])) {
-		char caBuf[36];
 		snprintfx(caBuf, sizeof(caBuf)," CHAN (x%02X vs x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
-		iRV = ds248xLogError(psDS248X, caBuf);
+		ds248xLogError(psDS248X, caBuf);
+		return 0;
 	}
-	return iRV;
+done:
+	return 1;
 }
 
 /**
