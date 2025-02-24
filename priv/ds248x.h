@@ -134,8 +134,6 @@ extern ds248x_t * psaDS248X;
 
 // ############################### Identify, test and configure ####################################
 
-// ###################################### Device debug support #####################################
-
 /**
  * @brief		reset device, read & store status
  * @param[in]	psDS248X required device control/config/status structure
@@ -150,11 +148,6 @@ extern ds248x_t * psaDS248X;
  * @note	OD	0	200		50
  */
 int	ds248xReset(ds248x_t * psDS248X);
-int	ds248xReportRegister(struct report_t * psR, ds248x_t * psDS248X, int Reg);
-int ds248xReport(struct report_t * psR, ds248x_t * psDS248X);
-int ds248xReportAll(struct report_t * psR);
-
-// ############################### Identify, test and configure ####################################
 
 /**
  * @brief		device reset+register reads to ascertain exact device type
@@ -249,6 +242,27 @@ u8_t ds248xOWReadByte(ds248x_t * psDS248X);
  * Returns � The DS248x status byte result from the triplet command
  */
 u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir);
+
+// ###################################### Device debug support #####################################
+
+int ds248xReportStatus(struct report_t * psR, u8_t Val1, u8_t Val2);
+
+int ds248xReportConfig(struct report_t * psR, u8_t Val1, u8_t Val2);
+
+/**
+ * Display register contents, decode status & configuration
+ */
+int	ds248xReportRegister(struct report_t * psR, ds248x_t * psDS248X, int Reg);
+
+/**
+ * Report decoded status of a specific device, all registers
+ */
+int ds248xReport(struct report_t * psR, ds248x_t * psDS248X);
+
+/**
+ * Report decoded status of all devices & registers
+ */
+int ds248xReportAll(struct report_t * psR);
 
 #ifdef __cplusplus
 }
