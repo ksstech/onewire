@@ -290,7 +290,7 @@ int ds248xReset(ds248x_t * psDS248X) {
 	psDS248X->Rconf = 0;								// all bits cleared (default) config
 	memset(psDS248X->Rpadj, 0, SO_MEM(ds248x_t, Rpadj));// DS2484 specific
 	if (Retries)
-		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT, "(%#I) %s after %d retries  OK=%d  Err=%d", nvsWifi.ipSTA, psDS248X->RST ? "Success" : "FAILED", Retries, ResetOK, ResetErr);
+		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT, "(%#-I) %s after %d retries  OK=%d  Err=%d", nvsWifi.ipSTA, psDS248X->RST ? "Success" : "FAILED", Retries, ResetOK, ResetErr);
 	return psDS248X->RST;
 }
 
