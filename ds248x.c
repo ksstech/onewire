@@ -304,11 +304,13 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 	int iRV;
 	if (ds248xReset(&sDS248X) == 1) {
 		iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ);
+
 		// Read PADJ=OK with PAR=000 & OD=0, valid DS2484
 		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) {
 			psI2C->Type = i2cDEV_DS2484;				// definite DS2484
 			goto done;
 		}
+		
 		iRV = ds248xReadRegister(&sDS248X, ds248xREG_CHAN);
 		// -10x CSR should fail, -800 should succeed...
 		if (iRV != 1) {									// CSR read FAIL
