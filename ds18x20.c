@@ -161,7 +161,7 @@ int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const u8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF };
-	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
+	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(1,0,0,0,0,0,0,0,0,psDS18X20->Idx) };
 	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0;
 	if (debugTRACK && xOptionGet(dbgDS1820)) ds18x20Print_CB(&sRprt, psDS18X20);
@@ -439,7 +439,7 @@ int ds18x20ReportAll(report_t * psR) {
 		psR = &sRprt;
 	int iRV = 0;
 	for (int i = 0; i < Fam10_28Count; ++i) {
-		psR->sFM.u32Val = makeMASK09x23(0,1,1,1,1,1,1,1,1,i);
+		psR->sFM.u32Val = makeMASK09x23(1,0,1,1,1,1,1,1,1,i);
 		if (i == 0)
 			iRV += wprintfx(psR, "\r# DS18x20 #\r\n");
 		iRV += ds18x20Print_CB(psR, &psaDS18X20[i]);
