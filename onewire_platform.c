@@ -59,7 +59,7 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 	extern u8_t ds248xCount;
 	for (int i = 0; i < ds248xCount; ++i) {
 		ds248x_t * psDS248X = &psaDS248X[i];
-		IF_PXL(debugTRACK && ioB1GET(dbgOWscan), "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi);
+		IF_PXL(debugTRACK && xOptionGet(dbgOWscan), "Log=%d Dev=%d Lo=%d Hi=%d", LogBus, i, psDS248X->Lo, psDS248X->Hi);
 		if (INRANGE(psDS248X->Lo, LogBus, psDS248X->Hi)) {
 			psOW->DevNum = i;
 			#if (appPLTFRM == HW_AC01)
@@ -67,10 +67,10 @@ void OWP_BusL2P(owdi_t * psOW, u8_t LogBus) {
 			#else
 			psOW->PhyBus = LogBus - psDS248X->Lo;
 			#endif
-			IF_PXL(debugTRACK && ioB1GET(dbgOWscan), " -> P=%d\r\n", psOW->PhyBus);
+			IF_PXL(debugTRACK && xOptionGet(dbgOWscan), " -> P=%d\r\n", psOW->PhyBus);
 			return;
 		}
-		IF_PXL(debugTRACK && ioB1GET(dbgOWscan), strNL);
+		IF_PXL(debugTRACK && xOptionGet(dbgOWscan), strNL);
 	}
 	#endif
 	SL_ERR("Invalid Logical Ch=%d", LogBus);
@@ -208,7 +208,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 				iRV = OWSearch(&sOW, 0);
 				if (iRV > 0 && (sOW.ROM.HexChars[owFAMILY] != Family)) {
 					// Strictly speaking should never get here, iRV must be 0 if same family not found
-					IF_PX(debugTRACK && ioB1GET(dbgOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, sOW.ROM.HexChars[owFAMILY]);
+					IF_PX(debugTRACK && xOptionGet(dbgOWscan), "Family 0x%02X wanted, 0x%02X found\r\n", Family, sOW.ROM.HexChars[owFAMILY]);
 					OWP_BusRelease(&sOW);
 					continue;
 				}
@@ -217,7 +217,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 			}
 			while (iRV) {
 				sRprt.sFM.uCount = LogBus;
-				IF_EXEC_2(debugTRACK && ioB1GET(dbgOWscan), OWP_Print1W_CB, &sRprt, &sOW);
+				IF_EXEC_2(debugTRACK && xOptionGet(dbgOWscan), OWP_Print1W_CB, &sRprt, &sOW);
 				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t));
 				IF_myASSERT(debugRESULT, iRV == 1);
 				sRprt.sFM.uCount = uCount;
@@ -252,14 +252,14 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(report_t *, void *, owdi_t *), void *
 			OWTargetSetup(&sOW, Family);
 			iRV = OWSearch(&sOW, 0);
 			if (iRV > 0 && (sOW.ROM.HexChars[owFAMILY] != Family)) {
-				IF_PXL(debugTRACK && ioB1GET(dbgOWscan), "Family %02hhX wanted, %02hhX found\r\n", Family, &sOW.ROM.HexChars[owFAMILY]);
+				IF_PXL(debugTRACK && xOptionGet(dbgOWscan), "Family %02hhX wanted, %02hhX found\r\n", Family, &sOW.ROM.HexChars[owFAMILY]);
 				OWP_BusRelease(&sOW);
 				continue;
 			}
 		} else iRV = OWFirst(&sOW, 0);
 		while (iRV) {
 			sRprt.sFM.uCount = LogBus;
-			IF_EXEC_2(debugTRACK && ioB1GET(dbgOWscan), OWP_Print1W_CB, &sRprt, &sOW);
+			IF_EXEC_2(debugTRACK && xOptionGet(dbgOWscan), OWP_Print1W_CB, &sRprt, &sOW);
 			iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t));
 			IF_myASSERT(debugRESULT, iRV == 1);
 			sRprt.sFM.uCount = uCount;

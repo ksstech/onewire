@@ -164,7 +164,7 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(0,1,0,0,0,0,0,0,0,psDS18X20->Idx) };
 	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0;
-	if (debugTRACK && ioB1GET(dbgDS1820)) ds18x20Print_CB(&sRprt, psDS18X20);
+	if (debugTRACK && xOptionGet(dbgDS1820)) ds18x20Print_CB(&sRprt, psDS18X20);
 	return 1;
 }
 
@@ -174,7 +174,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28 && INRANGE(9, Res, 12)) {
 		Res -= 9;
 		u8_t u8Res = (Res << 5) | 0x1F;
-		IF_PX(debugTRACK && ioB1GET(dbgMode), "SP Res x%02X->x%02X (%d->%d)\r\n",
+		IF_PX(debugTRACK && xOptionGet(dbgMode), "SP Res x%02X->x%02X (%d->%d)\r\n",
 				psDS18X20->fam28.Conf, u8Res, psDS18X20->Res, Res);
 		IF_RETURN_X(psDS18X20->fam28.Conf == u8Res, 0);	// nothing changed
 		psDS18X20->fam28.Conf = u8Res;
@@ -186,7 +186,7 @@ int	ds18x20SetResolution(ds18x20_t * psDS18X20, int Res) {
 
 int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 	if (INRANGE(-128, Lo, 127) && INRANGE(-128, Hi, 127)) {
-		IF_PX(debugTRACK && ioB1GET(dbgMode), "SP Tlo:%d -> %d  Thi:%d -> %d\r\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi);
+		IF_PX(debugTRACK && xOptionGet(dbgMode), "SP Tlo:%d -> %d  Thi:%d -> %d\r\n", psDS18X20->Tlo, Lo, psDS18X20->Thi, Hi);
 		IF_RETURN_X(psDS18X20->Tlo == Lo && psDS18X20->Thi == Hi, 0);
 		psDS18X20->Tlo = Lo;
 		psDS18X20->Thi = Hi;
@@ -204,7 +204,7 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 	i32_t hi = psR->para.x32[AI][1].i32;
 	u32_t res = psR->para.x32[AI][2].u32;
 	u32_t wr = psR->para.x32[AI][3].u32;
-	IF_PX(debugTRACK && ioB1GET(dbgMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%ld hi=%ld res=%lu wr=%lu\r\n",
+	IF_PX(debugTRACK && xOptionGet(dbgMode), "MODE 'DS18X20' Xcur=%d Xmax=%d lo=%ld hi=%ld res=%lu wr=%lu\r\n",
 			Xcur, Xmax, lo, hi, res, wr);
 
 	IF_RETURN_MX(wr != 0 && wr != 1, "Invalid persist flag, not 0/1", erINV_MODE);
