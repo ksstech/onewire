@@ -1,6 +1,4 @@
-/*
- * onewire.h - Copyright (c) 2017-24 Andre M. Maree/KSS Technologies (Pty) Ltd.
- */
+// onewire.h - Copyright (c) 2017-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #pragma once
 
