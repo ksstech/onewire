@@ -432,9 +432,9 @@ int	ds248xOWReset(ds248x_t * psDS248X) {
 	//									\--------/
 	//						Repeat until 1WB bit has changed to 0
 	//  [] indicates from slave
-	u8_t cChr = ds248xCMD_1WRS;
+	const u8_t cmd1WRS = ds248xCMD_1WRS;
 	psDS248X->Rptr = ds248xREG_STAT;
-	ds248xWriteDelayReadCheck(psDS248X, &cChr, sizeof(cChr), psDS248X->OWS ? owDELAY_RST_OD : owDELAY_RST);
+	ds248xWriteDelayReadCheck(psDS248X, (u8_t *) &cmd1WRS, sizeof(u8_t), psDS248X->OWS ? owDELAY_RST_OD : owDELAY_RST);
 	return psDS248X->PPD;
 }
 
