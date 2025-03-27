@@ -6,7 +6,7 @@
 #include "hal_memory.h"
 #include "hal_options.h"
 #include "onewire_platform.h"
-#include "printfx.h"
+#include "report.h"
 #include "rules.h"
 #include "syslog.h"
 #include "systiming.h"					// timing debugging

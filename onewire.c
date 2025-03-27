@@ -5,7 +5,7 @@
 #if (HAL_ONEWIRE > 0)
 #include "onewire_platform.h"
 
-#include "printfx.h"
+#include "report.h"
 #include "syslog.h"
 #include "errors_events.h"
 

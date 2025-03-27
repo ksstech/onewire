@@ -8,7 +8,7 @@
 #include "FreeRTOS_Support.h"
 #include "onewire_platform.h"
 #include "hal_options.h"
-#include "printfx.h"
+#include "report.h.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
 #include "x_errors_events.h"
