@@ -117,55 +117,64 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
  * @note	
  */
 static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
-	char caBuf[36];
-	if (psDS248X->Rptr == ds248xREG_STAT) {				// Check STATus register
+	char caBuf[48];
+	if (psDS248X->Rptr == ds248xREG_STAT) {				// STATus register
 		if (psDS248X->OWB) {							// error if not blocking in I2C task
 			ds248xLogError(psDS248X, "OWB");
 			return 0;
-		} else {
-			#if	(appPRODUCTION == 0)
-			if (xOptionGet(dbgDS248X) > 1) {
-				const u8_t DS248Xmask[3] = { 0b00001111, 0b00111111, 0b11111111 };
-				u8_t Mask = DS248Xmask[xOptionGet(dbgDS248X) - 1];
-				u8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
-				if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
-					PX("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, StatX, psDS248X->Rstat);
-					ds248xReportStatus(NULL, StatX, psDS248X->Rstat);
-				}
-			}
-			psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat;
-			#endif
 		}
+		// No error in STATus register
+		#if	(appPRODUCTION == 0)
+		if (xOptionGet(dbgDS248X) > 1) {
+			const u8_t DS248Xmask[3] = { 0b00001111, 0b00111111, 0b11111111 };
+			u8_t Mask = DS248Xmask[xOptionGet(dbgDS248X) - 1];
+			u8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
+			if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
+				PX("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, StatX, psDS248X->Rstat);
+				ds248xReportStatus(NULL, StatX, psDS248X->Rstat);
+			}
+		}
+		psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat;
+		#endif
 	} else if (psDS248X->Rptr == ds248xREG_CONF) {		// CONFiguration register
-		if (Value == 0xC3)
-			goto done;									// Just read CONF, no change
-		Value &= 0x0F;
-		if (Value != psDS248X->Rconf) {
-			ds248x_conf_t sConf = { .Rconf = Value };
-			char * pcMess	= (psDS248X->OWS != sConf.OWS) ? "OWS"
-							: (psDS248X->SPU != sConf.SPU) ? "SPU"
-							: ((psDS248X->psI2C->Type == i2cDEV_DS2484) && (psDS248X->PDN != sConf.PDN)) ? "PDN"
-							: (psDS248X->APU != sConf.APU) ? "APU" : "???";
-			snprintfx(caBuf, sizeof(caBuf), "W=x%.2x  R=x%.2x (%s)", Value, psDS248X->Rconf, pcMess);
+		if (Value == 0xC3)								// ds2482CMD_CHSL / ds2484CMD_PADJ
+			goto done;									// ignore
+		Value &= 0x0F;									// remove REServed bits
+		if (Value != psDS248X->Rconf) {					// if Value written NOT same as that read back
+			ds248x_conf_t sConf = { .Rconf = Value };	// try find where it went wrong
+			char * pcTmp = caBuf;
+			if (psDS248X->OWS != sConf.OWS)
+				pcTmp = stpcpy(pcTmp, "OWS ");
+			if (psDS248X->SPU != sConf.SPU)
+				pcTmp = stpcpy(pcTmp, "SPU ");
+			if (psDS248X->psI2C->Type == i2cDEV_DS2484 && (psDS248X->PDN != sConf.PDN))
+				pcTmp = stpcpy(pcTmp, "PDN ");
+			if (psDS248X->APU != sConf.APU)
+				pcTmp = stpcpy(pcTmp, "APU ");
+			int xLen = pcTmp - caBuf;					// determine size used
+			IF_myASSERT(debugTRACK, xLen < sizeof(caBuf));
+			snprintfx(pcTmp, sizeof(caBuf)-xLen, "W=x%02X R=x%02X", Value, psDS248X->Rconf);
 			ds248xLogError(psDS248X, caBuf);
 			return 0;
-		} else {					// No error in CONF....
-			#if	(appPRODUCTION == 0)
-			if (xOptionGet(dbgDS248X)) {
-				u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];
-				if (psDS248X->Rconf != ConfX) {
-					PX("D=%d C=%u x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
-					ds248xReportConfig(NULL, ConfX, psDS248X->Rconf);
-				}
-			}
-			psDS248X->PrvConf[psDS248X->CurChan] = psDS248X->Rconf;
-			#endif
 		}
+		// No error in CONF....
+		#if	(appPRODUCTION == 0)						// for DEVelopment builds
+		if (xOptionGet(dbgDS248X)) {					// if debug option enabled
+			u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];	// if configuration different from previous
+			if (psDS248X->Rconf != ConfX) {				// report old vs new config
+				PX("Dev=%d  Ch=%u  x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
+				ds248xReportConfig(NULL, ConfX, psDS248X->Rconf);	// decode the changes
+			}
+		}
+		psDS248X->PrvConf[psDS248X->CurChan] = psDS248X->Rconf;
+		#endif
 		IF_myASSERT(debugRESULT, psDS248X->APU == 1);
-	} else if (psDS248X->Rptr == ds248xREG_CHAN && (psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan])) {
-		snprintfx(caBuf, sizeof(caBuf)," CHAN (x%02X vs x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
-		ds248xLogError(psDS248X, caBuf);
-		return 0;
+	} else if (psDS248X->Rptr == ds248xREG_CHAN) {		// CHANnel register...
+		if (psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan]) {	// and values don't match?
+			snprintfx(caBuf, sizeof(caBuf)," CHAN (x%02X vs x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
+			ds248xLogError(psDS248X, caBuf);
+			return 0;
+		}
 	}
 done:
 	return 1;
