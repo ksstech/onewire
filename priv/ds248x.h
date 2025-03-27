@@ -79,8 +79,8 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 				struct {
 			/*LSB*/	u8_t OWB : 1;	// 1-Wire Busy
 					u8_t PPD : 1;	// Presence Pulse Detected
-					u8_t SD : 1;
-					u8_t LL : 1;	// Link Level
+					u8_t SD : 1;	// Short Detected
+					u8_t LL : 1;	// Logic Level
 					u8_t RST : 1;	// ReSeT
 					u8_t SBR : 1;	// Single Bit Read
 					u8_t TSB : 1;
