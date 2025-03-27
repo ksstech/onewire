@@ -73,6 +73,8 @@ typedef union __attribute__((packed)) {
 	u8_t RadjX;
 } ds248x_padj_t;
 
+// ###################################### Local constants ##########################################
+
 // ###################################### Local variables ##########################################
 
 const char * const RegNames[ds248xREG_NUM] = {"Stat", "Data", "Chan", "Conf", "Port" };
@@ -103,14 +105,16 @@ static int ResetOK = 0, ResetErr = 0;
  * @return		result from ds248xReset, status of RST bit
  */
 static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
-	SL_ERR("Dev=%d  Ch=%d  %s error", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
+	SL_ERR("Dev=%d Ch=%d %s", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
 	return ds248xReset(psDS248X);
 }
 
 /**
- * @brief
- * @param
+ * @brief	Monitor resuts from register changes to check for consistency
+ * @param[in]	psDS248X pointer to device structure
+ * @param[in]	Value (previously written) now to be verified
  * @return	0 if an error, 1 if all OK
+ * @note	
  */
 static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 	char caBuf[36];
@@ -182,7 +186,7 @@ __attribute__((unused)) static int ds248xRead(ds248x_t * psDS248X) {
 	#if (ds248xLOCK == ds248xLOCK_IO)
 		xRtosSemaphoreGive(&psDS248X->mux);
 	#endif
-	return iRV == erSUCCESS ? ds248xCheckRead(psDS248X, 0xFF) : 0;
+	return (iRV == erSUCCESS) ? ds248xCheckRead(psDS248X, 0xFF) : 0;
 }
 
 /**
@@ -519,7 +523,7 @@ int ds248xReportConfig(report_t * psR, u8_t Val1, u8_t Val2) {
 int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 	int iRV = 0, Chan;
 	switch (Reg) {
-	case ds248xREG_STAT:
+	case ds248xREG_STAT: {
 	#if	(appPRODUCTION == 0)
 		iRV += report(psR, "STAT(0)");
 		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
@@ -528,12 +532,12 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		}
 	#endif
 		break;
-
-	case ds248xREG_DATA:
+	}
+	case ds248xREG_DATA: {
 		iRV += report(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata);
 		break;
-
-	case ds248xREG_CHAN:
+	}
+	case ds248xREG_CHAN: {
 		if (psDS248X->psI2C->Type != i2cDEV_DS2482_800)
 			break;
 		// Channel, start by finding the matching Channel #
@@ -541,13 +545,13 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]);
 		iRV += report(psR, "CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\r\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]);
 		break;
-
-	case ds248xREG_CONF:
+	}
+	case ds248xREG_CONF: {
 		iRV += report(psR, "CONF(3)=0x%02X  ", psDS248X->Rconf);
 		iRV += ds248xReportConfig(psR, 0, psDS248X->Rconf);
 		break;
-
-	case ds248xREG_PADJ:
+	}
+	case ds248xREG_PADJ: {
 		if (psDS248X->psI2C->Type != i2cDEV_DS2484)
 			break;
 		ds248xReadRegister(psDS248X, Reg);
@@ -564,6 +568,7 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		sPadj.RadjX = psDS248X->Rpadj[4];
 		iRV += report(psR, " | rWPU=%f ohm\r\n", (double) Rwpu[sPadj.VAL]);
 		break;
+	}
 	}
 	return iRV;
 }
