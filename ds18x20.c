@@ -331,13 +331,13 @@ int	ds18x20Print_CB(report_t * psR, ds18x20_t * psDS18X20) {
 	psR->sFM.bNL = 0;
 	int iRV = OWP_Print1W_CB(psR, &psDS18X20->sOW);
 	psR->sFM.bNL = ((fm_t)U32val).bNL;
-	iRV += wprintfx(psR, " Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
+	iRV += report(psR, " Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
 		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9);
 	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
-		iRV += wprintfx(psR, " Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK");
+		iRV += report(psR, " Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK");
 	if (psR->sFM.bNL)
-		iRV += wprintfx(psR, strNL);
+		iRV += report(psR, strNL);
 	return iRV;
 }
 
@@ -441,11 +441,11 @@ int ds18x20ReportAll(report_t * psR) {
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		psR->sFM.u32Val = makeMASK09x23(1,0,1,1,1,1,1,1,1,i);
 		if (i == 0)
-			iRV += wprintfx(psR, "\r# DS18x20 #\r\n");
+			iRV += report(psR, "\r# DS18x20 #\r\n");
 		iRV += ds18x20Print_CB(psR, &psaDS18X20[i]);
 	}
 	if (Fam10_28Count)
-		iRV += wprintfx(psR, strNL);
+		iRV += report(psR, strNL);
 	return iRV;
 }
 
