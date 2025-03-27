@@ -283,12 +283,12 @@ int ds248xReset(ds248x_t * psDS248X) {
 	const u8_t cmdDRST = ds248xCMD_DRST;
 	int Retries = 0;
 	psDS248X->Rptr = ds248xREG_STAT;				// After ReSeT pointer set to STATus register
-	while(Retries++ < 20) {
+	do {
 		ds248xWriteDelayRead(psDS248X, (u8_t *) &cmdDRST, sizeof(u8_t), 0);
 		if (psDS248X->RST)								// ReSeT successful?
 			break;										// exit to complete
 		vTaskDelay(pdMS_TO_TICKS(10));
-	}
+	} while(++Retries < 20);
 	if (psDS248X->RST) {
 		++ResetOK;										// yes, update counter
 		// set register mirrors & variables to defaults
