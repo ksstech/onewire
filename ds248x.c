@@ -125,7 +125,7 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 				u8_t Mask = DS248Xmask[xOptionGet(dbgDS248X) - 1];
 				u8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
 				if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
-					wprintfx(NULL, "D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, StatX, psDS248X->Rstat);
+					PX("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, StatX, psDS248X->Rstat);
 					ds248xReportStatus(NULL, StatX, psDS248X->Rstat);
 				}
 			}
@@ -150,7 +150,7 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 			if (xOptionGet(dbgDS248X)) {
 				u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];
 				if (psDS248X->Rconf != ConfX) {
-					wprintfx(NULL, "D=%d C=%u x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
+					PX("D=%d C=%u x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
 					ds248xReportConfig(NULL, ConfX, psDS248X->Rconf);
 				}
 			}
