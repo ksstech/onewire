@@ -280,24 +280,29 @@ static int ds248xWriteConfig(ds248x_t * psDS248X) {
 // ################### Identification, Diagnostics & Configuration functions #######################
 
 int ds248xReset(ds248x_t * psDS248X) {
+	const u8_t cmdDRST = ds248xCMD_DRST;
 	int Retries = 0;
-	do {
-		u8_t cChr = ds248xCMD_DRST;
-		psDS248X->Rptr = ds248xREG_STAT;				// After ReSeT pointer set to STATus register
-		ds248xWriteDelayRead(psDS248X, &cChr, sizeof(cChr), 0);
-		if (psDS248X->RST == 1) {						// ReSeT successful?
-			++ResetOK;									// yes, update counter
-			break;										// break to return
-		}
-		++ResetErr;										// update FAIL counter
+	psDS248X->Rptr = ds248xREG_STAT;				// After ReSeT pointer set to STATus register
+	while(Retries++ < 20) {
+		ds248xWriteDelayRead(psDS248X, (u8_t *) &cmdDRST, sizeof(u8_t), 0);
+		if (psDS248X->RST)								// ReSeT successful?
+			break;										// exit to complete
 		vTaskDelay(pdMS_TO_TICKS(10));
-	} while (++Retries < 20);
-	// set register mirrors & variables to defaults
-	psDS248X->CurChan = 0;
-	psDS248X->Rdata = 0;
-	psDS248X->Rchan = ds248x_V2N[0];					// DS2482-800 specific
-	psDS248X->Rconf = 0;								// all bits cleared (default) config
-	memset(psDS248X->Rpadj, 0, SO_MEM(ds248x_t, Rpadj));// DS2484 specific
+	}
+	if (psDS248X->RST) {
+		++ResetOK;										// yes, update counter
+		// set register mirrors & variables to defaults
+		psDS248X->CurChan = 0;							// all device, common requirement
+		psDS248X->Rdata = 0;
+		psDS248X->Rconf = 0;							// all bits cleared (default) config
+		if (psDS248X->psI2C->Type == i2cDEV_DS2482_800)	// DS2482-800 specific
+			psDS248X->Rchan = ds248x_V2N[0];
+		if (psDS248X->psI2C->Type == i2cDEV_DS2484)		// DS2484 specific
+			memset(psDS248X->Rpadj, 0, SO_MEM(ds248x_t, Rpadj));
+	} else {
+		++ResetErr;										// update FAIL counter
+		// possibly do hardware reset/reboot?
+	}
 	if (Retries)
 		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT, "(%#-I) %s after %d retries  OK=%d  Err=%d", nvsWifi.ipSTA, psDS248X->RST ? "Success" : "FAILED", Retries, ResetOK, ResetErr);
 	return psDS248X->RST;
@@ -479,9 +484,9 @@ u8_t ds248xOWReadByte(ds248x_t * psDS248X) {
 	//	Sr AD,0 [A] SRP [A] E1 [A] Sr AD,1 [A] DD A\ P
 	//  [] indicates from slave
 	//  DD data read
-	u8_t cBuf = ds248xCMD_1WRB;
+	const u8_t cmd1WRB = ds248xCMD_1WRB;
 	psDS248X->Rptr = ds248xREG_STAT;
-	ds248xWriteDelayReadCheck(psDS248X, &cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_RB_OD : owDELAY_RB);
+	ds248xWriteDelayReadCheck(psDS248X, (u8_t *) &cmd1WRB, sizeof(u8_t), psDS248X->OWS ? owDELAY_RB_OD : owDELAY_RB);
 	ds248xReadRegister(psDS248X, ds248xREG_DATA);
 	return psDS248X->Rdata;
 }
