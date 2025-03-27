@@ -521,16 +521,16 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 	switch (Reg) {
 	case ds248xREG_STAT:
 	#if	(appPRODUCTION == 0)
-		iRV += wprintfx(psR, "STAT(0)");
+		iRV += report(psR, "STAT(0)");
 		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
-			iRV += wprintfx(psR, "\t#%u:", i, psDS248X->PrvStat[i]);
+			iRV += report(psR, "\t#%u:", i, psDS248X->PrvStat[i]);
 			iRV += ds248xReportStatus(psR, 0, psDS248X->PrvStat[i]);
 		}
 	#endif
 		break;
 
 	case ds248xREG_DATA:
-		iRV += wprintfx(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata);
+		iRV += report(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata);
 		break;
 
 	case ds248xREG_CHAN:
@@ -539,11 +539,11 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan);
 		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]);
-		iRV += wprintfx(psR, "CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\r\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]);
+		iRV += report(psR, "CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\r\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]);
 		break;
 
 	case ds248xREG_CONF:
-		iRV += wprintfx(psR, "CONF(3)=0x%02X  ", psDS248X->Rconf);
+		iRV += report(psR, "CONF(3)=0x%02X  ", psDS248X->Rconf);
 		iRV += ds248xReportConfig(psR, 0, psDS248X->Rconf);
 		break;
 
@@ -553,16 +553,16 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		ds248xReadRegister(psDS248X, Reg);
 		ds248x_padj_t sPadj;
 		sPadj.RadjX = psDS248X->Rpadj[0];
-		iRV += wprintfx(psR, "PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
+		iRV += report(psR, "PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
 				sPadj.OD ? CHR_1 : CHR_0, Trstl[sPadj.VAL] * (sPadj.OD ? 1 : 10));
 		sPadj.RadjX = psDS248X->Rpadj[1];
-		iRV += wprintfx(psR, " | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
+		iRV += report(psR, " | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
 		sPadj.RadjX = psDS248X->Rpadj[2];
-		iRV += wprintfx(psR, " | tWOL=%.1fuS", sPadj.OD ? (double) Twol1[sPadj.VAL] / 10.0 : (double) Twol0[sPadj.VAL]);
+		iRV += report(psR, " | tWOL=%.1fuS", sPadj.OD ? (double) Twol1[sPadj.VAL] / 10.0 : (double) Twol0[sPadj.VAL]);
 		sPadj.RadjX = psDS248X->Rpadj[3];
-		iRV += wprintfx(psR, " | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
+		iRV += report(psR, " | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
 		sPadj.RadjX = psDS248X->Rpadj[4];
-		iRV += wprintfx(psR, " | rWPU=%f ohm\r\n", (double) Rwpu[sPadj.VAL]);
+		iRV += report(psR, " | rWPU=%f ohm\r\n", (double) Rwpu[sPadj.VAL]);
 		break;
 	}
 	return iRV;
@@ -574,7 +574,7 @@ int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 #if (HAL_DS18X20 > 0)
 	iRV += xRtosReportTimer(psR, psDS248X->th);
 #endif
-	iRV += wprintfx(psR, strNL);
+	iRV += report(psR, strNL);
 	return iRV;
 }
 
