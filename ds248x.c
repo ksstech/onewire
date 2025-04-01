@@ -305,12 +305,14 @@ int ds248xReset(ds248x_t * psDS248X) {
 	}
 	if (Retries)
 		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT, "(%#-I) %s after %d retries  OK=%d  Err=%d", nvsWifi.ipSTA, psDS248X->RST ? "Success" : "FAILED", Retries, ResetOK, ResetErr);
-	return psDS248X->RST;
+	if (Retries || psDS248X->LastRST != psDS248X->RST)
+	return psDS248X->LastRST = psDS248X->RST;			// save status of this reset attempt
 }
 
 int	ds248xIdentify(i2c_di_t * psI2C) {
 	ds248x_t sDS248X = { 0 };							// temporary device structure
 	sDS248X.psI2C = psI2C;
+	sDS248X.LastRST = 1;								// avoid syslog if reset successful
 	psI2C->Speed = i2cSPEED_400;
 	psI2C->TObus = 25;
 	psI2C->Test	= 1;
@@ -366,6 +368,7 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	if (psI2C->CFGok == 0) {							// definite 1st time for specific device...
 		psDS248X->psI2C = psI2C;
 		if (psI2C->Type == i2cDEV_DS2482_800)
+		psDS248X->LastRST = 1;							// avoid syslog on next "successful" reset
 			psDS248X->NumChan = 1;						// 0=1Ch, 1=8Ch
 		#if (HAL_DS18X20 > 0)
 			void ds18x20StepThreeRead(TimerHandle_t);

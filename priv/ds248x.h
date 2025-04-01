@@ -108,7 +108,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 		u8_t CurChan : 3;			// 0 -> 7
 		u8_t Rptr : 3;				// 0 -> 4
 		u8_t NumChan : 1;			// 0 / 1 / 8
-		u8_t Sp1 : 1;
+		u8_t LastRST : 1;			// result from last reset attempt
 		u8_t I2Cnum	: 4;			// index into I2C Device Info table
 		u8_t Lo : 4;
 		u8_t Hi : 4;
