@@ -195,7 +195,7 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 	u32_t uCount = 0;
 	owdi_t sOW;
 	report_t sRprt = {
-		.pcBuf = NULL,
+		.pvArg = NULL,
 		.Size = repSIZE_SET(0,0,0,0,sgrANSI,0,0),
 		.sFM.u32Val = makeMASK09x23(1,0,0,0,0,0,0,0,0,0),
 	};
@@ -243,7 +243,7 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(report_t *, void *, owdi_t *), void *
 	int	iRV = erSUCCESS;
 	u32_t uCount = 0;
 	owdi_t sOW;
-	report_t sRprt = { .pcBuf = NULL, .Size = 0, .sFM.u32Val = makeMASK09x23(1,0,0,0,0,0,0,0,0,0) };
+	report_t sRprt = { .pvArg = NULL, .Size = 0, .sFM.u32Val = makeMASK09x23(1,0,0,0,0,0,0,0,0,0) };
 	for (u8_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
 		OWP_BusL2P(&sOW, LogBus);
 		if (OWP_BusSelect(&sOW) == 0)
