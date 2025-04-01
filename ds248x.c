@@ -250,8 +250,7 @@ static int ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
 skip:
 	psDS248X->Rptr = Reg;
 	u8_t cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg };
-	int iRV = ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), 0);
-	return iRV;
+	return ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), 0);
 }
 
 /**
@@ -273,8 +272,7 @@ static int ds248xWriteConfig(ds248x_t * psDS248X) {
 	u8_t config	= psDS248X->Rconf & 0x0F;
 	u8_t cBuf[2] = { ds248xCMD_WCFG , (~config << 4) | config };
 	psDS248X->Rptr = ds248xREG_CONF;
-	int iRV = ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), 0);
-	return iRV;
+	return ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), 0);
 }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
@@ -303,9 +301,9 @@ int ds248xReset(ds248x_t * psDS248X) {
 		++ResetErr;										// update FAIL counter
 		// possibly do hardware reset/reboot?
 	}
-	if (Retries)
-		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT, "(%#-I) %s after %d retries  OK=%d  Err=%d", nvsWifi.ipSTA, psDS248X->RST ? "Success" : "FAILED", Retries, ResetOK, ResetErr);
 	if (Retries || psDS248X->LastRST != psDS248X->RST)
+		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT, "(%#-I) %s after %d retries  OK=%d  Err=%d",
+			nvsWifi.ipSTA, psDS248X->RST ? "Success" : "FAILED", Retries, ResetOK, ResetErr);
 	return psDS248X->LastRST = psDS248X->RST;			// save status of this reset attempt
 }
 
@@ -320,13 +318,11 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 	int iRV;
 	if (ds248xReset(&sDS248X) == 1) {
 		iRV = ds248xReadRegister(&sDS248X, ds248xREG_PADJ);
-
 		// Read PADJ=OK with PAR=000 & OD=0, valid DS2484
 		if (iRV == 1 &&	sDS248X.Rpadj[0] == 0b00000110) {
 			psI2C->Type = i2cDEV_DS2484;				// definite DS2484
 			goto done;
-		}
-		
+		}		
 		iRV = ds248xReadRegister(&sDS248X, ds248xREG_CHAN);
 		// -10x CSR should fail, -800 should succeed...
 		if (iRV != 1) {									// CSR read FAIL
@@ -367,9 +363,10 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	ds248x_t * psDS248X = &psaDS248X[psI2C->DevIdx];
 	if (psI2C->CFGok == 0) {							// definite 1st time for specific device...
 		psDS248X->psI2C = psI2C;
-		if (psI2C->Type == i2cDEV_DS2482_800)
 		psDS248X->LastRST = 1;							// avoid syslog on next "successful" reset
+		if (psI2C->Type == i2cDEV_DS2482_800) {
 			psDS248X->NumChan = 1;						// 0=1Ch, 1=8Ch
+		}
 		#if (HAL_DS18X20 > 0)
 			void ds18x20StepThreeRead(TimerHandle_t);
 			psDS248X->th = xTimerCreateStatic("tmrDS248x", pdMS_TO_TICKS(5), pdFALSE, NULL, ds18x20StepThreeRead, &psDS248X->ts);
