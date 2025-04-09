@@ -89,7 +89,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 				u8_t Rstat;
 			};
 			u8_t Rdata;				// DATA register
-			u8_t Rchan;				// DS2482-800 CHANnel SELect
+			u8_t Rchan;				// CHANnel SELect DS2482-800
 			union {					// CONFiguration
 				struct {
 			/*LSB*/	u8_t APU : 1;	// Active Pull Up
@@ -100,7 +100,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 				};
 				u8_t Rconf;
 			};
-			u8_t Rpadj[5];			// DS2484 ADJustments register
+			u8_t Rpadj[5];			// ADJustments DS2484
 		};
 		u8_t RegX[9];				// 4 + Rpadj[5]
 	};

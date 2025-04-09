@@ -16,11 +16,10 @@
 
 #include <string.h>
 
-// ##################################### Developer notes ###########################################
-/*
+/* ##################################### Developer notes ###########################################
 	Test at 400KHx I2C speed, maybe add auto detect and step up mode in SCAN routine?
 	Add support to configure the PADJ register timing
- */
+*/
 
 // ###################################### General macros ###########################################
 
