@@ -137,20 +137,26 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		#endif
 	} else if (psDS248X->Rptr == ds248xREG_CONF) {		// CONFiguration register
 		if (Value == 0xC3)								// ds2482CMD_CHSL / ds2484CMD_PADJ
+//		&& (psDS248X->psI2C.Type == i2cDEV_DS2484)		// ds2484CMD_PADJ
+//		&& (psDS248X->psI2C.Type == i2cDEV_DS2482-800)	// ds2482CMD_CHSL
 			goto done;									// ignore
-		Value &= 0x0F;									// remove REServed bits
-		if (Value != psDS248X->Rconf) {					// if Value written NOT same as that read back
-			ds248x_conf_t sConf = { .Rconf = Value };	// try find where it went wrong
-			char * pcTmp = caBuf;
-			if (psDS248X->OWS != sConf.OWS)
-				pcTmp = stpcpy(pcTmp, "OWS ");
-			if (psDS248X->SPU != sConf.SPU)
-				pcTmp = stpcpy(pcTmp, "SPU ");
-			if (psDS248X->psI2C->Type == i2cDEV_DS2484 && (psDS248X->PDN != sConf.PDN))
+		ds248x_conf_t sConf = { .Rconf = Value };		// try find where it went wrong
+		char * pcTmp = caBuf;
+		if (psDS248X->OWS != sConf.OWS)					// All DS248x devices 1W Speed
+			pcTmp = stpcpy(pcTmp, "OWS ");
+		if (psDS248X->psI2C->Type == i2cDEV_DS2484) {	// DS2484 only
+			if (psDS248X->PDN != sConf.PDN)
 				pcTmp = stpcpy(pcTmp, "PDN ");
-			if (psDS248X->APU != sConf.APU)
-				pcTmp = stpcpy(pcTmp, "APU ");
-			int xLen = pcTmp - caBuf;					// determine size used
+		} else {										// DS2482-xxx devices
+			if (psDS248X->PDN || sConf.PDN)				// bit set in either value?
+				pcTmp = stpcpy(pcTmp, "PDN? ");
+		}
+		if (psDS248X->SPU != sConf.SPU)					// All DS248x devices Strong Pull Up
+			pcTmp = stpcpy(pcTmp, "SPU ");
+		if (psDS248X->APU != sConf.APU)					// All DS248x devices Active Pull Up
+			pcTmp = stpcpy(pcTmp, "APU ");
+		int xLen = pcTmp - caBuf;						// determine size used
+		if (xLen) {
 			IF_myASSERT(debugTRACK, xLen < sizeof(caBuf));
 			snprintfx(pcTmp, sizeof(caBuf)-xLen, "W=x%02X R=x%02X", Value, psDS248X->Rconf);
 			ds248xLogError(psDS248X, caBuf);
@@ -378,8 +384,7 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 		halEventUpdateDevice(devMASK_DS248X, 0);
 		return erINV_DEVICE;
 	}
-	psDS248X->Rconf = 0;
-	psDS248X->APU = 1;									// LSBit
+	psDS248X->APU = 1;									// Even though only single slave ALWAYS enabled
 	iRV = ds248xWriteConfig(psDS248X);
 	IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 	if (iRV < erSUCCESS)
