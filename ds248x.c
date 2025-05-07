@@ -8,7 +8,6 @@
 #include "hal_options.h"
 #include "FreeRTOS_Support.h"
 #include "onewire_platform.h"
-#include "report.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
 #include "errors_events.h"
@@ -512,12 +511,12 @@ u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) {
 
 int ds248xReportStatus(report_t * psR, u8_t Val1, u8_t Val2) {
 	const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" };
-	return xBitMapDecodeChanges(psR, Val1, Val2, 0x000000FF, StatNames);
+	return xReportBitMap(psR, Val1, Val2, 0x000000FF, StatNames);
 }
 
 int ds248xReportConfig(report_t * psR, u8_t Val1, u8_t Val2) {
 	const char * const ConfNames[4] = { "APU", "PDN", "SPU", "OWS" };
-	return xBitMapDecodeChanges(psR, Val1, Val2, 0x0000000F, ConfNames);
+	return xReportBitMap(psR, Val1, Val2, 0x0000000F, ConfNames);
 }
 
 int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
@@ -525,16 +524,16 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 	switch (Reg) {
 	case ds248xREG_STAT: {
 	#if	(appPRODUCTION == 0)
-		iRV += report(psR, "STAT(0)");
+		iRV += xReport(psR, "STAT(0)");
 		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
-			iRV += report(psR, "\t#%u:", i, psDS248X->PrvStat[i]);
+			iRV += xReport(psR, "\t#%u:", i, psDS248X->PrvStat[i]);
 			iRV += ds248xReportStatus(psR, 0, psDS248X->PrvStat[i]);
 		}
 	#endif
 		break;
 	}
 	case ds248xREG_DATA: {
-		iRV += report(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata);
+		iRV += xReport(psR, "DATA(1)=0x%02X (Last read)\r\n", psDS248X->Rdata);
 		break;
 	}
 	case ds248xREG_CHAN: {
@@ -543,11 +542,11 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan);
 		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]);
-		iRV += report(psR, "CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\r\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]);
+		iRV += xReport(psR, "CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\r\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]);
 		break;
 	}
 	case ds248xREG_CONF: {
-		iRV += report(psR, "CONF(3)=0x%02X  ", psDS248X->Rconf);
+		iRV += xReport(psR, "CONF(3)=0x%02X  ", psDS248X->Rconf);
 		iRV += ds248xReportConfig(psR, 0, psDS248X->Rconf);
 		break;
 	}
@@ -557,16 +556,16 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 		ds248xReadRegister(psDS248X, Reg);
 		ds248x_padj_t sPadj;
 		sPadj.RadjX = psDS248X->Rpadj[0];
-		iRV += report(psR, "PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
+		iRV += xReport(psR, "PADJ(4)=0x%02X  OD=%c | tRSTL=%duS", sPadj.RadjX,
 				sPadj.OD ? CHR_1 : CHR_0, Trstl[sPadj.VAL] * (sPadj.OD ? 1 : 10));
 		sPadj.RadjX = psDS248X->Rpadj[1];
-		iRV += report(psR, " | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
+		iRV += xReport(psR, " | tMSP=%.1fuS", sPadj.OD ? (double) Tmsp1[sPadj.VAL] / 10.0 : (double) Tmsp0[sPadj.VAL]);
 		sPadj.RadjX = psDS248X->Rpadj[2];
-		iRV += report(psR, " | tWOL=%.1fuS", sPadj.OD ? (double) Twol1[sPadj.VAL] / 10.0 : (double) Twol0[sPadj.VAL]);
+		iRV += xReport(psR, " | tWOL=%.1fuS", sPadj.OD ? (double) Twol1[sPadj.VAL] / 10.0 : (double) Twol0[sPadj.VAL]);
 		sPadj.RadjX = psDS248X->Rpadj[3];
-		iRV += report(psR, " | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
+		iRV += xReport(psR, " | tREC0=%.2fuS", (double) Trec0[sPadj.VAL] / 100.0);
 		sPadj.RadjX = psDS248X->Rpadj[4];
-		iRV += report(psR, " | rWPU=%f ohm\r\n", (double) Rwpu[sPadj.VAL]);
+		iRV += xReport(psR, " | rWPU=%f ohm\r\n", (double) Rwpu[sPadj.VAL]);
 		break;
 	}
 	}
@@ -579,7 +578,7 @@ int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 #if (HAL_DS18X20 > 0)
 	iRV += xRtosReportTimer(psR, psDS248X->th);
 #endif
-	iRV += report(psR, strNL);
+	iRV += xReport(psR, strNL);
 	return iRV;
 }
 

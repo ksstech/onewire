@@ -161,7 +161,7 @@ int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const u8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF };
-	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(1,0,0,0,0,0,0,0,0,psDS18X20->Idx) };
+	report_t sRprt = { .pvArg=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(1,0,0,0,0,0,0,0,0,psDS18X20->Idx) };
 	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0;
 	if (debugTRACK && xOptionGet(dbgDS1820)) ds18x20Print_CB(&sRprt, psDS18X20);
@@ -331,13 +331,13 @@ int	ds18x20Print_CB(report_t * psR, ds18x20_t * psDS18X20) {
 	psR->sFM.bNL = 0;
 	int iRV = OWP_Print1W_CB(psR, &psDS18X20->sOW);
 	psR->sFM.bNL = ((fm_t)U32val).bNL;
-	iRV += report(psR, " Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
+	iRV += xReport(psR, " Traw=0x%04X/%.4fC Tlo=%d Thi=%d Res=%d",
 		psDS18X20->Tmsb << 8 | psDS18X20->Tlsb,
 		psDS18X20->sEWx.var.val.x32.f32, psDS18X20->Tlo, psDS18X20->Thi, psDS18X20->Res+9);
 	if (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
-		iRV += report(psR, " Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK");
+		iRV += xReport(psR, " Conf=0x%02X %s", psDS18X20->fam28.Conf, ((psDS18X20->fam28.Conf >> 5) != psDS18X20->Res) ? "ERROR" : "OK");
 	if (psR->sFM.bNL)
-		iRV += report(psR, strNL);
+		iRV += xReport(psR, strNL);
 	return iRV;
 }
 
@@ -434,18 +434,18 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 // ######################################### Reporting #############################################
 
 int ds18x20ReportAll(report_t * psR) {
-	report_t sRprt = { .pcBuf = NULL, .Size = 0, .sFM.u32Val = 0 };
+	report_t sRprt = { .pvArg = NULL, .Size = 0, .sFM.u32Val = 0 };
 	if (psR == NULL)
 		psR = &sRprt;
 	int iRV = 0;
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		psR->sFM.u32Val = makeMASK09x23(1,0,1,1,1,1,1,1,1,i);
 		if (i == 0)
-			iRV += report(psR, "\r# DS18x20 #\r\n");
+			iRV += xReport(psR, "\r# DS18x20 #\r\n");
 		iRV += ds18x20Print_CB(psR, &psaDS18X20[i]);
 	}
 	if (Fam10_28Count)
-		iRV += report(psR, strNL);
+		iRV += xReport(psR, strNL);
 	return iRV;
 }
 

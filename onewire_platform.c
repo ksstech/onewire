@@ -107,10 +107,13 @@ void OWP_BusRelease(owdi_t * psOW) { ds248xBusRelease(&psaDS248X[psOW->DevNum]);
  */
 int	OWP_PrintROM_CB(report_t * psR, ow_rom_t * psOW_ROM) {
 	int iRV = 0;
-	if (fmTST(bRT))				iRV += report(psR, "%!.R: ", halTIMER_ReadRunTime());
-	if (fmTST(bTskNum))			iRV += report(psR, "#%u ", psR->sFM.uCount);
-	iRV += report(psR, "%02X/%M/%02X", psOW_ROM->HexChars[owFAMILY], &psOW_ROM->HexChars[owAD0], psOW_ROM->HexChars[owCRC]);
-	if (fmTST(bNL))				iRV += report(psR, strNL);
+	if (fmTST(bRT))
+		iRV += xReport(psR, "%!.R: ", halTIMER_ReadRunTime());
+	if (fmTST(bTskNum))
+		iRV += xReport(psR, "#%u ", psR->sFM.uCount);
+	iRV += xReport(psR, "%02X/%M/%02X", psOW_ROM->HexChars[owFAMILY], &psOW_ROM->HexChars[owAD0], psOW_ROM->HexChars[owCRC]);
+	if (fmTST(bNL))
+		iRV += xReport(psR, strNL);
 	return iRV;
 }
 
@@ -119,8 +122,9 @@ int	OWP_Print1W_CB(report_t * psR, owdi_t * psOW) {
 	fmSET(bNL, 0);
 	int iRV = OWP_PrintROM_CB(psR, &psOW->ROM);
 	fmBACK(bNL);
-	iRV += report(psR, "  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
-	if (fmTST(bNL)) iRV += report(psR, strNL);
+	iRV += xReport(psR, "  Log=%d  Dev=%d  Phy=%d  PSU=%d", OWP_BusP2L(psOW), psOW->DevNum, psOW->PhyBus, psOW->PSU);
+	if (fmTST(bNL))
+		iRV += xReport(psR, strNL);
 	return iRV;
 }
 
@@ -136,10 +140,13 @@ int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI) {
 		fmBACK(bNL);
 		fmBACK(bTskNum);
 	}
-	iRV += report(psR, " OW#%d ", psR->sFM.uCount);
-	if (psCI->LastRead)			iRV += report(psR, "%R ", xTimeMakeTimeStamp(psCI->LastRead, 0));
-	if (psCI->ds18any)			iRV += report(psR, "DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
-	if (fmTST(bNL))				iRV += report(psR, strNL);
+	iRV += xReport(psR, " OW#%d ", psR->sFM.uCount);
+	if (psCI->LastRead)
+		iRV += xReport(psR, "%R ", xTimeMakeTimeStamp(psCI->LastRead, 0));
+	if (psCI->ds18any)
+		iRV += xReport(psR, "DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
+	if (fmTST(bNL))
+		iRV += xReport(psR, strNL);
 	return iRV;
 }
 
@@ -195,8 +202,8 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 	u32_t uCount = 0;
 	owdi_t sOW;
 	report_t sRprt = {
-		.pvArg = NULL,
-		.Size = repSIZE_SET(0,0,0,0,sgrANSI,0,0),
+		.pcBuf = NULL,
+		.Size = repSIZE_SET(sNONE,sgrANSI,0,0),
 		.sFM.u32Val = makeMASK09x23(1,0,0,0,0,0,0,0,0,0),
 	};
 	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
@@ -243,7 +250,7 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(report_t *, void *, owdi_t *), void *
 	int	iRV = erSUCCESS;
 	u32_t uCount = 0;
 	owdi_t sOW;
-	report_t sRprt = { .pvArg = NULL, .Size = 0, .sFM.u32Val = makeMASK09x23(1,0,0,0,0,0,0,0,0,0) };
+	report_t sRprt = { .pcBuf = NULL, .Size = 0, .sFM.u32Val = makeMASK09x23(1,0,0,0,0,0,0,0,0,0) };
 	for (u8_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
 		OWP_BusL2P(&sOW, LogBus);
 		if (OWP_BusSelect(&sOW) == 0)
