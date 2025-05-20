@@ -161,7 +161,7 @@ int	ds18x20ResetConfig(ds18x20_t * psDS18X20) {
 
 int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	const u8_t u8Mask[4] = { 0xF8, 0xFC, 0xFE, 0xFF };
-	report_t sRprt = { .pvArg=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(1,0,0,0,0,0,0,0,0,psDS18X20->Idx) };
+	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(1,0,0,0,0,0,0,0,0,psDS18X20->Idx) };
 	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0;
 	if (debugTRACK && xOptionGet(dbgDS1820)) ds18x20Print_CB(&sRprt, psDS18X20);
@@ -434,7 +434,7 @@ void ds18x20StepThreeRead(TimerHandle_t pxHandle) {
 // ######################################### Reporting #############################################
 
 int ds18x20ReportAll(report_t * psR) {
-	report_t sRprt = { .pvArg = NULL, .Size = 0, .sFM.u32Val = 0 };
+	report_t sRprt = { .pcBuf = NULL, .Size = 0, .sFM.u32Val = 0 };
 	if (psR == NULL)
 		psR = &sRprt;
 	int iRV = 0;
