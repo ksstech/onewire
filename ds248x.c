@@ -577,7 +577,6 @@ int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 #if (HAL_DS18X20 > 0)
 	iRV += xRtosReportTimer(psR, psDS248X->th);
 #endif
-	iRV += xReport(psR, strNL);
 	return iRV;
 }
 
