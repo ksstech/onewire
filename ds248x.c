@@ -5,7 +5,6 @@
 #if (HAL_DS248X > 0)
 #include "hal_i2c_common.h"
 #include "hal_network.h"							// temporary access to IP address
-#include "hal_options.h"
 #include "FreeRTOS_Support.h"
 #include "onewire_platform.h"
 #include "syslog.h"

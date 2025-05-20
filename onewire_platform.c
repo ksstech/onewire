@@ -5,7 +5,6 @@
 #if (HAL_ONEWIRE > 0)
 #include "hal_flash.h"
 #include "hal_memory.h"
-#include "hal_options.h"
 #include "hal_timer.h"
 #include "onewire_platform.h"
 #include "report.h"

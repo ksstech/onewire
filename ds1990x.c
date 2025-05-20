@@ -5,9 +5,7 @@
 #if (HAL_ONEWIRE > 0) && (HAL_DS1990X > 0)
 #include "endpoints.h"
 #include "errors_events.h"
-#include "hal_options.h"
 #include "onewire_platform.h"
-#include "report.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
 #include "task_events.h"
