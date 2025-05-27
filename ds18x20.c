@@ -290,8 +290,8 @@ int	ds18x20Enumerate(void) {
 	u8_t ds18x20NumDev = 0;
 	Fam10_28Count = Fam10Count + Fam28Count;
 	SL_INFO("DS18x20 found %d devices", Fam10_28Count);
-	IF_SYSTIMER_INIT(debugTIMING, stDS1820A, stMILLIS, "DS1820A", 10, 1000);
-	IF_SYSTIMER_INIT(debugTIMING, stDS1820B, stMILLIS, "DS1820B", 1, 10);
+	IF_SYSTIMER_INIT(debugTIMING, stDS1820A, stTICKS, "DS1820A", 10, 1000);
+	IF_SYSTIMER_INIT(debugTIMING, stDS1820B, stTICKS, "DS1820B", 1, 10);
 
 	// Init primary EWP endpoint (leave fSecSNS = 0 to force parallel sensing
 	epw_t * psEWP = &table_work[URI_DS18X20];
