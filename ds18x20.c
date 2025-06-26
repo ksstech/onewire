@@ -1,4 +1,4 @@
-// ds18x20.c - Copyright (c) 2018-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
+// ds18x20.c - Copyright (c) 2018-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 
@@ -38,7 +38,7 @@
  * 	Implement and test ALARM scan and over/under alarm status scan
  *
  * 	Optimisation:
- * 	If more than 1 DS248XZ present Tsns will trigger convert on 1st bus of each DS248x device (parallelism)
+ * 	If more than 1 DS248x is present Tsns will trigger convert on 1st bus of each DS248x device (parallelism)
  * 	Each device will start a timer to call handler to read and convert all DS18X20's on the bus
  * 	Handler will loop and read each sensor on the current bus.
  * 	If more than 1 bus on the device (DS2482-800) handler will release current bus.
@@ -65,9 +65,7 @@
 
 // ################################ Forward function declaration ###################################
 
-
 // ######################################### Constants #############################################
-
 
 // ###################################### Local variables ##########################################
 
@@ -136,7 +134,8 @@ int	ds18x20TempRead(ds18x20_t * psDS18X20) { return ds18x20ReadSP(psDS18X20, 2);
 // ###################################### IRMACOS support ##########################################
 
 int	ds18x20Initialize(ds18x20_t * psDS18X20) {
-	if (ds18x20ReadSP(psDS18X20, SO_MEM(ds18x20_t, RegX)) == 0) return 0;
+	if (ds18x20ReadSP(psDS18X20, SO_MEM(ds18x20_t, RegX)) == 0)
+		return 0;
 	ds18x20CheckPower(psDS18X20);
 	psDS18X20->Res	= (psDS18X20->sOW.ROM.HexChars[owFAMILY] == OWFAMILY_28)
 					? psDS18X20->fam28.Conf >> 5
@@ -163,7 +162,8 @@ int	ds18x20ConvertTemperature(ds18x20_t * psDS18X20) {
 	report_t sRprt = { .pcBuf=NULL, .Size=0, .sFM.u32Val=makeMASK09x23(1,0,0,0,0,0,0,0,0,psDS18X20->Idx) };
 	u16_t u16Adj = (psDS18X20->Tmsb << 8) | (psDS18X20->Tlsb & u8Mask[psDS18X20->Res]);
 	psDS18X20->sEWx.var.val.x32.f32 = (float) u16Adj / 16.0;
-	if (debugTRACK && xOptionGet(dbgDS1820)) ds18x20Print_CB(&sRprt, psDS18X20);
+	if (debugTRACK && xOptionGet(dbgDS1820))
+		ds18x20Print_CB(&sRprt, psDS18X20);
 	return 1;
 }
 
@@ -195,7 +195,8 @@ int	ds18x20SetAlarms(ds18x20_t * psDS18X20, int Lo, int Hi) {
 }
 
 int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
-	if (psaDS18X20 == NULL) RETURN_MX("No DS18x20 enumerated", erINV_OPERATION);
+	if (psaDS18X20 == NULL)
+		RETURN_MX("No DS18x20 enumerated", erINV_OPERATION);
 	// support syntax mode /ow/ds18x20 idx lo hi res [1=persist]
 	int iRV = erFAILURE, iRVx = erFAILURE;
 	u8_t	AI = psR->ActIdx;
@@ -217,7 +218,8 @@ int	ds18x20ConfigMode (struct rule_t * psR, int Xcur, int Xmax) {
 				if (iRVx > erFAILURE) {
 					if (iRV == 1 || iRVx == 1) {	// 1 or both changed in scratchpad
 						iRV = ds18x20WriteSP(psDS18X20);
-						if (wr == 1) ds18x20WriteEE(psDS18X20);
+						if (wr == 1)
+							ds18x20WriteEE(psDS18X20);
 					}
 				}
 			}
@@ -363,7 +365,8 @@ int	ds18x20StartAllInOne(epw_t * psEWP) {
 	for (int i = 0; i < Fam10_28Count; ++i) {
 		ds18x20_t * psDS18X20 = &psaDS18X20[i];
 		if (psDS18X20->sOW.PhyBus != PrevBus) {
-			if (OWP_BusSelect(&psDS18X20->sOW) == 0) continue;
+			if (OWP_BusSelect(&psDS18X20->sOW) == 0)
+				continue;
 			if (OWResetCommand(&psDS18X20->sOW, DS18X20_CONVERT, owADDR_SKIP, 1) == 1) {
 				PrevBus = psDS18X20->sOW.PhyBus;
 				vTaskDelay(ds18x20CalcDelay(psDS18X20, 1));
