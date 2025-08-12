@@ -7,6 +7,7 @@
 #include "hal_network.h"							// temporary access to IP address
 #include "FreeRTOS_Support.h"
 #include "onewire_platform.h"
+#include "options.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
 #include "errors_events.h"

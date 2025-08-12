@@ -6,6 +6,7 @@
 #include "endpoints.h"
 #include "errors_events.h"
 #include "onewire_platform.h"
+#include "options.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
 #include "task_events.h"
