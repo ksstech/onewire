@@ -103,7 +103,7 @@ static int ResetOK = 0, ResetErr = 0;
  * @return		result from ds248xReset, status of RST bit
  */
 static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
-	SL_ERR("Dev=%d Ch=%d %s", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
+	SL_ALRT("Dev=%d Ch=%d %s", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
 	return ds248xReset(psDS248X);
 }
 
@@ -248,7 +248,7 @@ static int ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
 	// check for validity of CHAN (only DS2482-800) and PADJ (only DS2484)
 	if ((Reg == ds248xREG_CHAN && psDS248X->psI2C->Type != i2cDEV_DS2482_800) ||
 		(Reg == ds248xREG_PADJ && psDS248X->psI2C->Type != i2cDEV_DS2484)) {
-		SL_ERR("Invalid device/register combo Reg=%d (%s)", Reg, RegNames[Reg]);
+		SL_ALRT("Invalid device/register combo Reg=%d (%s)", Reg, RegNames[Reg]);
 		return erFAILURE;
 	}
 skip:
@@ -337,7 +337,7 @@ int	ds248xIdentify(i2c_di_t * psI2C) {
 			// remain an unidentified device.....
 		}
 	} else {
-		SL_ERR("Dev=%d  Ch=%d  Missing/faulty DS248x !!!", sDS248X.psI2C->DevIdx, sDS248X.CurChan);
+		SL_ALRT("Dev=%d  Ch=%d  Missing/faulty DS248x !!!", sDS248X.psI2C->DevIdx, sDS248X.CurChan);
 	}
 done:
 	#if (ds248xLOCK == ds248xLOCK_IO)					/* if locking enabled.... */
