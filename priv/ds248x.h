@@ -124,6 +124,40 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 } ds248x_t;
 DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+ DS18X20x2));
 
+typedef union __attribute__((packed)) {
+	struct {
+/*LSB*/	u8_t	OWB	: 1;			// 1-Wire Busy
+		u8_t	PPD	: 1;			// Presence Pulse Detected
+		u8_t	SD	: 1;
+		u8_t	LL	: 1;			// Link Level
+		u8_t	RST	: 1;			// ReSeT
+		u8_t	SBR	: 1;			// Single Bit Read
+		u8_t	TSB	: 1;			//
+/*MSB*/	u8_t	DIR	: 1;			// DIRection
+	};
+	u8_t STAT;
+} ds248x_stat_t;
+
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+/*LSB*/	u8_t	APU	: 1;			// Active Pull Up
+		u8_t	PDN	: 1;			// Pull Down (DS2484 only) was PPM/Presence Pulse Mask in DS2482
+		u8_t	SPU	: 1;			// Strong Pull Up
+		u8_t	OWS	: 1;			// 1-Wire Speed
+/*MSB*/	u8_t	RES	: 4;
+	};
+	u8_t	Rconf;
+} ds248x_conf_t;
+
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+/*LSB*/	u8_t	VAL	: 4;			// PARameter VALue
+		u8_t	OD	: 1;			// OverDrive control
+/*MSB*/	u8_t	PAR	: 3;			// PARameter selector
+	};
+	u8_t RadjX;
+} ds248x_padj_t;
+
 // #################################### Public Data structures #####################################
 
 extern ds248x_t * psaDS248X;
