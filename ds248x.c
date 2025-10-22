@@ -69,7 +69,7 @@ static int ResetOK = 0, ResetErr = 0;
  * @return		result from ds248xReset, status of RST bit
  */
 static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
-	SL_ALRT("Dev=%d Ch=%d %s", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
+	SL_ALRT("Dev=%d  Ch=%d  %s", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
 	return ds248xReset(psDS248X);
 }
 
@@ -78,7 +78,9 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
  * @param[in]	psDS248X pointer to device structure
  * @param[in]	Value (previously written) now to be verified
  * @return	0 if an error, 1 if all OK
- * @note	
+ * @note	All logic relies on the fact that only certain bits can/should change in certain registers
+ * 			Also, the register pointer value is critical to determine the logic of what needs to be checked
+ * 
  */
 static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 	char caBuf[48];
@@ -110,11 +112,11 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		if (psDS248X->OWS != sConf.OWS)					// All DS248x devices 1W Speed
 			pcTmp = stpcpy(pcTmp, "OWS ");
 		if (psDS248X->psI2C->Type == i2cDEV_DS2484) {	// DS2484 only
-			if (psDS248X->PDN != sConf.PDN)
+			if (psDS248X->PDN != sConf.PDN)				// PullDown bit different?
 				pcTmp = stpcpy(pcTmp, "PDN ");
 		} else {										// DS2482-xxx devices
-			if (psDS248X->PDN || sConf.PDN)				// bit set in either value?
-				pcTmp = stpcpy(pcTmp, "PDN? ");
+			if (psDS248X->PDN || sConf.PDN)				// PPM discontinued, should not be set in either value
+				pcTmp = stpcpy(pcTmp, "PPM? ");
 		}
 		if (psDS248X->SPU != sConf.SPU)					// All DS248x devices Strong Pull Up
 			pcTmp = stpcpy(pcTmp, "SPU ");
@@ -189,7 +191,7 @@ static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSiz
 }
 
 /**
- * @brief
+ * @brief		
  * @param[in]
  * @return	1 if OK, 0 if error
  */
@@ -218,8 +220,8 @@ static int ds248xReadRegister(ds248x_t * psDS248X, u8_t Reg) {
 		return erFAILURE;
 	}
 skip:
-	psDS248X->Rptr = Reg;
 	u8_t cBuf[2] = { ds248xCMD_SRP, (~Reg << 4) | Reg };
+	psDS248X->Rptr = Reg;
 	return ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), 0);
 }
 
@@ -489,13 +491,13 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 	int iRV = 0, Chan;
 	switch (Reg) {
 	case ds248xREG_STAT: {
-	#if	(appPRODUCTION == 0)
-		iRV += xReport(psR, "STAT(0)");
-		for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
-			iRV += xReport(psR, "\t#%u:", i, psDS248X->PrvStat[i]);
-			iRV += ds248xReportStatus(psR, 0, psDS248X->PrvStat[i]);
-		}
-	#endif
+		#if	(appPRODUCTION == 0)
+			iRV += xReport(psR, "STAT(0)");
+			for (int i = 0; i < (psDS248X->NumChan ? 8 : 1); ++i) {
+				iRV += xReport(psR, "\t#%u:", i, psDS248X->PrvStat[i]);
+				iRV += ds248xReportStatus(psR, 0, psDS248X->PrvStat[i]);
+			}
+		#endif
 		break;
 	}
 	case ds248xREG_DATA: {
@@ -541,9 +543,9 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 	int iRV = halI2C_DeviceReport(psR, (void *) psDS248X->psI2C);
 	for (int Reg = 0; Reg < ds248xREG_NUM; iRV += ds248xReportRegister(psR, psDS248X, Reg++));
-#if (HAL_DS18X20 > 0)
-	iRV += xRtosReportTimer(psR, psDS248X->th);
-#endif
+	#if (HAL_DS18X20 > 0)
+		iRV += xRtosReportTimer(psR, psDS248X->th);
+	#endif
 	return iRV;
 }
 
