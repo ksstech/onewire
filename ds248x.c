@@ -180,7 +180,7 @@ static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSiz
  */
 static int ds248xWriteDelayReadCheck(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSize, u32_t uSdly) {
 	int iRV = ds248xWriteDelayRead(psDS248X, pTxBuf, TxSize, uSdly);
-	return (iRV == erSUCCESS) ? ds248xCheckRead(psDS248X, (TxSize > 1) ? pTxBuf[1] : 0xFF) : 0;
+	return (iRV == erSUCCESS) ? ds248xCheckRead(psDS248X, (TxSize > 1) ? pTxBuf[1] : 0x0F) : 0;
 }
 
 /**
