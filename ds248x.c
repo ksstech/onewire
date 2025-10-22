@@ -84,10 +84,17 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
  */
 static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 	char caBuf[48];
+	char * pcTmp = caBuf;
+	int xLen;
 	if (psDS248X->Rptr == ds248xREG_STAT) {				// STATus register
-		if (psDS248X->OWB) {							// error if not blocking in I2C task
-			ds248xLogError(psDS248X, "OWB");
-			return 0;
+		if (psDS248X->OWB)								// error if not blocking in I2C task
+			pcTmp = stpcpy(pcTmp, "OWB ");
+		if (psDS248X->SD)								// Short Detected
+			pcTmp = stpcpy(pcTmp, "SD ");
+		if (pcTmp != caBuf) {
+			xLen = pcTmp - caBuf;					// determine size used
+			snprintfx(pcTmp, sizeof(caBuf)-xLen, "Stat=x%X", psDS248X->Rstat);
+			goto err_exit;
 		}
 		// No error in STATus register
 		#if	(appPRODUCTION == 0)
@@ -103,14 +110,15 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		psDS248X->PrvStat[psDS248X->CurChan] = psDS248X->Rstat;
 		#endif
 	} else if (psDS248X->Rptr == ds248xREG_CONF) {		// CONFiguration register
-		if (Value == 0xC3)								// ds2482CMD_CHSL / ds2484CMD_PADJ
-//		&& (psDS248X->psI2C.Type == i2cDEV_DS2484)		// ds2484CMD_PADJ
-//		&& (psDS248X->psI2C.Type == i2cDEV_DS2482-800)	// ds2482CMD_CHSL
+		if (Value == 0xC3) {							// ds2482CMD_CHSL / ds2484CMD_PADJ
 			goto done;									// ignore
-		ds248x_conf_t sConf = { .Rconf = Value };		// try find where it went wrong
-		char * pcTmp = caBuf;
+		}
+		// try find out IF anything went wrong
+		ds248x_conf_t sConf = { .Rconf = Value & 0x0F};	// discard the top nibble		
 		if (psDS248X->OWS != sConf.OWS)					// All DS248x devices 1W Speed
 			pcTmp = stpcpy(pcTmp, "OWS ");
+		if (psDS248X->SPU != sConf.SPU)					// All DS248x devices Strong Pull Up
+			pcTmp = stpcpy(pcTmp, "SPU ");
 		if (psDS248X->psI2C->Type == i2cDEV_DS2484) {	// DS2484 only
 			if (psDS248X->PDN != sConf.PDN)				// PullDown bit different?
 				pcTmp = stpcpy(pcTmp, "PDN ");
@@ -118,16 +126,13 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 			if (psDS248X->PDN || sConf.PDN)				// PPM discontinued, should not be set in either value
 				pcTmp = stpcpy(pcTmp, "PPM? ");
 		}
-		if (psDS248X->SPU != sConf.SPU)					// All DS248x devices Strong Pull Up
-			pcTmp = stpcpy(pcTmp, "SPU ");
 		if (psDS248X->APU != sConf.APU)					// All DS248x devices Active Pull Up
 			pcTmp = stpcpy(pcTmp, "APU ");
-		int xLen = pcTmp - caBuf;						// determine size used
+		xLen = pcTmp - caBuf;							// determine size used
 		if (xLen) {
 			IF_myASSERT(debugTRACK, xLen < sizeof(caBuf));
-			snprintfx(pcTmp, sizeof(caBuf)-xLen, "W=x%02X R=x%02X", Value, psDS248X->Rconf);
-			ds248xLogError(psDS248X, caBuf);
-			return 0;
+			snprintfx(pcTmp, sizeof(caBuf)-xLen, "W=x%X R=x%X", sConf.Rconf, psDS248X->Rconf);
+			goto err_exit;
 		}
 		// No error in CONF....
 		#if	(appPRODUCTION == 0)						// for DEVelopment builds
@@ -144,12 +149,14 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 	} else if (psDS248X->Rptr == ds248xREG_CHAN) {		// CHANnel register...
 		if (psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan]) {	// and values don't match?
 			snprintfx(caBuf, sizeof(caBuf)," CHAN (x%02X vs x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
-			ds248xLogError(psDS248X, caBuf);
-			return 0;
+			goto err_exit;
 		}
 	}
 done:
 	return 1;
+err_exit:
+	ds248xLogError(psDS248X, caBuf);
+	return 0;
 }
 
 
