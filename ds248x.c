@@ -525,7 +525,7 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 
 int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 	int iRV = halI2C_DeviceReport(psR, (void *) psDS248X->psI2C);
-	for (int Reg = 0; Reg < ds248xREG_NUM; iRV += ds248xReportRegister(psR, psDS248X, Reg++));
+	for (int Reg = 0; Reg < ds248xREG_NUM; ++Reg) iRV += ds248xReportRegister(psR, psDS248X, Reg);
 	#if (HAL_DS18X20 > 0)
 		iRV += xRtosReportTimer(psR, psDS248X->th);
 	#endif
