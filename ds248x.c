@@ -1,4 +1,4 @@
-// ds248x.c - Copyright (c) 2020-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
+// ds248x.c - Copyright (c) 2020-26 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 
@@ -87,13 +87,14 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 	char * pcTmp = caBuf;
 	int xLen;
 	if (psDS248X->Rptr == ds248xREG_STAT) {				// STATus register
-		if (psDS248X->OWB)								// error if not blocking in I2C task
-			pcTmp = stpcpy(pcTmp, "OWB ");
-		if (psDS248X->SD)								// Short Detected
-			pcTmp = stpcpy(pcTmp, "SD ");
+		// Short Detected (SD) check 
+		if (psDS248X->SD)			pcTmp = stpcpy(pcTmp, "SD ");
+		// 1W Bus Busy (OWB) check
+		if (psDS248X->OWB)			pcTmp = stpcpy(pcTmp, "OWB ");
+		// if anything in buffer, append the status value
 		if (pcTmp != caBuf) {
-			xLen = pcTmp - caBuf;					// determine size used
-			snprintfx(pcTmp, sizeof(caBuf)-xLen, "Stat=x%X", psDS248X->Rstat);
+			xLen = pcTmp - caBuf;						// determine size used
+			snprintfx(pcTmp, sizeof(caBuf)-xLen, "Stat=x%02X", psDS248X->Rstat);
 			goto err_exit;
 		}
 		// No error in STATus register

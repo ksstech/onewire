@@ -93,7 +93,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 			union {					// CONFiguration
 				struct {
 			/*LSB*/	u8_t APU : 1;	// Active Pull Up
-					u8_t PDN : 1;	// Pull Down (DS2484 only)
+					u8_t PDN : 1;	// Pull Down (DS2484 only) else PPM (discontinued)
 					u8_t SPU : 1;	// Strong Pull Up
 					u8_t OWS : 1;	// 1-Wire Speed
 			/*MSB*/	u8_t RES1 : 4;
