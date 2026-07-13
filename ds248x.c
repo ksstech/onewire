@@ -170,7 +170,6 @@ static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSiz
 	#if (ds248xLOCK == ds248xLOCK_IO)
 		xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
 	#endif
-	IF_myASSERT(debugTRACK, psDS248X->OWB == 0);
 //	IF_SYSTIMER_START(debugTIMING, stDS248x);
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr],
 		psDS248X->Rptr == ds248xREG_PADJ ? SO_MEM(ds248x_t, Rpadj) : 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) NULL);
@@ -252,6 +251,7 @@ int ds248xReset(ds248x_t * psDS248X) {
 	} while(++Retries < 20);
 	if (psDS248X->RST) {
 		++ResetOK;										// yes, update counter
+		IF_myASSERT(debugTRACK, psDS248X->OWB == 0);	// verify DRST left the device idle (1WB cleared)
 		// set register mirrors & variables to defaults
 		psDS248X->CurChan = 0;							// all device, common requirement
 		psDS248X->Rdata = 0;
