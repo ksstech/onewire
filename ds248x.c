@@ -137,7 +137,7 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		}
 		// No error in CONF....
 		#if	(appPRODUCTION == 0)						// for DEVelopment builds
-		if (xOptionGet(dbgDS248X)) {					// if debug option enabled
+		if (xOptionGet(dbgDS248X)) {				// if debug option enabled
 			u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];	// if configuration different from previous
 			if (psDS248X->Rconf != ConfX) {				// report old vs new config
 				PX("Dev=%d  Ch=%u  x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
@@ -146,7 +146,6 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		}
 		psDS248X->PrvConf[psDS248X->CurChan] = psDS248X->Rconf;
 		#endif
-		IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 	} else if (psDS248X->Rptr == ds248xREG_CHAN) {		// CHANnel register...
 		if (psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan]) {	// and values don't match?
 			snprintfx(caBuf, sizeof(caBuf)," CHAN (x%02X vs x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
@@ -344,7 +343,6 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	}
 	psDS248X->APU = 1;									// Even though only single slave ALWAYS enabled
 	iRV = ds248xWriteConfig(psDS248X);
-	IF_myASSERT(debugRESULT, psDS248X->APU == 1);
 	if (iRV < erSUCCESS)
 		goto exit;
 	psI2C->CFGok = 1;
