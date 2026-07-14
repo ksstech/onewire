@@ -44,7 +44,7 @@
 const char * const RegNames[ds248xREG_NUM] = {"Stat", "Data", "Chan", "Conf", "Port" };
 
 // DS2482-800 only CHAN register xlat	0	  1		2	  3		4	  5		6	  7
-static const u8_t ds248x_V2N[8] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87 };
+static const u8_t ds248x_V2N[9] = { 0xB8, 0xB1, 0xAA, 0xA3, 0x9C, 0x95, 0x8E, 0x87, 0x00 };	// [8] = invalid/error sentinel
 // DS2484 only reporting/debugging
 static const u8_t Trstl[16]	= { 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74 };
 static const u8_t Tmsp0[16]	= { 58, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 76, 76, 76, 76, 76 };
@@ -498,7 +498,10 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 			break;
 		// Channel, start by finding the matching Channel #
 		for (Chan = 0; Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan != ds248x_V2N[Chan]; ++Chan);
-		IF_myASSERT(debugRESULT, Chan < (psDS248X->NumChan ? 8 : 1) && psDS248X->Rchan == ds248x_V2N[Chan]);
+		if (Chan >= (psDS248X->NumChan ? 8 : 1)) {		// no match: corrupted/unrecognized channel read-back
+			SL_LOG(SL_SEV_CRITICAL, "DS2482 CHAN read-back x%02X unrecognized", psDS248X->Rchan);
+			Chan = 8;									// clamp to error-sentinel slot (no reboot, no OOB)
+		}
 		iRV += xReport(psR, "CHAN(2)=0x%02X Chan=%d Xlat=0x%02X\r\n", psDS248X->Rchan, Chan, ds248x_V2N[Chan]);
 		break;
 	}
