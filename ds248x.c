@@ -35,6 +35,8 @@
 #define	ds248xLOCK_BUS				2					// un/locked on Bus select level
 #define	ds248xLOCK					ds248xLOCK_DIS
 
+#define	dsERR_LOG_INTERVAL			pdMS_TO_TICKS(60000)	// rate limit: <=1 error log / channel / minute
+
 // ##################################### Local structures ##########################################
 
 // ###################################### Local constants ##########################################
@@ -69,7 +71,19 @@ static int ResetOK = 0, ResetErr = 0;
  * @return		result from ds248xReset, status of RST bit
  */
 static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
+#if (ds248xSTAT_DEBUG > 0)								// throttle log volume; recovery (DRST) is NOT gated
+	u8_t ch = psDS248X->CurChan;
+	u32_t now = xTaskGetTickCount();
+	if ((u32_t)(now - psDS248X->ErrLogTick[ch]) >= dsERR_LOG_INTERVAL) {
+		SL_ALRT("Dev=%d  Ch=%d  %s  supp=%u", psDS248X->psI2C->DevIdx, ch, pcMess, psDS248X->ErrSupp[ch]);
+		psDS248X->ErrLogTick[ch] = now;
+		psDS248X->ErrSupp[ch] = 0;
+	} else {
+		++psDS248X->ErrSupp[ch];						// counted, surfaced on the next line that gets through
+	}
+#else
 	SL_ALRT("Dev=%d  Ch=%d  %s", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
+#endif
 	return ds248xReset(psDS248X);
 }
 
@@ -94,9 +108,19 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		// if anything in buffer, append the status value
 		if (pcTmp != caBuf) {
 			xLen = pcTmp - caBuf;						// determine size used
+			#if (ds248xSTAT_DEBUG > 0)					// add command + episode size
+			++psDS248X->SDseq[psDS248X->CurChan];		// consecutive error on this channel
+			if (psDS248X->SD)  ++psDS248X->SDtotal;		// lifetime SD count
+			snprintfx(pcTmp, sizeof(caBuf)-xLen, "Cmd=x%02X Stat=x%02X seq=%u",
+				psDS248X->OpCmd, psDS248X->Rstat, psDS248X->SDseq[psDS248X->CurChan]);
+			#else
 			snprintfx(pcTmp, sizeof(caBuf)-xLen, "Stat=x%02X", psDS248X->Rstat);
+			#endif
 			goto err_exit;
 		}
+		#if (ds248xSTAT_DEBUG > 0)
+		psDS248X->SDseq[psDS248X->CurChan] = 0;			// clean read → close any error episode
+		#endif
 		// No error in STATus register
 		#if	(appPRODUCTION == 0)
 		if (xOptionGet(dbgDS248X) > 1) {
@@ -159,13 +183,15 @@ err_exit:
 	return 0;
 }
 
-
 /**
  * @brief
  * @param
  * @return
  */
 static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSize, u32_t uSdly) {
+	#if (ds248xSTAT_DEBUG > 0)
+		psDS248X->OpCmd = pTxBuf[0];					// record command in flight for CheckRead diagnostics
+	#endif
 	#if (ds248xLOCK == ds248xLOCK_IO)
 		xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
 	#endif
@@ -535,6 +561,11 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 	int iRV = halI2C_DeviceReport(psR, (void *) psDS248X->psI2C);
 	for (int Reg = 0; Reg < ds248xREG_NUM; ++Reg) iRV += ds248xReportRegister(psR, psDS248X, Reg);
+	#if (ds248xSTAT_DEBUG > 0)
+		iRV += xReport(psR, "SDtotal=%u  supp=%u/%u/%u/%u/%u/%u/%u/%u\r\n", psDS248X->SDtotal,
+			psDS248X->ErrSupp[0], psDS248X->ErrSupp[1], psDS248X->ErrSupp[2], psDS248X->ErrSupp[3],
+			psDS248X->ErrSupp[4], psDS248X->ErrSupp[5], psDS248X->ErrSupp[6], psDS248X->ErrSupp[7]);
+	#endif
 	#if (HAL_DS18X20 > 0)
 		iRV += xRtosReportTimer(psR, psDS248X->th);
 	#endif

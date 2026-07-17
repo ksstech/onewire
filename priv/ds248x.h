@@ -56,6 +56,12 @@ enum {													// STATus register bitmap
 	ds248xSTAT_DIR		= (1 << 7),						// DIRection
 };
 
+// ############################## SD/OWB event instrumentation gate ################################
+
+#ifndef ds248xSTAT_DEBUG								// Cmd/seq logging + per-channel rate-limit + telemetry
+	#define ds248xSTAT_DEBUG	(appPRODUCTION == 0)	// default: on in DEBUG builds; set 0/1 to force
+#endif
+
 // ######################################### Structures ############################################
 
 // See http://www.catb.org/esr/structure-packing/
@@ -121,8 +127,18 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 #else
 	#define DS18X20x2	0
 #endif
+#if (ds248xSTAT_DEBUG > 0)			// 59 bytes: SD/OWB event instrumentation
+	u8_t  OpCmd;					// last 1-Wire command byte issued
+	u16_t SDtotal;					// lifetime SD count (telemetry)
+	u8_t  SDseq[8];					// consecutive SD/err per channel; cleared on a clean STATUS read
+	u32_t ErrLogTick[8];			// last error-log tick, per channel (rate limit)
+	u16_t ErrSupp[8];				// errors suppressed since last log, per channel
+	#define DS18X20x3	(1+2+8+32+16)
+#else
+	#define DS18X20x3	0
+#endif
 } ds248x_t;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+ DS18X20x2));
+DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+ DS18X20x2 + DS18X20x3));
 
 typedef union __attribute__((packed)) {
 	struct {
