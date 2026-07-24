@@ -64,6 +64,8 @@ static int ResetOK = 0, ResetErr = 0;
 
 // ################################ Local ONLY utility functions ###################################
 
+static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSize, u32_t uSdly);	// fwd: used by ds248xLogError APU restore
+
 /**
  * @brief
  * @param[in]	psDS248X required device control/config/status structure
@@ -84,7 +86,20 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 #else
 	SL_ALRT("Dev=%d  Ch=%d  %s", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
 #endif
-	return ds248xReset(psDS248X);
+	int iRV = ds248xReset(psDS248X);					// DRST reverts the device to POR-default (APU=0)
+	// A DRST on an SD/OWB/CONF error clears the device config. If the device was already configured,
+	// re-apply the configured state (APU=1) so it is not left silently at POR-default. NON-checking
+	// write (ds248xWriteDelayRead, not ...Check) => no ds248xCheckRead => no ds248xLogError re-entry
+	// => no recursion. Skipped when CFGok==0 (identify, and ds248xConfig's own reset which re-configs
+	// itself).
+	if (iRV == 1 && psDS248X->psI2C->CFGok) {
+		psDS248X->APU = 1;								// restore Active Pull-Up in the Rconf mirror
+		u8_t config = psDS248X->Rconf & 0x0F;
+		u8_t cBuf[2] = { ds248xCMD_WCFG , (~config << 4) | config };
+		psDS248X->Rptr = ds248xREG_CONF;
+		ds248xWriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0);
+	}
+	return iRV;
 }
 
 /**
@@ -267,13 +282,13 @@ static int ds248xWriteConfig(ds248x_t * psDS248X) {
 int ds248xReset(ds248x_t * psDS248X) {
 	const u8_t cmdDRST = ds248xCMD_DRST;
 	int Retries = 0;
-	psDS248X->Rptr = ds248xREG_STAT;				// After ReSeT pointer set to STATus register
+	psDS248X->Rptr = ds248xREG_STAT;					// After ReSeT pointer set to STATus register
 	do {
 		ds248xWriteDelayRead(psDS248X, (u8_t *) &cmdDRST, sizeof(u8_t), 0);
 		if (psDS248X->RST)								// ReSeT successful?
 			break;										// exit to complete
 		vTaskDelay(pdMS_TO_TICKS(10));
-	} while(++Retries < 20);
+	} while(++Retries < 2);
 	if (psDS248X->RST) {
 		++ResetOK;										// yes, update counter
 		IF_myASSERT(debugTRACK, psDS248X->OWB == 0);	// verify DRST left the device idle (1WB cleared)
