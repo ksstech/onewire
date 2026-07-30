@@ -127,13 +127,20 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 #else
 	#define DS18X20x2	0
 #endif
-#if (ds248xSTAT_DEBUG > 0)			// 59 bytes: SD/OWB event instrumentation
+#if (ds248xSTAT_DEBUG > 0)			// 187 bytes: SD/OWB event + per-channel activity instrumentation
 	u8_t  OpCmd;					// last 1-Wire command byte issued
 	u16_t SDtotal;					// lifetime SD count (telemetry)
 	u8_t  SDseq[8];					// consecutive SD/err per channel; cleared on a clean STATUS read
 	u32_t ErrLogTick[8];			// last error-log tick, per channel (rate limit)
 	u16_t ErrSupp[8];				// errors suppressed since last log, per channel
-	#define DS18X20x3	(1+2+8+32+16)
+	/* Activity counters: the denominator the error counts above lack. Deliberately u32 (not the
+	 * u16/bitfields used for errors) since RstCnt alone advances ~2.5/sec per scanned channel and
+	 * would wrap a u16 inside 8 hours - the exact ambiguity that made SEMerr=799 unreadable. */
+	u32_t RstCnt[8];				// 1W resets issued, per channel = how often the channel is polled
+	u32_t PPDcnt[8];				// resets that saw a Presence Pulse = something answered
+	u32_t TripCnt[8];				// search triplets issued, per channel = enumeration workload
+	u32_t TagCnt[8];				// tag IDs accepted, per channel (dlyDS1990 repeats NOT counted)
+	#define DS18X20x3	(1+2+8+32+16 + (4 * 8 * sizeof(u32_t)))
 #else
 	#define DS18X20x3	0
 #endif

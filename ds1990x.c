@@ -51,6 +51,9 @@ int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
 		IF_PX(debugTRACK && xOptionGet(dbgDS1990x), "Tag repeat %ds" strNL, Dly);
 	} else {
 		IF_PX(debugTRACK && xOptionGet(dbgDS1990x), "Tag %-.8hhY L=%d P=%d" strNL, &psOW->ROM, LogChan, psOW->PhyBus);
+		#if (ds248xSTAT_DEBUG > 0)					// accepted reads only: repeats above are NOT counted
+		++psaDS248X[psOW->DevNum].TagCnt[psOW->PhyBus];
+		#endif
 		psOW_CI->LastROM.Value = psOW->ROM.Value;
 		psOW_CI->LastRead = NowRead;
 		xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits);

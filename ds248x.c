@@ -436,6 +436,11 @@ int	ds248xOWReset(ds248x_t * psDS248X) {
 	const u8_t cmd1WRS = ds248xCMD_1WRS;
 	psDS248X->Rptr = ds248xREG_STAT;
 	ds248xWriteDelayReadCheck(psDS248X, (u8_t *) &cmd1WRS, sizeof(u8_t), psDS248X->OWS ? owDELAY_RST_OD : owDELAY_RST);
+	#if (ds248xSTAT_DEBUG > 0)						// poll rate, and how often anything answered
+	++psDS248X->RstCnt[psDS248X->CurChan];
+	if (psDS248X->PPD)
+		++psDS248X->PPDcnt[psDS248X->CurChan];
+	#endif
 	return psDS248X->PPD;
 }
 
@@ -502,6 +507,9 @@ u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) {
 	u8_t cBuf[2] = { ds248xCMD_1WT, u8Dir ? 0x80 : 0x00 };
 	psDS248X->Rptr = ds248xREG_STAT;
 	ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_ST_OD : owDELAY_ST);
+	#if (ds248xSTAT_DEBUG > 0)						// enumeration workload (64 triplets per ROM found)
+	++psDS248X->TripCnt[psDS248X->CurChan];
+	#endif
 	return psDS248X->Rstat;
 }
 
@@ -580,6 +588,12 @@ int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 		iRV += xReport(psR, "SDtotal=%u  supp=%u/%u/%u/%u/%u/%u/%u/%u\r\n", psDS248X->SDtotal,
 			psDS248X->ErrSupp[0], psDS248X->ErrSupp[1], psDS248X->ErrSupp[2], psDS248X->ErrSupp[3],
 			psDS248X->ErrSupp[4], psDS248X->ErrSupp[5], psDS248X->ErrSupp[6], psDS248X->ErrSupp[7]);
+		const char * const ActNames[4] = { "Rst", "PPD", "Trip", "Tag" };
+		const u32_t * const ActCnts[4] = { psDS248X->RstCnt, psDS248X->PPDcnt, psDS248X->TripCnt, psDS248X->TagCnt };
+		for (int a = 0; a < 4; ++a)					// per-channel activity: Ch0 -> Ch7
+			iRV += xReport(psR, "%s=%lu/%lu/%lu/%lu/%lu/%lu/%lu/%lu\r\n", ActNames[a],
+				ActCnts[a][0], ActCnts[a][1], ActCnts[a][2], ActCnts[a][3],
+				ActCnts[a][4], ActCnts[a][5], ActCnts[a][6], ActCnts[a][7]);
 	#endif
 	#if (HAL_DS18X20 > 0)
 		iRV += xRtosReportTimer(psR, psDS248X->th);
