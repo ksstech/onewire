@@ -118,7 +118,8 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 		u8_t I2Cnum	: 4;			// index into I2C Device Info table
 		u8_t Lo : 4;
 		u8_t Hi : 4;
-		u8_t Sp2 : 4;
+		u8_t LastOWB : 1;			// 1WB state at last reset: report only on transition, not per event
+		u8_t Sp2 : 3;
 	};
 #if	(appPRODUCTION == 0)		    // 16 bytes
 	u8_t PrvStat[8];				// previous STAT reg

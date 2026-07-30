@@ -60,7 +60,7 @@ static const uint16_t Rwpu[16]	= { 500, 500, 500, 500, 500, 500, 1000, 1000, 100
 
 u8_t ds248xCount = 0;
 ds248x_t * psaDS248X = NULL;
-static int ResetOK = 0, ResetErr = 0;
+static int ResetOK = 0, ResetErr = 0, ResetBusy = 0;	// ResetBusy: DRST OK but 1W engine left wedged
 
 // ################################ Local ONLY utility functions ###################################
 
@@ -285,13 +285,21 @@ int ds248xReset(ds248x_t * psDS248X) {
 	psDS248X->Rptr = ds248xREG_STAT;					// After ReSeT pointer set to STATus register
 	do {
 		ds248xWriteDelayRead(psDS248X, (u8_t *) &cmdDRST, sizeof(u8_t), 0);
-		if (psDS248X->RST)								// ReSeT successful?
+		if (psDS248X->RST && psDS248X->OWB == 0)		// ReSeT successful AND 1W engine left idle?
 			break;										// exit to complete
-		vTaskDelay(pdMS_TO_TICKS(10));
-	} while(++Retries < 2);
+		vTaskDelay(pdMS_TO_TICKS(10));					// else spend the remaining attempt(s) trying
+	} while(++Retries < 2);								//  to shake 1WB loose with another DRST
+	/* A DRST that reports success but leaves 1WB set means the device is wedged. That is a DEVICE
+	 * fault to report, NOT a firmware invariant: this was an IF_myASSERT(debugTRACK, OWB == 0),
+	 * which abort()ed and reboot-looped field units once their DS2482 wedged (v0.6.1.4 c764, 11
+	 * coredumps in 12 minutes). Deliberately non-fatal now - the device is left configured and
+	 * usable, and recovery is re-attempted on every subsequent I2C error via
+	 * halI2C_ResetSubSystem, so a stray failure self-heals without taking the unit offline. */
+	bool bBusy = (psDS248X->OWB != 0);
 	if (psDS248X->RST) {
 		++ResetOK;										// yes, update counter
-		IF_myASSERT(debugTRACK, psDS248X->OWB == 0);	// verify DRST left the device idle (1WB cleared)
+		if (bBusy)
+			++ResetBusy;								// present but wedged: telemetry, not fatal
 		// set register mirrors & variables to defaults
 		psDS248X->CurChan = 0;							// all device, common requirement
 		psDS248X->Rdata = 0;
@@ -304,9 +312,14 @@ int ds248xReset(ds248x_t * psDS248X) {
 		++ResetErr;										// update FAIL counter
 		// possibly do hardware reset/reboot?
 	}
-	if (Retries || psDS248X->LastRST != psDS248X->RST)
-		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT, "(%#-I) %s after %d retries  OK=%d  Err=%d",
-			nvsWifi.ipSTA, psDS248X->RST ? "Success" : "FAILED", Retries, ResetOK, ResetErr);
+	// Report on a state CHANGE (or when retries were needed), never per-event: a wedged device is
+	// re-reset on every I2C error, so logging each attempt would flood exactly like the pre-throttle
+	// halI2C_ErrorHandler did. Ongoing visibility comes from the OK/Err/Busy counters.
+	if (Retries || bBusy != psDS248X->LastOWB || psDS248X->LastRST != psDS248X->RST)
+		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT,
+			"(%#-I) %s after %d retries  1WB=%d  OK=%d  Err=%d  Busy=%d",
+			nvsWifi.ipSTA, psDS248X->RST ? "Success" : "FAILED", Retries, bBusy, ResetOK, ResetErr, ResetBusy);
+	psDS248X->LastOWB = bBusy;
 	return psDS248X->LastRST = psDS248X->RST;			// save status of this reset attempt
 }
 
