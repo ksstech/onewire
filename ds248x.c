@@ -61,6 +61,12 @@ static const uint16_t Rwpu[16]	= { 500, 500, 500, 500, 500, 500, 1000, 1000, 100
 u8_t ds248xCount = 0;
 ds248x_t * psaDS248X = NULL;
 static int ResetOK = 0, ResetErr = 0, ResetBusy = 0;	// ResetBusy: DRST OK but 1W engine left wedged
+/* Pre-aged by one full interval so the FIRST report always passes the rate limit: initialised to 0
+ * the (now - ResetLogTick) window would only open 60s after boot, silencing exactly the boot-time
+ * DS2482 faults ds248xConfig() exists to surface. Unsigned wraparound makes the subtraction valid. */
+static u32_t ResetLogTick = (u32_t) -dsERR_LOG_INTERVAL;	// last tick ds248xReset() actually logged
+static u32_t ResetSupp = 0;							// reset reports suppressed since then
+static bool ResetFaultLogged = 0;					// a fault line was emitted => owe a "cleared" line
 
 // ################################ Local ONLY utility functions ###################################
 
@@ -281,10 +287,19 @@ static int ds248xWriteConfig(ds248x_t * psDS248X) {
 
 int ds248xReset(ds248x_t * psDS248X) {
 	const u8_t cmdDRST = ds248xCMD_DRST;
-	int Retries = 0;
+	int Retries = 0, iRV;
 	psDS248X->Rptr = ds248xREG_STAT;					// After ReSeT pointer set to STATus register
 	do {
-		ds248xWriteDelayRead(psDS248X, (u8_t *) &cmdDRST, sizeof(u8_t), 0);
+		iRV = ds248xWriteDelayRead(psDS248X, (u8_t *) &cmdDRST, sizeof(u8_t), 0);
+		/* Transport FAILED => the read never wrote RegX[ds248xREG_STAT], so Rstat still holds the
+		 * PREVIOUS reading. Interpreting it reports stale bits as current device state: a stale
+		 * RST=1 was counted as ResetOK and logged "Success" while the bus was dead, and a stale
+		 * OWB=1 could never clear (a fresh value is never read), so the wedge became self-
+		 * sustaining in software regardless of what the hardware was doing. Discard instead. */
+		if (iRV != erSUCCESS) {
+			psDS248X->Rstat = 0;						// RST=0 => reported+counted as a real failure
+			break;										// retrying a dead transport just burns time
+		}
 		if (psDS248X->RST && psDS248X->OWB == 0)		// ReSeT successful AND 1W engine left idle?
 			break;										// exit to complete
 		vTaskDelay(pdMS_TO_TICKS(10));					// else spend the remaining attempt(s) trying
@@ -312,13 +327,35 @@ int ds248xReset(ds248x_t * psDS248X) {
 		++ResetErr;										// update FAIL counter
 		// possibly do hardware reset/reboot?
 	}
-	// Report on a state CHANGE (or when retries were needed), never per-event: a wedged device is
-	// re-reset on every I2C error, so logging each attempt would flood exactly like the pre-throttle
-	// halI2C_ErrorHandler did. Ongoing visibility comes from the OK/Err/Busy counters.
-	if (Retries || bBusy != psDS248X->LastOWB || psDS248X->LastRST != psDS248X->RST)
+	/* Report a state CHANGE or an ongoing fault, never per-event, and rate limit BOTH.
+	 * 'Retries' must NOT appear in this test: a wedged device always exhausts the retry loop, so
+	 * the previous 'Retries ||' term was permanently true and short-circuited the very throttling
+	 * the test exists to provide - c764 logged 20.8 lines/sec (~1.8M/day) on v0.6.1.5, every line
+	 * reading "Success after 2 retries". A change-only test is not enough either: a device flapping
+	 * OWB would satisfy it on every call and flood identically. So rate limit the FAULT and carry a
+	 * suppressed count like ds248xLogError does. A quiet device stays silent (LastRST/LastOWB are
+	 * preseeded by Identify/Config), a transient is reported at once (the first event in a window
+	 * always passes), and a persistent fault costs one line per dsERR_LOG_INTERVAL, not ~1250. */
+	bool bFault = bBusy || (psDS248X->RST == 0);		// anything wrong right now?
+	bool bChange = (bBusy != psDS248X->LastOWB) || (psDS248X->LastRST != psDS248X->RST);
+	u32_t now = xTaskGetTickCount();
+	/* A fault is rate limited. The CLEARING of a reported fault is a one-shot that bypasses the
+	 * limit: once healthy bFault goes false and stays false, so a throttled-only test would
+	 * silently swallow the recovery - the single transition most worth seeing. Bounded against a
+	 * device flapping OWB: the recovery line re-arms the window, so a flap costs at most one
+	 * fault + one recovery line per interval, not one per call. */
+	bool bRecovered = (bFault == 0) && ResetFaultLogged && bChange;
+	if ((bFault && (u32_t)(now - ResetLogTick) >= dsERR_LOG_INTERVAL) || bRecovered) {
 		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT,
-			"(%#-I) %s after %d retries  1WB=%d  OK=%d  Err=%d  Busy=%d",
-			nvsWifi.ipSTA, psDS248X->RST ? "Success" : "FAILED", Retries, bBusy, ResetOK, ResetErr, ResetBusy);
+			"(%#-I) %s after %d retries  1WB=%d  OK=%d  Err=%d  Busy=%d  supp=%lu",
+			nvsWifi.ipSTA, psDS248X->RST ? "Success" : (iRV != erSUCCESS) ? "FAILED(io)" : "FAILED",
+			Retries, bBusy, ResetOK, ResetErr, ResetBusy, ResetSupp);
+		ResetLogTick = now;
+		ResetSupp = 0;
+		ResetFaultLogged = bFault;						// cleared by the recovery line itself
+	} else if (bFault || bChange) {
+		++ResetSupp;									// surfaced on the next line that gets through
+	}
 	psDS248X->LastOWB = bBusy;
 	return psDS248X->LastRST = psDS248X->RST;			// save status of this reset attempt
 }
