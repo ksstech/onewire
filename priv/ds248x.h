@@ -128,12 +128,15 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 #else
 	#define DS18X20x2	0
 #endif
-#if (ds248xSTAT_DEBUG > 0)			// 187 bytes: SD/OWB event + per-channel activity instrumentation
+	/* 48 bytes, UNCONDITIONAL and deliberately outside the STAT_DEBUG block below: rate limiting is
+	 * not instrumentation. Gated, it vanished from production - the one build where the unit is
+	 * unattended and every SL_* can block on a TCP send to the syslog host. */
+	u32_t ErrLogTick[8];			// last error-log tick, per channel (rate limit)
+	u16_t ErrSupp[8];				// errors suppressed since last log, per channel
+#if (ds248xSTAT_DEBUG > 0)			// 139 bytes: SD/OWB event + per-channel activity instrumentation
 	u8_t  OpCmd;					// last 1-Wire command byte issued
 	u16_t SDtotal;					// lifetime SD count (telemetry)
 	u8_t  SDseq[8];					// consecutive SD/err per channel; cleared on a clean STATUS read
-	u32_t ErrLogTick[8];			// last error-log tick, per channel (rate limit)
-	u16_t ErrSupp[8];				// errors suppressed since last log, per channel
 	/* Activity counters: the denominator the error counts above lack. Deliberately u32 (not the
 	 * u16/bitfields used for errors) since RstCnt alone advances ~2.5/sec per scanned channel and
 	 * would wrap a u16 inside 8 hours - the exact ambiguity that made SEMerr=799 unreadable. */
@@ -141,12 +144,12 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	u32_t PPDcnt[8];				// resets that saw a Presence Pulse = something answered
 	u32_t TripCnt[8];				// search triplets issued, per channel = enumeration workload
 	u32_t TagCnt[8];				// tag IDs accepted, per channel (dlyDS1990 repeats NOT counted)
-	#define DS18X20x3	(1+2+8+32+16 + (4 * 8 * sizeof(u32_t)))
+	#define DS18X20x3	(1+2+8 + (4 * 8 * sizeof(u32_t)))	// was +32+16, ErrLogTick/ErrSupp moved out
 #else
 	#define DS18X20x3	0
 #endif
 } ds248x_t;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+ DS18X20x2 + DS18X20x3));
+DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+48+ DS18X20x2 + DS18X20x3));
 
 typedef union __attribute__((packed)) {
 	struct {

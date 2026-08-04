@@ -79,7 +79,11 @@ static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSiz
  * @return		result from ds248xReset, status of RST bit
  */
 static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
-#if (ds248xSTAT_DEBUG > 0)								// throttle log volume; recovery (DRST) is NOT gated
+	/* Throttle applies in BOTH builds; recovery (DRST) below is NOT gated. It used to sit inside
+	 * #if (ds248xSTAT_DEBUG > 0), which removed the rate limit from production - the build where the
+	 * unit is unattended and every SL_* can block on a TCP send. This is the path that flooded c764
+	 * at 20.8 lines/sec, so losing the limiter there was the worst possible place for it. State
+	 * lives in ds248x.h, moved out of the STAT_DEBUG block for the same reason. */
 	u8_t ch = psDS248X->CurChan;
 	u32_t now = xTaskGetTickCount();
 	if ((u32_t)(now - psDS248X->ErrLogTick[ch]) >= dsERR_LOG_INTERVAL) {
@@ -89,9 +93,6 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 	} else {
 		++psDS248X->ErrSupp[ch];						// counted, surfaced on the next line that gets through
 	}
-#else
-	SL_ALRT("Dev=%d  Ch=%d  %s", psDS248X->psI2C->DevIdx, psDS248X->CurChan, pcMess);
-#endif
 	int iRV = ds248xReset(psDS248X);					// DRST reverts the device to POR-default (APU=0)
 	// A DRST on an SD/OWB/CONF error clears the device config. If the device was already configured,
 	// re-apply the configured state (APU=1) so it is not left silently at POR-default. NON-checking
