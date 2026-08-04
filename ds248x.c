@@ -33,7 +33,7 @@
 #define	ds248xLOCK_DIS				0					// no locking
 #define	ds248xLOCK_IO				1					// un/locked on I2C access level
 #define	ds248xLOCK_BUS				2					// un/locked on Bus select level
-#define	ds248xLOCK					ds248xLOCK_DIS
+#define	ds248xLOCK					ds248xLOCK_BUS
 
 #define	dsERR_LOG_INTERVAL			pdMS_TO_TICKS(60000)	// rate limit: <=1 error log / channel / minute
 
@@ -427,11 +427,27 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 		#endif
 	}
 
+	/* Recovery MUST participate in the same lock the 1-Wire transaction path uses, or it corrupts
+	 * Rptr/Rconf mid transaction - that IS the race. Owner aware, because recovery runs INLINE on
+	 * whichever task hit the error (hal_i2c_common.c, i2cInlineDepth): if that task already holds
+	 * the mutex, taking a PLAIN mutex (xSemaphoreCreateMutex) a second time self deadlocks - not a
+	 * rare interleaving, but EVERY time an error occurs inside a locked transaction.
+	 * Timeout is the device's OWN bus timeout: between transfers we get it immediately; mid
+	 * transfer we wait no longer than that transfer is already permitted to take. Recovery can
+	 * therefore never stall I2C longer than one ordinary transfer already can. */
+	#if (ds248xLOCK == ds248xLOCK_BUS)
+		BaseType_t bHeld = xRtosSemaphoreCheckCurrent(&psDS248X->mux);
+		if (bHeld == pdFALSE &&
+			xRtosSemaphoreTake(&psDS248X->mux, pdMS_TO_TICKS(psI2C->TObus)) != pdTRUE)
+			return erBUSY;								// held elsewhere: skip QUIETLY, state untouched
+	#endif
+
 	psI2C->CFGok = 0;
 	int iRV = ds248xReset(psDS248X);
 	if (iRV != 1) {
 		halEventUpdateDevice(devMASK_DS248X, 0);
-		return erINV_DEVICE;
+		iRV = erINV_DEVICE;
+		goto exit;										// was a bare return - would leak the mutex
 	}
 	psDS248X->APU = 1;									// Even though only single slave ALWAYS enabled
 	iRV = ds248xWriteConfig(psDS248X);
@@ -440,6 +456,10 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	psI2C->CFGok = 1;
 	halEventUpdateDevice(devMASK_DS248X, 1);
 exit:
+	#if (ds248xLOCK == ds248xLOCK_BUS)
+		if (bHeld == pdFALSE)
+			xRtosSemaphoreGive(&psDS248X->mux);
+	#endif
 	return iRV;
 }
 
@@ -463,7 +483,11 @@ int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
 		iRV = ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), 0);
 	}
 	#if (ds248xLOCK == ds248xLOCK_BUS)
-		if (iRV == 0)									// if actual IO performed && result is an error
+		/* Release on ANY non success, not just 0. Success is 1 - either no IO was needed or the
+		 * channel select succeeded - and only then does the caller own the lock through to
+		 * ds248xBusRelease(). Testing "== 0" leaked the mutex for any other value, and a leak
+		 * here is unrecoverable: every later BusSelect on that device blocks forever. */
+		if (iRV != 1)
 			xRtosSemaphoreGive(&psDS248X->mux);			// release the lock...
 	#endif
 	return iRV;
