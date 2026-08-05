@@ -70,7 +70,7 @@ static bool ResetFaultLogged = 0;					// a fault line was emitted => owe a "clea
 
 // ################################ Local ONLY utility functions ###################################
 
-static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSize, u32_t uSdly);	// fwd: used by ds248xLogError APU restore
+static int ds248xWriteConfigRaw(ds248x_t * psDS248X, ds248x_conf_t sConf);	// fwd: used by ds248xLogError APU restore
 
 /**
  * @brief
@@ -96,18 +96,35 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 	int iRV = ds248xReset(psDS248X);					// DRST reverts the device to POR-default (APU=0)
 	// A DRST on an SD/OWB/CONF error clears the device config. If the device was already configured,
 	// re-apply the configured state (APU=1) so it is not left silently at POR-default. NON-checking
-	// write (ds248xWriteDelayRead, not ...Check) => no ds248xCheckRead => no ds248xLogError re-entry
-	// => no recursion. Skipped when CFGok==0 (identify, and ds248xConfig's own reset which re-configs
+	// write (ds248xWriteConfigRaw) => no ds248xCheckRead => no ds248xLogError re-entry => no
+	// recursion. Skipped when CFGok==0 (identify, and ds248xConfig's own reset which re-configs
 	// itself).
 	if (iRV == 1 && psDS248X->psI2C->CFGok) {
-		psDS248X->APU = 1;								// restore Active Pull-Up in the Rconf mirror
-		u8_t config = psDS248X->Rconf & 0x0F;
-		u8_t cBuf[2] = { ds248xCMD_WCFG , (~config << 4) | config };
-		psDS248X->Rptr = ds248xREG_CONF;
-		ds248xWriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0);
+		psDS248X->CfgSet.APU = 1;						// restore Active Pull-Up in the INTENDED config
+		ds248xWriteConfigRaw(psDS248X, psDS248X->CfgSet);
 	}
 	return iRV;
 }
+
+#if (ds248xLOCK == ds248xLOCK_BUS)
+/* Recovery skipped because another task holds the bus lock. Deliberately does NOT use the
+ * per-channel ErrLogTick[]/ErrSupp[] slots: those belong to genuine device errors, and a burst of
+ * skips sharing the window would suppress the very error line that explains them. */
+static u32_t BusyLogTick = (u32_t) -dsERR_LOG_INTERVAL;	// pre-aged, see ResetLogTick above
+static u32_t BusySupp = 0;
+
+static void ds248xLogBusy(ds248x_t * psDS248X) {
+	u32_t now = xTaskGetTickCount();
+	if ((u32_t)(now - BusyLogTick) >= dsERR_LOG_INTERVAL) {
+		SL_WARN("Dev=%d  Ch=%d  Config SKIPPED, bus held elsewhere  supp=%u",
+			psDS248X->psI2C->DevIdx, psDS248X->CurChan, BusySupp);
+		BusyLogTick = now;
+		BusySupp = 0;
+	} else {
+		++BusySupp;
+	}
+}
+#endif
 
 /**
  * @brief	Monitor resuts from register changes to check for consistency
@@ -218,8 +235,13 @@ static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSiz
 		xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
 	#endif
 //	IF_SYSTIMER_START(debugTIMING, stDS248x);
-	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[psDS248X->Rptr],
-		psDS248X->Rptr == ds248xREG_PADJ ? SO_MEM(ds248x_t, Rpadj) : 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) NULL);
+	/* Snapshot Rptr ONCE. It was read twice here - for the destination address and again for the
+	 * length - so a concurrent task changing it in between could hand the driver RegX[CONF] with
+	 * the 5-byte PADJ length, writing 4 bytes past that member and over the neighbouring register
+	 * mirrors. Rptr is a shared 3-bit field with no lock; the two reads must at least agree. */
+	u8_t Rptr = psDS248X->Rptr;
+	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[Rptr],
+		Rptr == ds248xREG_PADJ ? SO_MEM(ds248x_t, Rpadj) : 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) NULL);
 //	IF_SYSTIMER_STOP(debugTIMING, stDS248x);
 	#if (ds248xLOCK == ds248xLOCK_IO)
 		xRtosSemaphoreGive(&psDS248X->mux);
@@ -263,9 +285,16 @@ skip:
 }
 
 /**
- * @brief	Write config value lower nibble, upper nibble bitwise inverted.
- * @param	psDS248X
- * @return	result from ds248xWriteDelayReadCheck(), 1 if config written & response correct else 0
+ * @brief	Write the configuration register WITHOUT read-back checking
+ * @param	sConf - the config to send, BY VALUE (write lower nibble, upper nibble bitwise inverted)
+ * @return	result from ds248xWriteDelayRead()
+ * @note	Takes the config as a parameter rather than reading psDS248X->Rconf back out. Rconf
+ *			lives in the RegX[] union - every CONF-register reply overwrites it and ds248xReset()
+ *			zeroes it - so building the command from it could send something other than what the
+ *			caller just decided. Callers pass psDS248X->CfgSet, which only they mutate. This does
+ *			not make the driver lock free: Rptr sequencing is a separate shared-state problem,
+ *			still covered by the bus lock.
+ *			Non-checking => no ds248xCheckRead => safe from ds248xLogError (no recursion).
  *
  *	WWDR		100KHz	400KHz
  *				300uS	75uS
@@ -273,15 +302,25 @@ skip:
  *	NS	0		300		75
  *	OD	0		300		75
  */
-static int ds248xWriteConfig(ds248x_t * psDS248X) {
+static int ds248xWriteConfigRaw(ds248x_t * psDS248X, ds248x_conf_t sConf) {
 	// Write configuration (Case A)
 	//	S AD,0 [A] WCFG [A] CF [A] Sr AD,1 [A] [CF] A\ P
 	//  [] indicates from slave
 	//  CF configuration byte to write
-	u8_t config	= psDS248X->Rconf & 0x0F;
-	u8_t cBuf[2] = { ds248xCMD_WCFG , (~config << 4) | config };
+	sConf.RES = 0;										// only APU/PDN/SPU/OWS are writable
+	u8_t cBuf[2] = { ds248xCMD_WCFG , (~sConf.Rconf << 4) | sConf.Rconf };
 	psDS248X->Rptr = ds248xREG_CONF;
-	return ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), 0);
+	return ds248xWriteDelayRead(psDS248X, cBuf, sizeof(cBuf), 0);
+}
+
+/**
+ * @brief	Write the configuration register and verify the device echoed it back
+ * @return	1 if config written & response correct else 0 (see ds248xCheckRead)
+ */
+static int ds248xWriteConfig(ds248x_t * psDS248X, ds248x_conf_t sConf) {
+	sConf.RES = 0;
+	int iRV = ds248xWriteConfigRaw(psDS248X, sConf);
+	return (iRV == erSUCCESS) ? ds248xCheckRead(psDS248X, sConf.Rconf) : 0;
 }
 
 // ################### Identification, Diagnostics & Configuration functions #######################
@@ -438,8 +477,14 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	#if (ds248xLOCK == ds248xLOCK_BUS)
 		BaseType_t bHeld = xRtosSemaphoreCheckCurrent(&psDS248X->mux);
 		if (bHeld == pdFALSE &&
-			xRtosSemaphoreTake(&psDS248X->mux, pdMS_TO_TICKS(psI2C->TObus)) != pdTRUE)
-			return erBUSY;								// held elsewhere: skip QUIETLY, state untouched
+			xRtosSemaphoreTake(&psDS248X->mux, pdMS_TO_TICKS(psI2C->TObus)) != pdTRUE) {
+			/* Held elsewhere: state untouched, but SAY SO. Returning erBUSY silently turned a failed
+			 * recovery into an invisible no-op - the device stays unconfigured (CFGok untouched) and
+			 * nothing in the log says why, which is exactly what made the c98c regression diagnosable
+			 * only from Papertrail history. Rate limited on its OWN window, see ds248xLogBusy. */
+			ds248xLogBusy(psDS248X);
+			return erBUSY;
+		}
 	#endif
 
 	psI2C->CFGok = 0;
@@ -449,8 +494,9 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 		iRV = erINV_DEVICE;
 		goto exit;										// was a bare return - would leak the mutex
 	}
-	psDS248X->APU = 1;									// Even though only single slave ALWAYS enabled
-	iRV = ds248xWriteConfig(psDS248X);
+	psDS248X->CfgSet.Rconf = 0;							// DRST above left the device at POR default
+	psDS248X->CfgSet.APU = 1;							// Even though only single slave ALWAYS enabled
+	iRV = ds248xWriteConfig(psDS248X, psDS248X->CfgSet);
 	if (iRV < erSUCCESS)
 		goto exit;
 	psI2C->CFGok = 1;
@@ -501,8 +547,8 @@ void ds248xBusRelease(ds248x_t * psDS248X) {
 
 int	ds248xOWReset(ds248x_t * psDS248X) {
 	// DS2482-800 datasheet page 7 para 2
-	if (psDS248X->SPU == owPOWER_STRONG)
-		ds248xOWLevel(psDS248X, owPOWER_STANDARD);
+	if (psDS248X->CfgSet.SPU == owPOWER_STRONG)			// INTENT, not the mirror: a clobbered mirror
+		ds248xOWLevel(psDS248X, owPOWER_STANDARD);		// would skip dropping a pull-up that IS still on
 	// 1-Wire reset (Case B)
 	//	S AD,0 [A] 1WRS [A] Sr AD,1 [A] [Status] A [Status] A\ P
 	//									\--------/
@@ -510,7 +556,7 @@ int	ds248xOWReset(ds248x_t * psDS248X) {
 	//  [] indicates from slave
 	const u8_t cmd1WRS = ds248xCMD_1WRS;
 	psDS248X->Rptr = ds248xREG_STAT;
-	ds248xWriteDelayReadCheck(psDS248X, (u8_t *) &cmd1WRS, sizeof(u8_t), psDS248X->OWS ? owDELAY_RST_OD : owDELAY_RST);
+	ds248xWriteDelayReadCheck(psDS248X, (u8_t *) &cmd1WRS, sizeof(u8_t), psDS248X->CfgSet.OWS ? owDELAY_RST_OD : owDELAY_RST);
 	#if (ds248xSTAT_DEBUG > 0)						// poll rate, and how often anything answered
 	++psDS248X->RstCnt[psDS248X->CurChan];
 	if (psDS248X->PPD)
@@ -519,15 +565,18 @@ int	ds248xOWReset(ds248x_t * psDS248X) {
 	return psDS248X->PPD;
 }
 
+/* Speed/Level record the INTENT in CfgSet then command it. The return value stays the read-back
+ * bitfield: the caller asked what the device ended up at, and CheckRead has already flagged any
+ * mismatch. Only the decision of WHAT to send comes from CfgSet. */
 int	ds248xOWSpeed(ds248x_t * psDS248X, bool speed) {
-	psDS248X->OWS = speed;
-	ds248xWriteConfig(psDS248X);
+	psDS248X->CfgSet.OWS = speed;
+	ds248xWriteConfig(psDS248X, psDS248X->CfgSet);
 	return psDS248X->OWS;
 }
 
 int	ds248xOWLevel(ds248x_t * psDS248X, bool level) {
-	psDS248X->SPU = level;
-	ds248xWriteConfig(psDS248X);
+	psDS248X->CfgSet.SPU = level;
+	ds248xWriteConfig(psDS248X, psDS248X->CfgSet);
 	return psDS248X->SPU;
 }
 
@@ -540,7 +589,7 @@ bool ds248xOWTouchBit(ds248x_t * psDS248X, bool Bit) {
 	//  BB indicates byte containing bit value in msbit
 	u8_t cBuf[2] = { ds248xCMD_1WSB, Bit << 7 };
 	psDS248X->Rptr = ds248xREG_STAT;
-	ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_SB_OD : owDELAY_SB);
+	ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), psDS248X->CfgSet.OWS ? owDELAY_SB_OD : owDELAY_SB);
 	return psDS248X->SBR;
 }
 
@@ -553,7 +602,7 @@ u8_t ds248xOWWriteByte(ds248x_t * psDS248X, u8_t Byte) {
 	//  DD data to write
 	u8_t cBuf[2] = { ds248xCMD_1WWB, Byte };
 	psDS248X->Rptr = ds248xREG_STAT;
-	ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_WB_OD : owDELAY_WB);
+	ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), psDS248X->CfgSet.OWS ? owDELAY_WB_OD : owDELAY_WB);
 	return psDS248X->Rstat;
 }
 
@@ -567,7 +616,7 @@ u8_t ds248xOWReadByte(ds248x_t * psDS248X) {
 	//  DD data read
 	const u8_t cmd1WRB = ds248xCMD_1WRB;
 	psDS248X->Rptr = ds248xREG_STAT;
-	ds248xWriteDelayReadCheck(psDS248X, (u8_t *) &cmd1WRB, sizeof(u8_t), psDS248X->OWS ? owDELAY_RB_OD : owDELAY_RB);
+	ds248xWriteDelayReadCheck(psDS248X, (u8_t *) &cmd1WRB, sizeof(u8_t), psDS248X->CfgSet.OWS ? owDELAY_RB_OD : owDELAY_RB);
 	ds248xReadRegister(psDS248X, ds248xREG_DATA);
 	return psDS248X->Rdata;
 }
@@ -581,7 +630,7 @@ u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) {
 	//  SS indicates byte containing search direction bit value in msbit
 	u8_t cBuf[2] = { ds248xCMD_1WT, u8Dir ? 0x80 : 0x00 };
 	psDS248X->Rptr = ds248xREG_STAT;
-	ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), psDS248X->OWS ? owDELAY_ST_OD : owDELAY_ST);
+	ds248xWriteDelayReadCheck(psDS248X, cBuf, sizeof(cBuf), psDS248X->CfgSet.OWS ? owDELAY_ST_OD : owDELAY_ST);
 	#if (ds248xSTAT_DEBUG > 0)						// enumeration workload (64 triplets per ROM found)
 	++psDS248X->TripCnt[psDS248X->CurChan];
 	#endif

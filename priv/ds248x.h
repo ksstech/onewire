@@ -69,6 +69,19 @@ enum {													// STATus register bitmap
 
 struct i2c_di_t;
 
+/* Moved ahead of ds248x_t so the same bitfield definition serves BOTH the read-back mirror and the
+ * intended config (ds248x_t.CfgSet) - one description of the register, not two. */
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+/*LSB*/	u8_t	APU	: 1;			// Active Pull Up
+		u8_t	PDN	: 1;			// Pull Down (DS2484 only) was PPM/Presence Pulse Mask in DS2482
+		u8_t	SPU	: 1;			// Strong Pull Up
+		u8_t	OWS	: 1;			// 1-Wire Speed
+/*MSB*/	u8_t	RES	: 4;
+	};
+	u8_t	Rconf;
+} ds248x_conf_t;
+
 typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	struct i2c_di_t * psI2C;		// size = 4
 	SemaphoreHandle_t mux;			// size = 4
@@ -121,6 +134,14 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 		u8_t LastOWB : 1;			// 1WB state at last reset: report only on transition, not per event
 		u8_t Sp2 : 3;
 	};
+	/* The config we INTEND the device to have. Rconf above is the OBSERVED value - it lives in the
+	 * RegX[] union and is overwritten by every I2C reply that lands on ds248xREG_CONF. Building a
+	 * WCFG command by setting a bit in Rconf and reading it straight back therefore had a window
+	 * where a reply wiped the bit in between: observed as "APU W=x0 R=x1", a config sent with APU=0
+	 * immediately after APU=1 was assigned. Intended and observed state cannot share storage.
+	 * Every decision about what to DO (which 1-Wire delay to wait, whether strong pull-up must be
+	 * dropped) reads CfgSet; the ->APU/->SPU/->OWS mirror above is for VERIFICATION only. */
+	ds248x_conf_t CfgSet;
 #if	(appPRODUCTION == 0)		    // 16 bytes
 	u8_t PrvStat[8];				// previous STAT reg
 	u8_t PrvConf[8];				// previous CONF reg
@@ -149,7 +170,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	#define DS18X20x3	0
 #endif
 } ds248x_t;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+48+ DS18X20x2 + DS18X20x3));
+DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+1+48+ DS18X20x2 + DS18X20x3));	// +1 = CfgSet
 
 typedef union __attribute__((packed)) {
 	struct {
@@ -164,17 +185,6 @@ typedef union __attribute__((packed)) {
 	};
 	u8_t STAT;
 } ds248x_stat_t;
-
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-/*LSB*/	u8_t	APU	: 1;			// Active Pull Up
-		u8_t	PDN	: 1;			// Pull Down (DS2484 only) was PPM/Presence Pulse Mask in DS2482
-		u8_t	SPU	: 1;			// Strong Pull Up
-		u8_t	OWS	: 1;			// 1-Wire Speed
-/*MSB*/	u8_t	RES	: 4;
-	};
-	u8_t	Rconf;
-} ds248x_conf_t;
 
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
