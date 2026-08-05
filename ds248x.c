@@ -94,13 +94,17 @@ static void ds248xReportHealth(ds248x_t * psDS248X) {
 			++Bad;
 	}
 	u32_t DRSTerr = (u32_t)ResetErr - psDS248X->PrvResetErr;
-	bool bDRSTok = ((u32_t)ResetOK != psDS248X->PrvResetOK);
+	u32_t DRSTok = (u32_t)ResetOK - psDS248X->PrvResetOK;
 	u32_t now = xTaskGetTickCount();
 	bool bWindow = (u32_t)(now - psDS248X->ErrLogTick) >= dsERR_LOG_INTERVAL;
 	u8_t NewState = (Sum || DRSTerr) ? ds248xSTATE_ERR : ds248xSTATE_OK;
 	if (bWindow) {										// wedge assessment advances once per WINDOW
-		if (NewState == ds248xSTATE_ERR && bDRSTok == 0 &&
-			(Bad >= 6 || DRSTerr >= 10 || psDS248X->XErrCnt >= 10)) {
+		/* "dead in practice": >=10 DRST failures AND <=~10% success in the window. Zero-success
+		 * was the original test, but c98c proved a wedged DS2482 still lands the odd lucky DRST
+		 * (4 OK vs 237 failed per window) - and the intermittent wedge IS the power-cycle class. */
+		if (NewState == ds248xSTATE_ERR &&
+			(Bad >= 6 || DRSTerr >= 10 || psDS248X->XErrCnt >= 10) &&
+			DRSTerr >= 10 && DRSTerr >= 10 * (DRSTok + 1)) {
 			if (psDS248X->WedgeCnt < 255)
 				++psDS248X->WedgeCnt;
 		} else {
@@ -279,10 +283,12 @@ static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSiz
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[Rptr],
 		Rptr == ds248xREG_PADJ ? SO_MEM(ds248x_t, Rpadj) : 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) NULL);
 //	IF_SYSTIMER_STOP(debugTIMING, stDS248x);
-	if (iRV < erSUCCESS && psDS248X->psI2C->Test == 0) {
+	if (iRV != erSUCCESS && psDS248X->psI2C->Test == 0) {
 		/* Transport failure: previously INVISIBLE at this layer (CheckRead never runs when the
 		 * transfer fails), so a fully dead bus produced no ds248x-side line at all. Counted here,
-		 * surfaced as XErr= in the consolidated health line. */
+		 * surfaced as XErr= in the consolidated health line.
+		 * "!=" not "<": esp_err_t codes are POSITIVE (c98c's ESP_ERR_INVALID_STATE = +259), only
+		 * the internal er### codes are negative - "<" left XErr=0 while the bus failed 810x/min. */
 		++psDS248X->XErrCnt;
 		ds248xReportHealth(psDS248X);
 	}
