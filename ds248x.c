@@ -35,7 +35,7 @@
 #define	ds248xLOCK_BUS				2					// un/locked on Bus select level
 #define	ds248xLOCK					ds248xLOCK_BUS
 
-#define	dsERR_LOG_INTERVAL			pdMS_TO_TICKS(60000)	// rate limit: <=1 error log / channel / minute
+#define	dsERR_LOG_INTERVAL			pdMS_TO_TICKS(60000)	// rate limit: <=1 health report / device / minute
 
 // ##################################### Local structures ##########################################
 
@@ -61,38 +61,94 @@ static const uint16_t Rwpu[16]	= { 500, 500, 500, 500, 500, 500, 1000, 1000, 100
 u8_t ds248xCount = 0;
 ds248x_t * psaDS248X = NULL;
 static int ResetOK = 0, ResetErr = 0, ResetBusy = 0;	// ResetBusy: DRST OK but 1W engine left wedged
-/* Pre-aged by one full interval so the FIRST report always passes the rate limit: initialised to 0
- * the (now - ResetLogTick) window would only open 60s after boot, silencing exactly the boot-time
- * DS2482 faults ds248xConfig() exists to surface. Unsigned wraparound makes the subtraction valid. */
-static u32_t ResetLogTick = (u32_t) -dsERR_LOG_INTERVAL;	// last tick ds248xReset() actually logged
-static u32_t ResetSupp = 0;							// reset reports suppressed since then
-static bool ResetFaultLogged = 0;					// a fault line was emitted => owe a "cleared" line
+
+enum { ds248xSTATE_OK, ds248xSTATE_ERR, ds248xSTATE_WEDGED };	// ds248x_t.State, owned by ds248xReportHealth()
 
 // ################################ Local ONLY utility functions ###################################
 
 static int ds248xWriteConfigRaw(ds248x_t * psDS248X, ds248x_conf_t sConf);	// fwd: used by ds248xLogError APU restore
 
 /**
- * @brief
+ * @brief	SINGLE device-level syslog originator for runtime DS248x errors.
+ * @note	All error sites RECORD (counters + LastMsg) and call here; this owns the one report
+ *			window, the OK/ERRORS/WEDGED state machine and the emission. One line carries what the
+ *			previous three originators (per-channel LogError, the ds248xReset block, LogBusy) spread
+ *			over ~10/min on a dead bus: per-channel counts, transport failures, recovery skips,
+ *			DRST totals and the freshest error text.
+ *			Hysteresis: escalations (state worsens) emit IMMEDIATELY; periodic repeats, recovery
+ *			and de-escalations wait for the window - a flapping device costs at most one line per
+ *			interval each way. Throttling applies in BOTH builds (the c764 lesson: losing the
+ *			limiter in production, where every SL_* can block on a TCP send, is the worst place).
+ *			WEDGED = two consecutive windows in which NO DRST succeeded AND failure is wide
+ *			(>=6 channels erroring, or the transport itself failing repeatedly) - the c98c/c764
+ *			hardware class where only a power cycle helps, hence the ALERT + action text.
+ */
+static void ds248xReportHealth(ds248x_t * psDS248X) {
+	if (psDS248X->psI2C->Test)							// identify-time probing errors are expected;
+		return;											//  ds248xIdentify reports its own outcome
+	u32_t Sum = psDS248X->XErrCnt + psDS248X->SkipCnt;
+	int Bad = 0;
+	for (int i = 0; i < 8; ++i) {
+		Sum += psDS248X->ErrSupp[i];
+		if (psDS248X->ErrSupp[i])
+			++Bad;
+	}
+	u32_t DRSTerr = (u32_t)ResetErr - psDS248X->PrvResetErr;
+	bool bDRSTok = ((u32_t)ResetOK != psDS248X->PrvResetOK);
+	u32_t now = xTaskGetTickCount();
+	bool bWindow = (u32_t)(now - psDS248X->ErrLogTick) >= dsERR_LOG_INTERVAL;
+	u8_t NewState = (Sum || DRSTerr) ? ds248xSTATE_ERR : ds248xSTATE_OK;
+	if (bWindow) {										// wedge assessment advances once per WINDOW
+		if (NewState == ds248xSTATE_ERR && bDRSTok == 0 &&
+			(Bad >= 6 || DRSTerr >= 10 || psDS248X->XErrCnt >= 10)) {
+			if (psDS248X->WedgeCnt < 255)
+				++psDS248X->WedgeCnt;
+		} else {
+			psDS248X->WedgeCnt = 0;
+		}
+	}
+	if (psDS248X->WedgeCnt >= 2)
+		NewState = ds248xSTATE_WEDGED;
+	// Escalations bypass the window; everything else (periodic, recovery, de-escalation) waits for it
+	if (NewState <= psDS248X->State && !(bWindow && (Sum || DRSTerr || NewState != psDS248X->State)))
+		return;
+	static const char * const StateName[3] = { "OK", "ERRORS", "WEDGED" };
+	SL_LOG((NewState == ds248xSTATE_WEDGED && psDS248X->State != ds248xSTATE_WEDGED) ? SL_SEV_ALERT :
+			NewState ? SL_SEV_ERROR : SL_SEV_NOTICE,
+		"Dev=%d  1W %s->%s  Ch=%u/%u/%u/%u/%u/%u/%u/%u  XErr=%u  Skip=%u  DRST=%d/%d/%d%s%s%s",
+		psDS248X->psI2C->DevIdx, StateName[psDS248X->State], StateName[NewState],
+		psDS248X->ErrSupp[0], psDS248X->ErrSupp[1], psDS248X->ErrSupp[2], psDS248X->ErrSupp[3],
+		psDS248X->ErrSupp[4], psDS248X->ErrSupp[5], psDS248X->ErrSupp[6], psDS248X->ErrSupp[7],
+		psDS248X->XErrCnt, psDS248X->SkipCnt, ResetOK, ResetErr, ResetBusy,
+		psDS248X->LastMsg[0] ? "  last=" : "", psDS248X->LastMsg,
+		(NewState == ds248xSTATE_WEDGED) ? "  POWER CYCLE required, reboot cannot clear a DS2482" : "");
+	psDS248X->ErrLogTick = now;
+	psDS248X->PrvResetOK = (u32_t)ResetOK;
+	psDS248X->PrvResetErr = (u32_t)ResetErr;
+	memset(psDS248X->ErrSupp, 0, sizeof(psDS248X->ErrSupp));
+	psDS248X->XErrCnt = psDS248X->SkipCnt = 0;
+	psDS248X->State = NewState;
+	if (NewState == ds248xSTATE_OK)
+		psDS248X->LastMsg[0] = 0;
+}
+
+/**
+ * @brief	Record an error detected by ds248xCheckRead, then attempt device-level recovery
  * @param[in]	psDS248X required device control/config/status structure
  * @param[in]	specific error message to log
  * @return		result from ds248xReset, status of RST bit
  */
 static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
-	/* Throttle applies in BOTH builds; recovery (DRST) below is NOT gated. It used to sit inside
-	 * #if (ds248xSTAT_DEBUG > 0), which removed the rate limit from production - the build where the
-	 * unit is unattended and every SL_* can block on a TCP send. This is the path that flooded c764
-	 * at 20.8 lines/sec, so losing the limiter there was the worst possible place for it. State
-	 * lives in ds248x.h, moved out of the STAT_DEBUG block for the same reason. */
 	u8_t ch = psDS248X->CurChan;
-	u32_t now = xTaskGetTickCount();
-	if ((u32_t)(now - psDS248X->ErrLogTick[ch]) >= dsERR_LOG_INTERVAL) {
-		SL_ALRT("Dev=%d  Ch=%d  %s  supp=%u", psDS248X->psI2C->DevIdx, ch, pcMess, psDS248X->ErrSupp[ch]);
-		psDS248X->ErrLogTick[ch] = now;
-		psDS248X->ErrSupp[ch] = 0;
-	} else {
-		++psDS248X->ErrSupp[ch];						// counted, surfaced on the next line that gets through
-	}
+	++psDS248X->ErrSupp[ch];							// counted per channel, reported consolidated
+	strncpy(psDS248X->LastMsg, pcMess, sizeof(psDS248X->LastMsg) - 1);
+	psDS248X->LastMsg[sizeof(psDS248X->LastMsg) - 1] = 0;
+	/* Per-EVENT detail at INFO: invisible at default thresholds and near free (xvSyslog drops it
+	 * BEFORE formatting). Diagnosis mode = raise ioSLOGhi (and ioSLhost for remote) to 6: the raw
+	 * per-channel event stream then flows 1:1, deliberately UNTHROTTLED - the severity gate is the
+	 * rate control. The always-on device-level picture lives in ds248xReportHealth(). */
+	SL_INFO("Dev=%d  Ch=%d  %s", psDS248X->psI2C->DevIdx, ch, pcMess);
+	ds248xReportHealth(psDS248X);
 	int iRV = ds248xReset(psDS248X);					// DRST reverts the device to POR-default (APU=0)
 	// A DRST on an SD/OWB/CONF error clears the device config. If the device was already configured,
 	// re-apply the configured state (APU=1) so it is not left silently at POR-default. NON-checking
@@ -105,26 +161,6 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 	}
 	return iRV;
 }
-
-#if (ds248xLOCK == ds248xLOCK_BUS)
-/* Recovery skipped because another task holds the bus lock. Deliberately does NOT use the
- * per-channel ErrLogTick[]/ErrSupp[] slots: those belong to genuine device errors, and a burst of
- * skips sharing the window would suppress the very error line that explains them. */
-static u32_t BusyLogTick = (u32_t) -dsERR_LOG_INTERVAL;	// pre-aged, see ResetLogTick above
-static u32_t BusySupp = 0;
-
-static void ds248xLogBusy(ds248x_t * psDS248X) {
-	u32_t now = xTaskGetTickCount();
-	if ((u32_t)(now - BusyLogTick) >= dsERR_LOG_INTERVAL) {
-		SL_WARN("Dev=%d  Ch=%d  Config SKIPPED, bus held elsewhere  supp=%u",
-			psDS248X->psI2C->DevIdx, psDS248X->CurChan, BusySupp);
-		BusyLogTick = now;
-		BusySupp = 0;
-	} else {
-		++BusySupp;
-	}
-}
-#endif
 
 /**
  * @brief	Monitor resuts from register changes to check for consistency
@@ -243,6 +279,13 @@ static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSiz
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[Rptr],
 		Rptr == ds248xREG_PADJ ? SO_MEM(ds248x_t, Rpadj) : 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) NULL);
 //	IF_SYSTIMER_STOP(debugTIMING, stDS248x);
+	if (iRV < erSUCCESS && psDS248X->psI2C->Test == 0) {
+		/* Transport failure: previously INVISIBLE at this layer (CheckRead never runs when the
+		 * transfer fails), so a fully dead bus produced no ds248x-side line at all. Counted here,
+		 * surfaced as XErr= in the consolidated health line. */
+		++psDS248X->XErrCnt;
+		ds248xReportHealth(psDS248X);
+	}
 	#if (ds248xLOCK == ds248xLOCK_IO)
 		xRtosSemaphoreGive(&psDS248X->mux);
 	#endif
@@ -367,43 +410,22 @@ int ds248xReset(ds248x_t * psDS248X) {
 		++ResetErr;										// update FAIL counter
 		// possibly do hardware reset/reboot?
 	}
-	/* Report a state CHANGE or an ongoing fault, never per-event, and rate limit BOTH.
-	 * 'Retries' must NOT appear in this test: a wedged device always exhausts the retry loop, so
-	 * the previous 'Retries ||' term was permanently true and short-circuited the very throttling
-	 * the test exists to provide - c764 logged 20.8 lines/sec (~1.8M/day) on v0.6.1.5, every line
-	 * reading "Success after 2 retries". A change-only test is not enough either: a device flapping
-	 * OWB would satisfy it on every call and flood identically. So rate limit the FAULT and carry a
-	 * suppressed count like ds248xLogError does. A quiet device stays silent (LastRST/LastOWB are
-	 * preseeded by Identify/Config), a transient is reported at once (the first event in a window
-	 * always passes), and a persistent fault costs one line per dsERR_LOG_INTERVAL, not ~1250. */
-	bool bFault = bBusy || (psDS248X->RST == 0);		// anything wrong right now?
-	bool bChange = (bBusy != psDS248X->LastOWB) || (psDS248X->LastRST != psDS248X->RST);
-	u32_t now = xTaskGetTickCount();
-	/* A fault is rate limited. The CLEARING of a reported fault is a one-shot that bypasses the
-	 * limit: once healthy bFault goes false and stays false, so a throttled-only test would
-	 * silently swallow the recovery - the single transition most worth seeing. Bounded against a
-	 * device flapping OWB: the recovery line re-arms the window, so a flap costs at most one
-	 * fault + one recovery line per interval, not one per call. */
-	bool bRecovered = (bFault == 0) && ResetFaultLogged && bChange;
-	if ((bFault && (u32_t)(now - ResetLogTick) >= dsERR_LOG_INTERVAL) || bRecovered) {
-		SL_LOG(psDS248X->RST ? SL_SEV_WARNING : SL_SEV_ALERT,
-			"(%#-I) %s after %d retries  1WB=%d  OK=%d  Err=%d  Busy=%d  supp=%lu",
-			nvsWifi.ipSTA, psDS248X->RST ? "Success" : (iRV != erSUCCESS) ? "FAILED(io)" : "FAILED",
-			Retries, bBusy, ResetOK, ResetErr, ResetBusy, ResetSupp);
-		ResetLogTick = now;
-		ResetSupp = 0;
-		ResetFaultLogged = bFault;						// cleared by the recovery line itself
-	} else if (bFault || bChange) {
-		++ResetSupp;									// surfaced on the next line that gets through
-	}
-	psDS248X->LastOWB = bBusy;
-	return psDS248X->LastRST = psDS248X->RST;			// save status of this reset attempt
+	/* No logging HERE, by design: DRST outcomes are folded into the consolidated device health
+	 * line (ds248xReportHealth: DRST=OK/Err/Busy plus window deltas). This replaces the previous
+	 * ~30-line fault/change/recovered machinery - the reporter's state hysteresis provides the
+	 * same change-only + rate-limited + recovery-one-shot behaviour generically (see the c764
+	 * flood history in git for why per-event logging here is forbidden). Failures escalate and
+	 * report immediately; a success only matters when an error episode is open (State != OK),
+	 * letting the reporter close it. 'Retries' stays out of any test for the same c764 reason. */
+	(void) Retries;
+	if (psDS248X->RST == 0 || bBusy || psDS248X->State)
+		ds248xReportHealth(psDS248X);
+	return psDS248X->RST;
 }
 
 int	ds248xIdentify(i2c_di_t * psI2C) {
 	ds248x_t sDS248X = { 0 };							// temporary device structure
 	sDS248X.psI2C = psI2C;
-	sDS248X.LastRST = 1;								// avoid syslog if reset successful
 	psI2C->Speed = i2cSPEED_400;
 	psI2C->TObus = 25;
 	psI2C->Test	= 1;
@@ -456,7 +478,6 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	ds248x_t * psDS248X = &psaDS248X[psI2C->DevIdx];
 	if (psI2C->CFGok == 0) {							// definite 1st time for specific device...
 		psDS248X->psI2C = psI2C;
-		psDS248X->LastRST = 1;							// avoid syslog on next "successful" reset
 		if (psI2C->Type == i2cDEV_DS2482_800) {
 			psDS248X->NumChan = 1;						// 0=1Ch, 1=8Ch
 		}
@@ -478,11 +499,11 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 		BaseType_t bHeld = xRtosSemaphoreCheckCurrent(&psDS248X->mux);
 		if (bHeld == pdFALSE &&
 			xRtosSemaphoreTake(&psDS248X->mux, pdMS_TO_TICKS(psI2C->TObus)) != pdTRUE) {
-			/* Held elsewhere: state untouched, but SAY SO. Returning erBUSY silently turned a failed
-			 * recovery into an invisible no-op - the device stays unconfigured (CFGok untouched) and
-			 * nothing in the log says why, which is exactly what made the c98c regression diagnosable
-			 * only from Papertrail history. Rate limited on its OWN window, see ds248xLogBusy. */
-			ds248xLogBusy(psDS248X);
+			/* Held elsewhere: state untouched, but COUNTED - a silently skipped recovery is an
+			 * invisible no-op (the c98c lesson: diagnosable only from Papertrail history). The
+			 * skip surfaces as Skip= in the consolidated health line. */
+			++psDS248X->SkipCnt;
+			ds248xReportHealth(psDS248X);
 			psDS248X->CfgPend = 1;			// defer: next BusSelect re-runs config under the lock it holds
 			return erBUSY;
 		}

@@ -127,12 +127,10 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 		u8_t CurChan : 3;			// 0 -> 7
 		u8_t Rptr : 3;				// 0 -> 4
 		u8_t NumChan : 1;			// 0 / 1 / 8
-		u8_t LastRST : 1;			// result from last reset attempt
 		u8_t I2Cnum	: 4;			// index into I2C Device Info table
 		u8_t Lo : 4;
 		u8_t Hi : 4;
-		u8_t LastOWB : 1;			// 1WB state at last reset: report only on transition, not per event
-		u8_t Sp2 : 3;
+		u8_t Sp2 : 4;				// byte-bound: a u8_t bitfield cannot span bytes, 5+ grows the struct
 	};
 	/* The config we INTEND the device to have. Rconf above is the OBSERVED value - it lives in the
 	 * RegX[] union and is overwritten by every I2C reply that lands on ds248xREG_CONF. Building a
@@ -144,9 +142,9 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	ds248x_conf_t CfgSet;
 	/* Set by I2C-task recovery when the erBUSY skip fires; consumed (test-and-clear) under the bus
 	 * lock in ds248xBusSelect. Deliberately a FULL byte, not a spare bit in the flags struct above:
-	 * a bitfield would share its byte with LastOWB, which ds248xReset() writes from the lock-holding
-	 * task while the I2C task sets this flag lock-free - two concurrent read-modify-writes on one
-	 * byte lose updates. Whole-byte stores cannot collide with neighbours. */
+	 * a bitfield would share its byte with fields written by the lock-holding task while the I2C
+	 * task sets this flag lock-free - two concurrent read-modify-writes on one byte lose updates.
+	 * Whole-byte stores cannot collide with neighbours. */
 	u8_t CfgPend;
 #if	(appPRODUCTION == 0)		    // 16 bytes
 	u8_t PrvStat[8];				// previous STAT reg
@@ -155,11 +153,24 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 #else
 	#define DS18X20x2	0
 #endif
-	/* 48 bytes, UNCONDITIONAL and deliberately outside the STAT_DEBUG block below: rate limiting is
+	/* 74 bytes, UNCONDITIONAL and deliberately outside the STAT_DEBUG block below: rate limiting is
 	 * not instrumentation. Gated, it vanished from production - the one build where the unit is
-	 * unattended and every SL_* can block on a TCP send to the syslog host. */
-	u32_t ErrLogTick[8];			// last error-log tick, per channel (rate limit)
-	u16_t ErrSupp[8];				// errors suppressed since last log, per channel
+	 * unattended and every SL_* can block on a TCP send to the syslog host.
+	 * State for ds248xReportHealth(), the SINGLE device-level syslog originator for runtime DS248x
+	 * errors: one line per window carrying per-channel counts, transport failures, recovery skips,
+	 * DRST totals and the freshest error detail - replacing three independent originators
+	 * (per-channel LogError, the ds248xReset block, LogBusy) whose separate windows turned one
+	 * dead bus into ~10 lines/min. Per-EVENT detail still exists at SL_INFO, gated purely by the
+	 * runtime syslog thresholds (raise ioSLOGhi/ioSLhost to 6 = diagnosis mode). */
+	u32_t ErrLogTick;				// device-level report window anchor (was per channel x8)
+	u16_t ErrSupp[8];				// errors per channel since the last report line
+	u16_t XErrCnt;					// transport-level failures (halI2C_Queue < erSUCCESS)
+	u16_t SkipCnt;					// recovery skips (erBUSY) since the last report line
+	u32_t PrvResetOK;				// ResetOK  snapshot at last report (window delta base)
+	u32_t PrvResetErr;				// ResetErr snapshot at last report
+	char LastMsg[40];				// freshest error detail, printed as last=... in the report
+	u8_t State;						// ds248xSTATE_OK / _ERR / _WEDGED
+	u8_t WedgeCnt;					// consecutive windows meeting the wedge criteria
 #if (ds248xSTAT_DEBUG > 0)			// 139 bytes: SD/OWB event + per-channel activity instrumentation
 	u8_t  OpCmd;					// last 1-Wire command byte issued
 	u16_t SDtotal;					// lifetime SD count (telemetry)
@@ -176,7 +187,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	#define DS18X20x3	0
 #endif
 } ds248x_t;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+2+48+ DS18X20x2 + DS18X20x3));	// +2 = CfgSet+CfgPend
+DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+2+74+ DS18X20x2 + DS18X20x3));	// +2 = CfgSet+CfgPend, 74 = health block
 
 typedef union __attribute__((packed)) {
 	struct {
