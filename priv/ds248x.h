@@ -142,6 +142,12 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	 * Every decision about what to DO (which 1-Wire delay to wait, whether strong pull-up must be
 	 * dropped) reads CfgSet; the ->APU/->SPU/->OWS mirror above is for VERIFICATION only. */
 	ds248x_conf_t CfgSet;
+	/* Set by I2C-task recovery when the erBUSY skip fires; consumed (test-and-clear) under the bus
+	 * lock in ds248xBusSelect. Deliberately a FULL byte, not a spare bit in the flags struct above:
+	 * a bitfield would share its byte with LastOWB, which ds248xReset() writes from the lock-holding
+	 * task while the I2C task sets this flag lock-free - two concurrent read-modify-writes on one
+	 * byte lose updates. Whole-byte stores cannot collide with neighbours. */
+	u8_t CfgPend;
 #if	(appPRODUCTION == 0)		    // 16 bytes
 	u8_t PrvStat[8];				// previous STAT reg
 	u8_t PrvConf[8];				// previous CONF reg
@@ -170,7 +176,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	#define DS18X20x3	0
 #endif
 } ds248x_t;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+1+48+ DS18X20x2 + DS18X20x3));	// +1 = CfgSet
+DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+2+48+ DS18X20x2 + DS18X20x3));	// +2 = CfgSet+CfgPend
 
 typedef union __attribute__((packed)) {
 	struct {

@@ -483,6 +483,7 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 			 * nothing in the log says why, which is exactly what made the c98c regression diagnosable
 			 * only from Papertrail history. Rate limited on its OWN window, see ds248xLogBusy. */
 			ds248xLogBusy(psDS248X);
+			psDS248X->CfgPend = 1;			// defer: next BusSelect re-runs config under the lock it holds
 			return erBUSY;
 		}
 	#endif
@@ -515,6 +516,16 @@ int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
 	int iRV = 1;
 	#if (ds248xLOCK == ds248xLOCK_BUS)
 		xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
+		/* Recovery that was skipped because WE (or a predecessor) held the lock mid-transaction.
+		 * Run it now, BEFORE the channel select: ds248xConfig's DRST resets CurChan to 0, so the
+		 * select below then proceeds from known-good state. The owner-aware take inside
+		 * ds248xConfig sees the mutex we hold (CheckCurrent) and runs inline - no deadlock, no
+		 * double-take, and its result is deliberately ignored: a failing device produces its own
+		 * (throttled) log lines, and the select below fails loudly on its own. */
+		if (psDS248X->CfgPend) {
+			psDS248X->CfgPend = 0;
+			ds248xConfig(psDS248X->psI2C);
+		}
 	#endif
 	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800) && (psDS248X->CurChan != Bus))	{	// optimise to avoid unnecessary IO
 		/* Channel Select (Case A)
