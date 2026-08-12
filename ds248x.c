@@ -117,14 +117,23 @@ static void ds248xReportHealth(ds248x_t * psDS248X) {
 	if (NewState <= psDS248X->State && !(bWindow && (Sum || DRSTerr || NewState != psDS248X->State)))
 		return;
 	static const char * const StateName[3] = { "OK", "ERRORS", "WEDGED" };
+	char caFirst[64] = "";
+	#if (ds248xCHAN_ATTRIB > 0)
+	if (psDS248X->FirstMsg[0])							// I-1: the TRIGGER, not the freshest error
+		snprintfx(caFirst, sizeof(caFirst), "  first=Ch%u '%s' Cmd=x%02X Stat=x%02X +%lus",
+			psDS248X->FirstChan, psDS248X->FirstMsg, psDS248X->FirstCmd, psDS248X->FirstStat,
+			(now - psDS248X->FirstTick) / configTICK_RATE_HZ);
+	if (NewState != ds248xSTATE_OK)
+		psDS248X->AuditPend = 1;						// I-3: line-state audit on the next Sense pass
+	#endif
 	SL_LOG((NewState == ds248xSTATE_WEDGED && psDS248X->State != ds248xSTATE_WEDGED) ? SL_SEV_ALERT :
 			NewState ? SL_SEV_ERROR : SL_SEV_NOTICE,
-		"Dev=%d  1W %s->%s  Ch=%u/%u/%u/%u/%u/%u/%u/%u  XErr=%u  Skip=%u  DRST=%d/%d/%d%s%s%s",
+		"Dev=%d  1W %s->%s  Ch=%u/%u/%u/%u/%u/%u/%u/%u  XErr=%u  Skip=%u  DRST=%d/%d/%d%s%s%s%s",
 		psDS248X->psI2C->DevIdx, StateName[psDS248X->State], StateName[NewState],
 		psDS248X->ErrSupp[0], psDS248X->ErrSupp[1], psDS248X->ErrSupp[2], psDS248X->ErrSupp[3],
 		psDS248X->ErrSupp[4], psDS248X->ErrSupp[5], psDS248X->ErrSupp[6], psDS248X->ErrSupp[7],
 		psDS248X->XErrCnt, psDS248X->SkipCnt, ResetOK, ResetErr, ResetBusy,
-		psDS248X->LastMsg[0] ? "  last=" : "", psDS248X->LastMsg,
+		psDS248X->LastMsg[0] ? "  last=" : "", psDS248X->LastMsg, caFirst,
 		(NewState == ds248xSTATE_WEDGED) ? "  POWER CYCLE required, reboot cannot clear a DS2482" : "");
 	psDS248X->ErrLogTick = now;
 	psDS248X->PrvResetOK = (u32_t)ResetOK;
@@ -132,9 +141,33 @@ static void ds248xReportHealth(ds248x_t * psDS248X) {
 	memset(psDS248X->ErrSupp, 0, sizeof(psDS248X->ErrSupp));
 	psDS248X->XErrCnt = psDS248X->SkipCnt = 0;
 	psDS248X->State = NewState;
-	if (NewState == ds248xSTATE_OK)
+	if (NewState == ds248xSTATE_OK) {
 		psDS248X->LastMsg[0] = 0;
+		#if (ds248xCHAN_ATTRIB > 0)
+		psDS248X->FirstMsg[0] = 0;						// episode closed: re-arm the trigger latch
+		#endif
+	}
 }
+
+#if (ds248xCHAN_ATTRIB > 0)
+/**
+ * @brief	I-1: latch the FIRST fault of an error episode - the attribution datum. In-wedge data
+ *			is uniform across channels (the die is latched); only the trigger names the channel.
+ *			Cleared by ds248xReportHealth when the episode closes (State returns OK).
+ */
+static void ds248xFirstFault(ds248x_t * psDS248X, const char * pcMess) {
+	if (psDS248X->FirstMsg[0])
+		return;											// episode open, trigger already latched
+	strncpy(psDS248X->FirstMsg, pcMess, sizeof(psDS248X->FirstMsg) - 1);
+	psDS248X->FirstMsg[sizeof(psDS248X->FirstMsg) - 1] = 0;
+	psDS248X->FirstChan = psDS248X->CurChan;
+	psDS248X->FirstStat = psDS248X->Rstat;
+	#if (ds248xSTAT_DEBUG > 0)
+	psDS248X->FirstCmd = psDS248X->OpCmd;
+	#endif
+	psDS248X->FirstTick = xTaskGetTickCount();
+}
+#endif
 
 /**
  * @brief	Record an error detected by ds248xCheckRead, then attempt device-level recovery
@@ -145,6 +178,9 @@ static void ds248xReportHealth(ds248x_t * psDS248X) {
 static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 	u8_t ch = psDS248X->CurChan;
 	++psDS248X->ErrSupp[ch];							// counted per channel, reported consolidated
+	#if (ds248xCHAN_ATTRIB > 0)
+	ds248xFirstFault(psDS248X, pcMess);
+	#endif
 	strncpy(psDS248X->LastMsg, pcMess, sizeof(psDS248X->LastMsg) - 1);
 	psDS248X->LastMsg[sizeof(psDS248X->LastMsg) - 1] = 0;
 	/* Per-EVENT detail at INFO: invisible at default thresholds and near free (xvSyslog drops it
@@ -166,6 +202,21 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 	return iRV;
 }
 
+#if (ds248xCHAN_ATTRIB > 0)
+void ds248xLogCRC(u8_t DevNum, u8_t PhyBus) {
+	ds248x_t * psDS248X = &psaDS248X[DevNum];
+	++psDS248X->CRCerr[PhyBus];
+	char caBuf[24];
+	snprintfx(caBuf, sizeof(caBuf), "CRC Ch=%u #%u", PhyBus, psDS248X->CRCerr[PhyBus]);
+	++psDS248X->ErrSupp[PhyBus];						// participates in the per-channel window counts
+	strncpy(psDS248X->LastMsg, caBuf, sizeof(psDS248X->LastMsg) - 1);
+	psDS248X->LastMsg[sizeof(psDS248X->LastMsg) - 1] = 0;
+	ds248xFirstFault(psDS248X, caBuf);					// a CRC fail can BE the episode trigger
+	SL_INFO("Dev=%d  Ch=%d  %s", psDS248X->psI2C->DevIdx, PhyBus, caBuf);	// diagnosis-mode stream
+	ds248xReportHealth(psDS248X);						// immediate on escalation, windowed otherwise
+}
+#endif
+
 /**
  * @brief	Monitor resuts from register changes to check for consistency
  * @param[in]	psDS248X pointer to device structure
@@ -180,7 +231,14 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 	char * pcTmp = caBuf;
 	int xLen;
 	if (psDS248X->Rptr == ds248xREG_STAT) {				// STATus register
-		// Short Detected (SD) check 
+		#if (ds248xCHAN_ATTRIB > 0)
+		if (psDS248X->Rstat == 0xFF) {					// all 8 bits set = floating dead-I2C read,
+			++psDS248X->FFCnt;							//  NOT device state: keep it OUT of the
+			snprintfx(caBuf, sizeof(caBuf), "STAT=xFF artifact #%u", psDS248X->FFCnt);
+			goto err_exit;								//  SD/OWB statistics (c998 polluted them)
+		}
+		#endif
+		// Short Detected (SD) check
 		if (psDS248X->SD)			pcTmp = stpcpy(pcTmp, "SD ");
 		// 1W Bus Busy (OWB) check
 		if (psDS248X->OWB)			pcTmp = stpcpy(pcTmp, "OWB ");
@@ -251,6 +309,10 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		#endif
 	} else if (psDS248X->Rptr == ds248xREG_CHAN) {		// CHANnel register...
 		if (psDS248X->Rchan != ds248x_V2N[psDS248X->CurChan]) {	// and values don't match?
+			#if (ds248xCHAN_ATTRIB > 0)
+			if (psDS248X->Rchan == 0xFF)
+				++psDS248X->FFCnt;						// same floating-read artifact class
+			#endif
 			snprintfx(caBuf, sizeof(caBuf)," CHAN (x%02X vs x%02X)", psDS248X->Rchan, ds248x_V2N[psDS248X->CurChan]);
 			goto err_exit;
 		}
@@ -290,6 +352,9 @@ static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSiz
 		 * "!=" not "<": esp_err_t codes are POSITIVE (c98c's ESP_ERR_INVALID_STATE = +259), only
 		 * the internal er### codes are negative - "<" left XErr=0 while the bus failed 810x/min. */
 		++psDS248X->XErrCnt;
+		#if (ds248xCHAN_ATTRIB > 0)
+		ds248xFirstFault(psDS248X, "XErr(transport)");
+		#endif
 		ds248xReportHealth(psDS248X);
 	}
 	#if (ds248xLOCK == ds248xLOCK_IO)
@@ -509,6 +574,9 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 			 * invisible no-op (the c98c lesson: diagnosable only from Papertrail history). The
 			 * skip surfaces as Skip= in the consolidated health line. */
 			++psDS248X->SkipCnt;
+			#if (ds248xCHAN_ATTRIB > 0)
+			ds248xFirstFault(psDS248X, "Skip(recovery)");
+			#endif
 			ds248xReportHealth(psDS248X);
 			psDS248X->CfgPend = 1;			// defer: next BusSelect re-runs config under the lock it holds
 			return erBUSY;
@@ -529,6 +597,9 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 		goto exit;
 	psI2C->CFGok = 1;
 	halEventUpdateDevice(devMASK_DS248X, 1);
+	#if (ds248xCHAN_ATTRIB > 0)
+	psDS248X->AuditPend = 1;							// I-3: baseline audit after boot/recovery config
+	#endif
 exit:
 	#if (ds248xLOCK == ds248xLOCK_BUS)
 		if (bHeld == pdFALSE)
@@ -677,6 +748,38 @@ u8_t ds248xOWSearchTriplet(ds248x_t * psDS248X, u8_t u8Dir) {
 
 // #################################### DS248x debug/reporting #####################################
 
+#if (ds248xCHAN_ATTRIB > 0)
+void ds248xAuditRun(void) {
+	for (int i = 0; i < ds248xCount; ++i) {
+		ds248x_t * psDS248X = &psaDS248X[i];
+		if (psDS248X->AuditPend == 0 || psDS248X->psI2C->Type != i2cDEV_DS2482_800)
+			continue;
+		psDS248X->AuditPend = 0;
+		u8_t SEL = 0, LL = 0, SD = 0, PPD = 0;			// bit N = channel N
+		for (u8_t Ch = 0; Ch < 8; ++Ch) {
+			if (ds248xBusSelect(psDS248X, Ch) != 1)
+				continue;								// select failed: absent from SEL map
+			SEL |= (1 << Ch);
+			if (ds248xReadRegister(psDS248X, ds248xREG_STAT) == 1 && psDS248X->LL)
+				LL |= (1 << Ch);						// idle line level; 0 = held LOW = short/leakage
+			ds248xOWReset(psDS248X);					// 1WRS: SD sampled during reset, PPD = presence
+			if (psDS248X->SD)  SD  |= (1 << Ch);
+			if (psDS248X->PPD) PPD |= (1 << Ch);
+			ds248xBusRelease(psDS248X);
+		}
+		/* Severity escalates with content: a clean audit is a NOTICE, one with a suspect channel
+		 * (selected but line idles LOW, or short detected during reset) must reach the host. */
+		u8_t Suspect = (SEL & ~LL) | SD;
+		char caSus[16] = "";
+		if (Suspect)
+			snprintfx(caSus, sizeof(caSus), "  SUSPECT=x%02X", Suspect);
+		SL_LOG(Suspect ? SL_SEV_WARNING : SL_SEV_NOTICE,
+			"Audit Dev=%d  SEL=x%02X  LL=x%02X  SD=x%02X  PPD=x%02X%s",
+			psDS248X->psI2C->DevIdx, SEL, LL, SD, PPD, caSus);
+	}
+}
+#endif
+
 int ds248xReportStatus(report_t * psR, u8_t Val1, u8_t Val2) {
 	const char * const StatNames[8] = { "OWB", "PPD", "SD", "LL", "RST", "SBR", "TSB", "DIR" };
 	return xReportBitMap(psR, Val1, Val2, 0x000000FF, StatNames);
@@ -746,6 +849,11 @@ int	ds248xReportRegister(report_t * psR, ds248x_t * psDS248X, int Reg) {
 int ds248xReport(report_t * psR, ds248x_t * psDS248X) {
 	int iRV = halI2C_DeviceReport(psR, (void *) psDS248X->psI2C);
 	for (int Reg = 0; Reg < ds248xREG_NUM; ++Reg) iRV += ds248xReportRegister(psR, psDS248X, Reg);
+	#if (ds248xCHAN_ATTRIB > 0)
+		iRV += xReport(psR, "FF=%u  CRCerr=%u/%u/%u/%u/%u/%u/%u/%u\r\n", psDS248X->FFCnt,
+			psDS248X->CRCerr[0], psDS248X->CRCerr[1], psDS248X->CRCerr[2], psDS248X->CRCerr[3],
+			psDS248X->CRCerr[4], psDS248X->CRCerr[5], psDS248X->CRCerr[6], psDS248X->CRCerr[7]);
+	#endif
 	#if (ds248xSTAT_DEBUG > 0)
 		iRV += xReport(psR, "SDtotal=%u  supp=%u/%u/%u/%u/%u/%u/%u/%u\r\n", psDS248X->SDtotal,
 			psDS248X->ErrSupp[0], psDS248X->ErrSupp[1], psDS248X->ErrSupp[2], psDS248X->ErrSupp[3],

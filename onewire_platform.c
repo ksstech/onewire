@@ -1,4 +1,4 @@
-// onewire_platform.c - Copyright (c) 2020-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
+// onewire_platform.c - Copyright (c) 2020-26 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 
@@ -225,8 +225,17 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 			while (iRV) {
 				sRprt.sFM.uCount = LogBus;
 				IF_EXEC_2(debugTRACK && OPT_GET(dbgOWscan), OWP_Print1W_CB, &sRprt, &sOW);
-				iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t));
-				IF_myASSERT(debugRESULT, iRV == 1);
+				if (OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) == 0) {
+					/* EMI-corrupted search result. WAS a live assert - field builds are DEBUG, so
+					 * one glitched search REBOOTED the unit AND discarded the leading-indicator
+					 * signal. Count per channel via the health pipeline and abandon this bus for
+					 * this pass: the search state is untrustworthy, continuing enumerates
+					 * phantom ROMs. */
+					#if (HAL_DS248X > 0) && (ds248xCHAN_ATTRIB > 0)
+					ds248xLogCRC(sOW.DevNum, sOW.PhyBus);
+					#endif
+					break;
+				}
 				sRprt.sFM.uCount = uCount;
 				iRV = Handler(&sRprt, &sOW);
 				if (iRV < erSUCCESS)
@@ -267,8 +276,12 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(report_t *, void *, owdi_t *), void *
 		while (iRV) {
 			sRprt.sFM.uCount = LogBus;
 			IF_EXEC_2(debugTRACK && OPT_GET(dbgOWscan), OWP_Print1W_CB, &sRprt, &sOW);
-			iRV = OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t));
-			IF_myASSERT(debugRESULT, iRV == 1);
+			if (OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) == 0) {	// see OWP_Scan: was a live assert
+				#if (HAL_DS248X > 0) && (ds248xCHAN_ATTRIB > 0)
+				ds248xLogCRC(sOW.DevNum, sOW.PhyBus);
+				#endif
+				break;
+			}
 			sRprt.sFM.uCount = uCount;
 			iRV = Handler(&sRprt, pVoid, &sOW);
 			if (iRV < erSUCCESS)

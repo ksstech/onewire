@@ -62,6 +62,10 @@ enum {													// STATus register bitmap
 	#define ds248xSTAT_DEBUG	(appPRODUCTION == 0)	// default: on in DEBUG builds; set 0/1 to force
 #endif
 
+#ifndef ds248xCHAN_ATTRIB								// I-1..I-4 wedge channel-attribution instruments
+	#define ds248xCHAN_ATTRIB	(appPRODUCTION == 0)	// default: on in DEBUG builds; set 0/1 to force
+#endif
+
 // ######################################### Structures ############################################
 
 // See http://www.catb.org/esr/structure-packing/
@@ -171,6 +175,23 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	char LastMsg[40];				// freshest error detail, printed as last=... in the report
 	u8_t State;						// ds248xSTATE_OK / _ERR / _WEDGED
 	u8_t WedgeCnt;					// consecutive windows meeting the wedge criteria
+#if (ds248xCHAN_ATTRIB > 0)			// 66 bytes: wedge channel-attribution instruments (I-1..I-4)
+	/* I-1 first-fault latch: LastMsg above tracks the FRESHEST error - in a 400/min storm the
+	 * TRIGGER is overwritten within seconds. These latch the first fault of an episode (cleared
+	 * when State returns OK) = the channel that was active when the device started failing.
+	 * In-wedge counters CANNOT attribute (the die is latched, every channel fails uniformly). */
+	char FirstMsg[40];				// first error detail of the current episode
+	u32_t FirstTick;				// when it happened (health line prints age in seconds)
+	u16_t FFCnt;					// I-2: STAT/CHAN reads == 0xFF (floating dead-I2C artifact)
+	u16_t CRCerr[8];				// I-4: per-channel search CRC failures (EMI leading indicator)
+	u8_t FirstChan;					// channel selected at first fault
+	u8_t FirstCmd;					// command in flight (0 if ds248xSTAT_DEBUG off)
+	u8_t FirstStat;					// STATUS byte at first fault
+	u8_t AuditPend;					// I-3: audit scheduled; runs from the Sense scan context
+	#define DS248Xx4	(40+4+2+16+4)
+#else
+	#define DS248Xx4	0
+#endif
 #if (ds248xSTAT_DEBUG > 0)			// 139 bytes: SD/OWB event + per-channel activity instrumentation
 	u8_t  OpCmd;					// last 1-Wire command byte issued
 	u16_t SDtotal;					// lifetime SD count (telemetry)
@@ -187,7 +208,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	#define DS18X20x3	0
 #endif
 } ds248x_t;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+2+74+ DS18X20x2 + DS18X20x3));	// +2 = CfgSet+CfgPend, 74 = health block
+DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+2+74+ DS248Xx4 + DS18X20x2 + DS18X20x3));	// +2 = CfgSet+CfgPend, 74 = health block
 
 typedef union __attribute__((packed)) {
 	struct {
@@ -382,6 +403,24 @@ int ds248xReport(struct report_t * psR, ds248x_t * psDS248X);
  * Report decoded status of all devices & registers
  */
 int ds248xReportAll(struct report_t * psR);
+
+#if (ds248xCHAN_ATTRIB > 0)
+/**
+ * @brief	I-3: run any pending channel line-state audit (LL/SD/PPD sweep of all 8 channels).
+ * @note	Call ONLY from a scan-task context (takes the bus lock per channel); scheduled by
+ *			ds248xConfig (boot/recovery baseline) and by every degraded health-line emission.
+ */
+void ds248xAuditRun(void);
+
+/**
+ * @brief	I-4: record a search-CRC failure through the single-originator health pipeline.
+ * @note	Called from the platform scan loops. Counts per PHYSICAL channel, latches first-fault,
+ *			emits per-event at INFO (diagnosis mode) and rides the throttled health line - NOT a
+ *			raw per-event error (the c764 flood lesson). No DRST: the device is alive, the LINE
+ *			glitched.
+ */
+void ds248xLogCRC(u8_t DevNum, u8_t PhyBus);
+#endif
 
 #ifdef __cplusplus
 }

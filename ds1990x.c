@@ -1,4 +1,4 @@
-// ds1990x.c - Copyright (c) 2020-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
+// ds1990x.c - Copyright (c) 2020-26 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 
@@ -64,6 +64,9 @@ int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
 
 int	ds1990Sense(epw_t * psEWP) {
 	IF_SYSTIMER_START(debugTIMING, stDS1990);
+	#if (HAL_DS248X > 0) && (ds248xCHAN_ATTRIB > 0)
+	ds248xAuditRun();								// I-3: deferred audits (boot baseline/degraded health)
+	#endif
 	int iRV = OWP_Scan(OWFAMILY_01, ds1990SenseCB);
 	IF_SYSTIMER_STOP(debugTIMING, stDS1990);
 	return iRV;
