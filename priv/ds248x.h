@@ -157,7 +157,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 #else
 	#define DS18X20x2	0
 #endif
-	/* 74 bytes, UNCONDITIONAL and deliberately outside the STAT_DEBUG block below: rate limiting is
+	/* 84 bytes, UNCONDITIONAL and deliberately outside the STAT_DEBUG block below: rate limiting is
 	 * not instrumentation. Gated, it vanished from production - the one build where the unit is
 	 * unattended and every SL_* can block on a TCP send to the syslog host.
 	 * State for ds248xReportHealth(), the SINGLE device-level syslog originator for runtime DS248x
@@ -172,6 +172,9 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	u16_t SkipCnt;					// recovery skips (erBUSY) since the last report line
 	u32_t PrvResetOK;				// ResetOK  snapshot at last report (window delta base)
 	u32_t PrvResetErr;				// ResetErr snapshot at last report
+	u32_t BkofTick;					// I5: tick of the last ALLOWED recovery attempt while WEDGED
+	u32_t BkofTicks;				// I5: current backoff interval, MIN doubling to MAX; 0 = disarmed
+	u16_t BkofCnt;					// I5: DRSTs suppressed by the backoff since the last report line
 	char LastMsg[40];				// freshest error detail, printed as last=... in the report
 	u8_t State;						// ds248xSTATE_OK / _ERR / _WEDGED
 	u8_t WedgeCnt;					// consecutive windows meeting the wedge criteria
@@ -208,7 +211,7 @@ typedef struct __attribute__((packed)) ds248x_t {		// DS248X I2C <> 1Wire bridge
 	#define DS18X20x3	0
 #endif
 } ds248x_t;
-DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+2+74+ DS248Xx4 + DS18X20x2 + DS18X20x3));	// +2 = CfgSet+CfgPend, 74 = health block
+DUMB_STATIC_ASSERT(sizeof(ds248x_t) == (4+4+ DS18X20x1 + sizeof(StaticTimer_t) + 9+3+2+84+ DS248Xx4 + DS18X20x2 + DS18X20x3));	// +2 = CfgSet+CfgPend, 84 = health block (incl I5 backoff)
 
 typedef union __attribute__((packed)) {
 	struct {

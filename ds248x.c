@@ -36,6 +36,8 @@
 #define	ds248xLOCK					ds248xLOCK_BUS
 
 #define	dsERR_LOG_INTERVAL			pdMS_TO_TICKS(60000)	// rate limit: <=1 health report / device / minute
+#define	dsBACKOFF_MIN				pdMS_TO_TICKS(5000)		// I5: first WEDGED recovery retry after 5s
+#define	dsBACKOFF_MAX				pdMS_TO_TICKS(60000)	// I5: cap, one recovery attempt per minute
 
 // ##################################### Local structures ##########################################
 
@@ -102,7 +104,15 @@ static void ds248xReportHealth(ds248x_t * psDS248X) {
 		/* "dead in practice": >=10 DRST failures AND <=~10% success in the window. Zero-success
 		 * was the original test, but c98c proved a wedged DS2482 still lands the odd lucky DRST
 		 * (4 OK vs 237 failed per window) - and the intermittent wedge IS the power-cycle class. */
-		if (NewState == ds248xSTATE_ERR &&
+		if (psDS248X->State == ds248xSTATE_WEDGED) {
+			/* I5: STICKY while erroring. The backoff caps DRST attempts far below the >=10
+			 * entry criteria above, so re-testing them here would read the throttle itself as
+			 * recovery and flap WEDGED->ERR->storm->WEDGED forever. And a lone lucky DRST is
+			 * not recovery either (c98c: 4 OK vs 237 in-wedge). Only an ERROR-FREE window
+			 * closes the wedge - the device answering everything again IS the recovery test. */
+			if (Sum == 0 && DRSTerr == 0)
+				psDS248X->WedgeCnt = 0;
+		} else if (NewState == ds248xSTATE_ERR &&
 			(Bad >= 6 || DRSTerr >= 10 || psDS248X->XErrCnt >= 10) &&
 			DRSTerr >= 10 && DRSTerr >= 10 * (DRSTok + 1)) {
 			if (psDS248X->WedgeCnt < 255)
@@ -128,18 +138,28 @@ static void ds248xReportHealth(ds248x_t * psDS248X) {
 	#endif
 	SL_LOG((NewState == ds248xSTATE_WEDGED && psDS248X->State != ds248xSTATE_WEDGED) ? SL_SEV_ALERT :
 			NewState ? SL_SEV_ERROR : SL_SEV_NOTICE,
-		"Dev=%d  1W %s->%s  Ch=%u/%u/%u/%u/%u/%u/%u/%u  XErr=%u  Skip=%u  DRST=%d/%d/%d%s%s%s%s",
+		"Dev=%d  1W %s->%s  Ch=%u/%u/%u/%u/%u/%u/%u/%u  XErr=%u  Skip=%u  Bkof=%u  DRST=%d/%d/%d%s%s%s%s",
 		psDS248X->psI2C->DevIdx, StateName[psDS248X->State], StateName[NewState],
 		psDS248X->ErrSupp[0], psDS248X->ErrSupp[1], psDS248X->ErrSupp[2], psDS248X->ErrSupp[3],
 		psDS248X->ErrSupp[4], psDS248X->ErrSupp[5], psDS248X->ErrSupp[6], psDS248X->ErrSupp[7],
-		psDS248X->XErrCnt, psDS248X->SkipCnt, ResetOK, ResetErr, ResetBusy,
+		psDS248X->XErrCnt, psDS248X->SkipCnt, psDS248X->BkofCnt, ResetOK, ResetErr, ResetBusy,
 		psDS248X->LastMsg[0] ? "  last=" : "", psDS248X->LastMsg, caFirst,
 		(NewState == ds248xSTATE_WEDGED) ? "  POWER CYCLE required, reboot cannot clear a DS2482" : "");
 	psDS248X->ErrLogTick = now;
 	psDS248X->PrvResetOK = (u32_t)ResetOK;
 	psDS248X->PrvResetErr = (u32_t)ResetErr;
 	memset(psDS248X->ErrSupp, 0, sizeof(psDS248X->ErrSupp));
-	psDS248X->XErrCnt = psDS248X->SkipCnt = 0;
+	psDS248X->XErrCnt = psDS248X->SkipCnt = psDS248X->BkofCnt = 0;
+	/* I5: the backoff arms/disarms HERE, the single place State commits. Entering WEDGED starts
+	 * the ladder at MIN (the storm that got us here already proved full rate is useless);
+	 * leaving it - which the sticky window above only allows after an error-free window -
+	 * restores full-rate recovery for the next episode. */
+	if (NewState == ds248xSTATE_WEDGED && psDS248X->State != ds248xSTATE_WEDGED) {
+		psDS248X->BkofTick = now;
+		psDS248X->BkofTicks = dsBACKOFF_MIN;
+	} else if (NewState != ds248xSTATE_WEDGED) {
+		psDS248X->BkofTicks = 0;
+	}
 	psDS248X->State = NewState;
 	if (NewState == ds248xSTATE_OK) {
 		psDS248X->LastMsg[0] = 0;
@@ -440,6 +460,24 @@ static int ds248xWriteConfig(ds248x_t * psDS248X, ds248x_conf_t sConf) {
 // ################### Identification, Diagnostics & Configuration functions #######################
 
 int ds248xReset(ds248x_t * psDS248X) {
+	/* I5: WEDGED backoff - the single choke point every recovery path funnels through
+	 * (ds248xLogError, ds248xConfig via halI2C_ResetSubSystem, CfgPend in BusSelect). c998 ran
+	 * ~5 DRST cycles/sec for 56 minutes against a die only a power cycle can clear, and that
+	 * storm is what fed the fragile panic path. While WEDGED, allow one attempt per interval
+	 * (MIN doubling to MAX), fail everything else fast with NO I2C traffic. Suppressed calls
+	 * are counted (Bkof= in the health line), not silent. Identify-time probing (Test) and the
+	 * disarmed state (BkofTicks==0, degenerate: always allowed) bypass cleanly. */
+	if (psDS248X->State == ds248xSTATE_WEDGED && psDS248X->psI2C->Test == 0 && psDS248X->BkofTicks) {
+		u32_t tNow = xTaskGetTickCount();
+		if ((u32_t)(tNow - psDS248X->BkofTick) < psDS248X->BkofTicks) {
+			if (psDS248X->BkofCnt < 65535)
+				++psDS248X->BkofCnt;
+			return 0;									// fail fast: no DRST, no delays, no config
+		}
+		psDS248X->BkofTick = tNow;
+		psDS248X->BkofTicks = (psDS248X->BkofTicks >= dsBACKOFF_MAX / 2) ? dsBACKOFF_MAX
+															: psDS248X->BkofTicks * 2;
+	}
 	const u8_t cmdDRST = ds248xCMD_DRST;
 	int Retries = 0, iRV;
 	psDS248X->Rptr = ds248xREG_STAT;					// After ReSeT pointer set to STATus register
