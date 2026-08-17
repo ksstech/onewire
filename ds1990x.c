@@ -56,7 +56,8 @@ int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
 		#endif
 		psOW_CI->LastROM.Value = psOW->ROM.Value;
 		psOW_CI->LastRead = NowRead;
-		xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits);
+		if (EventsHandle)								// NULLed on Events task exit - Sense and Events
+			xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits);	// die in the same phase, unordered
 		portYIELD();
 	}
 	return erSUCCESS;
