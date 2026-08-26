@@ -638,8 +638,10 @@ int	ds248xConfig(i2c_di_t * psI2C) {
 	psDS248X->CfgSet.Rconf = 0;							// DRST above left the device at POR default
 	psDS248X->CfgSet.APU = 1;							// Even though only single slave ALWAYS enabled
 	iRV = ds248xWriteConfig(psDS248X, psDS248X->CfgSet);
-	if (iRV < erSUCCESS)
+	if (iRV != 1) {										// returns 1/0, never negative: the < erSUCCESS test always passed
+		iRV = erINV_CONFIG;								// propagate a real failure, CFGok stays 0
 		goto exit;
+	}
 	psI2C->CFGok = 1;
 	halEventUpdateDevice(devMASK_DS248X, 1);
 	#if (ds248xCHAN_ATTRIB > 0)
