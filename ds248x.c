@@ -351,6 +351,14 @@ err_exit:
 	return 0;
 }
 
+#if (benchTEST_DS248X_INJECT > 0)			// ####### bench DS248x fault injection (console c-L) #######
+static u32_t ds248xInjectCnt = 0;			// upcoming SUCCESSFUL reads to poison with 0xFF
+void ds248xFaultInject(u32_t Count) {		// fakes the c70c class: die ACKs everything, registers float
+	ds248xInjectCnt = Count;
+	SL_WARN("DS248x fault-inject %s (%lu reads)", Count ? "ARMED" : "disarmed", Count);
+}
+#endif
+
 /**
  * @brief
  * @param
@@ -372,6 +380,12 @@ static int ds248xWriteDelayRead(ds248x_t * psDS248X, u8_t * pTxBuf, size_t TxSiz
 	int iRV = halI2C_Queue(psDS248X->psI2C, i2cWDR_B, pTxBuf, TxSize, &psDS248X->RegX[Rptr],
 		Rptr == ds248xREG_PADJ ? SO_MEM(ds248x_t, Rpadj) : 1, (i2cq_p1_t) uSdly, (i2cq_p2_t) NULL);
 //	IF_SYSTIMER_STOP(debugTIMING, stDS248x);
+	#if (benchTEST_DS248X_INJECT > 0)
+	if (ds248xInjectCnt && iRV == erSUCCESS) {			// transport OK, data poisoned = the c70c wedge class
+		--ds248xInjectCnt;
+		psDS248X->RegX[Rptr] = 0xFF;
+	}
+	#endif
 	if (iRV != erSUCCESS && psDS248X->psI2C->Test == 0) {
 		/* Transport failure: previously INVISIBLE at this layer (CheckRead never runs when the
 		 * transfer fails), so a fully dead bus produced no ds248x-side line at all. Counted here,
