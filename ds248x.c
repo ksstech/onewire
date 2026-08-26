@@ -724,6 +724,13 @@ int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
 		if (iRV != 1)
 			xRtosSemaphoreGive(&psDS248X->mux);			// release the lock...
 	#endif
+	/* Recovery assessment: ReportHealth was only ever called from ERROR paths, so a device whose
+	 * errors STOP could never close its episode - ERRORS stuck open forever, WedgeCnt stale across
+	 * quiet gaps, and a recovered WEDGED device stayed scan-throttled for life. A successful select
+	 * while degraded feeds the reporter; its own window gating keeps this near-free (~8/s compares,
+	 * one emission per clean window -> WEDGED/ERRORS -> OK, backoff disarms at the commit). */
+	if (iRV == 1 && psDS248X->State != ds248xSTATE_OK)
+		ds248xReportHealth(psDS248X);
 	return iRV;
 }
 
