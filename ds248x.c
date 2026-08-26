@@ -492,6 +492,13 @@ int ds248xReset(ds248x_t * psDS248X) {
 			psDS248X->Rstat = 0;						// RST=0 => reported+counted as a real failure
 			break;										// retrying a dead transport just burns time
 		}
+		if (psDS248X->Rstat == 0xFF) {					// floating dead-I2C read, NOT device state
+			#if (ds248xCHAN_ATTRIB > 0)
+			++psDS248X->FFCnt;
+			#endif
+			psDS248X->Rstat = 0;						// RST=0 => reported+counted as a real failure
+			break;										// more DRSTs at a dead bus just burn time
+		}
 		if (psDS248X->RST && psDS248X->OWB == 0)		// ReSeT successful AND 1W engine left idle?
 			break;										// exit to complete
 		vTaskDelay(pdMS_TO_TICKS(10));					// else spend the remaining attempt(s) trying
