@@ -680,7 +680,8 @@ int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
 			ds248xConfig(psDS248X->psI2C);
 		}
 	#endif
-	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800) && (psDS248X->CurChan != Bus))	{	// optimise to avoid unnecessary IO
+	if ((psDS248X->psI2C->Type == i2cDEV_DS2482_800) &&
+		((psDS248X->CurChan != Bus) || (psDS248X->State != ds248xSTATE_OK))) {	// skip-if-same only while OK: post-DRST CurChan=0 fabricated Ch0 SEL on a dead device
 		/* Channel Select (Case A)
 		 *	S AD,0 [A] CHSL [A] CC [A] Sr AD,1 [A] [RR] A\ P
 		 *  [] indicates from slave
