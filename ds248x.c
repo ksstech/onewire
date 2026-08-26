@@ -133,8 +133,8 @@ static void ds248xReportHealth(ds248x_t * psDS248X) {
 		snprintfx(caFirst, sizeof(caFirst), "  first=Ch%u '%s' Cmd=x%02X Stat=x%02X +%lus",
 			psDS248X->FirstChan, psDS248X->FirstMsg, psDS248X->FirstCmd, psDS248X->FirstStat,
 			(now - psDS248X->FirstTick) / configTICK_RATE_HZ);
-	if (NewState != ds248xSTATE_OK)
-		psDS248X->AuditPend = 1;						// I-3: line-state audit on the next Sense pass
+	if (psDS248X->State == ds248xSTATE_OK && NewState != ds248xSTATE_OK)
+		psDS248X->AuditPend = 1;						// I-3: audit ONCE at episode onset, not every degraded report
 	#endif
 	SL_LOG((NewState == ds248xSTATE_WEDGED && psDS248X->State != ds248xSTATE_WEDGED) ? SL_SEV_ALERT :
 			NewState ? SL_SEV_ERROR : SL_SEV_NOTICE,
