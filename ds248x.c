@@ -195,7 +195,7 @@ static void ds248xFirstFault(ds248x_t * psDS248X, const char * pcMess) {
  * @param[in]	specific error message to log
  * @return		result from ds248xReset, status of RST bit
  */
-static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
+static int ds248xLogEvent(ds248x_t * psDS248X, char const * pcMess) {	// record + report, NO device reset
 	u8_t ch = psDS248X->CurChan;
 	++psDS248X->ErrSupp[ch];							// counted per channel, reported consolidated
 	#if (ds248xCHAN_ATTRIB > 0)
@@ -209,6 +209,11 @@ static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
 	 * rate control. The always-on device-level picture lives in ds248xReportHealth(). */
 	SL_INFO("Dev=%d  Ch=%d  %s", psDS248X->psI2C->DevIdx, ch, pcMess);
 	ds248xReportHealth(psDS248X);
+	return 0;
+}
+
+static int ds248xLogError(ds248x_t * psDS248X, char const * pcMess) {
+	ds248xLogEvent(psDS248X, pcMess);
 	int iRV = ds248xReset(psDS248X);					// DRST reverts the device to POR-default (APU=0)
 	// A DRST on an SD/OWB/CONF error clears the device config. If the device was already configured,
 	// re-apply the configured state (APU=1) so it is not left silently at POR-default. NON-checking
@@ -273,6 +278,8 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 			#else
 			snprintfx(pcTmp, sizeof(caBuf)-xLen, "Stat=x%02X", psDS248X->Rstat);
 			#endif
+			if (psDS248X->SD && psDS248X->OWB == 0)		// SD alone = external line condition (wet or
+				return ds248xLogEvent(psDS248X, caBuf);	//  shorted reader): count+report, do NOT reset
 			goto err_exit;
 		}
 		#if (ds248xSTAT_DEBUG > 0)
