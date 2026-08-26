@@ -656,6 +656,16 @@ exit:
 // ################################## DS248x-x00 1-Wire functions ##################################
 
 int	ds248xBusSelect(ds248x_t * psDS248X, u8_t Bus) {
+	/* I5b: fast-fail the whole scan while WEDGED+backoff - only DRSTs were throttled, the Sense
+	 * sweep kept 8 CHSL/sec hitting the dead device. Lock-free; expiry falls through so the one
+	 * probe select fails into ds248xReset, which owns advancing the backoff. */
+	if (psDS248X->State == ds248xSTATE_WEDGED && psDS248X->psI2C->Test == 0 && psDS248X->BkofTicks) {
+		if ((u32_t)(xTaskGetTickCount() - psDS248X->BkofTick) < psDS248X->BkofTicks) {
+			if (psDS248X->BkofCnt < 65535)
+				++psDS248X->BkofCnt;
+			return 0;
+		}
+	}
 	int iRV = 1;
 	#if (ds248xLOCK == ds248xLOCK_BUS)
 		xRtosSemaphoreTake(&psDS248X->mux, portMAX_DELAY);
