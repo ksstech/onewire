@@ -31,6 +31,13 @@
 static const u8_t AC00Xlat[8] = { 3, 2, 1, 0, 4, 5, 6, 7 };
 #endif
 
+/* TEST 2026-08-31, REVERT (set 0) once proven: sweep channels 7->0 instead of 0->7. First-fault
+ * attribution latches CurChan and every sweep started at Ch0 - if the "Ch0" wedge signatures
+ * move to Ch7 they were a scan-order artefact; if they stay at Ch0 the DRST/config path or the
+ * wiring is the source. SD-type faults are per-channel and should NOT move. */
+#define owpSCAN_REVERSE				1
+#define owpSCAN_BUS(n)				(owpSCAN_REVERSE ? (OWP_NumBus - 1 - (n)) : (n))
+
 // ################################# Platform related variables ####################################
 
 owbi_t * psaOWBI = NULL;
@@ -206,7 +213,8 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 		.Size = repSIZE_SET(sNONE,sgrANSI,0,0,0),
 		.sFM.u32Val = makeMASK09x23(1,0,0,0,0,0,0,0,0,0),
 	};
-	for (int LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
+	for (int n = 0; n < OWP_NumBus; ++n) {
+		int LogBus = owpSCAN_BUS(n);					// TEST: sweep direction, see owpSCAN_REVERSE
 		memset(&sOW, 0, sizeof(owdi_t));
 		OWP_BusL2P(&sOW, LogBus);
 		if (OWP_BusSelect(&sOW)) {
@@ -260,7 +268,8 @@ int	OWP_Scan2(u8_t Family, int (* Handler)(report_t *, void *, owdi_t *), void *
 	u32_t uCount = 0;
 	owdi_t sOW;
 	report_t sRprt = { .pcBuf = NULL, .Size = 0, .sFM.u32Val = makeMASK09x23(1,0,0,0,0,0,0,0,0,0) };
-	for (u8_t LogBus = 0; LogBus < OWP_NumBus; ++LogBus) {
+	for (u8_t n = 0; n < OWP_NumBus; ++n) {
+		u8_t LogBus = owpSCAN_BUS(n);					// TEST: sweep direction, see owpSCAN_REVERSE
 		OWP_BusL2P(&sOW, LogBus);
 		if (OWP_BusSelect(&sOW) == 0)
 			continue;
