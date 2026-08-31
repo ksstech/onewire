@@ -563,7 +563,7 @@ int ds248xReset(ds248x_t * psDS248X) {
 int	ds248xIdentify(i2c_di_t * psI2C) {
 	ds248x_t sDS248X = { 0 };							// temporary device structure
 	sDS248X.psI2C = psI2C;
-	psI2C->Speed = i2cSPEED_400;
+	psI2C->Speed = i2cSPEED_100;						// v2 driver 400KHz marginality on classic ESP32 (esp-idf #14401); v1-era margins
 	psI2C->TObus = 25;
 	psI2C->Test	= 1;
 	psI2C->Type = i2cDEV_UNDEF;							// unidentified at this stage
