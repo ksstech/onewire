@@ -81,9 +81,11 @@ static int ds248xWriteConfigRaw(ds248x_t * psDS248X, ds248x_conf_t sConf);	// fw
  *			and de-escalations wait for the window - a flapping device costs at most one line per
  *			interval each way. Throttling applies in BOTH builds (the c764 lesson: losing the
  *			limiter in production, where every SL_* can block on a TCP send, is the worst place).
- *			WEDGED = two consecutive windows in which NO DRST succeeded AND failure is wide
- *			(>=6 channels erroring, or the transport itself failing repeatedly) - the c98c/c764
- *			hardware class where only a power cycle helps, hence the ALERT + action text.
+ *			WEDGED = two consecutive windows of either: (a) NO DRST succeeding AND failure wide
+ *			(>=6 channels, or the transport failing repeatedly) - the c98c/c764 class; or (b) EVERY
+ *			DRST succeeding while >=6 channels keep failing at volume - the c9a4 class, where the
+ *			1W engine re-wedges after each successful reset. Both need a power cycle, hence the
+ *			ALERT + action text.
  */
 static void ds248xReportHealth(ds248x_t * psDS248X) {
 	if (psDS248X->psI2C->Test)							// identify-time probing errors are expected;
@@ -113,8 +115,14 @@ static void ds248xReportHealth(ds248x_t * psDS248X) {
 			if (Sum == 0 && DRSTerr == 0)
 				psDS248X->WedgeCnt = 0;
 		} else if (NewState == ds248xSTATE_ERR &&
-			(Bad >= 6 || DRSTerr >= 10 || psDS248X->XErrCnt >= 10) &&
-			DRSTerr >= 10 && DRSTerr >= 10 * (DRSTok + 1)) {
+			(  /* (a) DRST itself failing - the c98c/c764 class */
+			   (  (Bad >= 6 || DRSTerr >= 10 || psDS248X->XErrCnt >= 10)
+			   && DRSTerr >= 10 && DRSTerr >= 10 * (DRSTok + 1))
+			   /* (b) DRST SUCCEEDS every time yet every channel keeps failing - c9a4 2026-08-31.
+			    * The 1W engine re-wedges on the next xB4, so the DRST triple reads 147169/0/0 and
+			    * (a) is structurally blind to it: 8 channels x ~60 errors and ~480 SUCCESSFUL
+			    * DRST per window, for hours, until it RTCWDT-crashed. */
+			|| (Bad >= 6 && Sum >= 100 && DRSTok >= 100))) {
 			if (psDS248X->WedgeCnt < 255)
 				++psDS248X->WedgeCnt;
 		} else {
