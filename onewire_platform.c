@@ -54,6 +54,8 @@ owbi_t * psOWP_BusGetPointer(u8_t LogBus) {
 	return &psaOWBI[LogBus];
 }
 
+int OWP_GetNumBus(void) { return OWP_NumBus; }			// callers must range-check BEFORE L2P asserts
+
 /**
  * @brief	Map LOGICAL (platform) bus to PHYSICAL (device) bus
  * @param	psOW - 1W device structure to be updated
@@ -166,9 +168,11 @@ int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI) {
 int	OWP_Count_CB(report_t * psR, owdi_t * psOW) {
 	switch (psOW->ROM.HexChars[owFAMILY]) {
 	#if (HAL_DS1990X > 0)							// DS1990A/R, 2401/11 devices
+	#if (appUSE_ENDPOINTS > 0)	// counter lives in ds1990x.c (endpoint world)
 	extern u8_t	Fam01Count;
 	case OWFAMILY_01:
 		++Fam01Count;
+	#endif
 		return 1;
 	#endif
 
@@ -348,7 +352,9 @@ int	OWP_Config(void) {
 		#endif
 
 		#if	(HAL_DS1990X > 0)
+		#if (appUSE_ENDPOINTS > 0)
 		ds1990xConfig();								// cannot enumerate, simple config
+		#endif
 		#endif
 	}
 	return OWP_NumDev;
