@@ -2,7 +2,9 @@
 
 #pragma once
 
-#include "endpoints.h"
+#if (appUSE_ENDPOINTS > 0)
+	#include "endpoints.h"					// epw_t/URI world - only for endpoint-integrated apps
+#endif
 
 #include "priv/onewire.h"
 #include "priv/ds248x.h"

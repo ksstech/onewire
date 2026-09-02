@@ -2,7 +2,7 @@
 
 #include "hal_platform.h"
 
-#if (HAL_ONEWIRE > 0) && (HAL_DS1990X > 0)
+#if (HAL_ONEWIRE > 0) && (HAL_DS1990X > 0) && (appUSE_ENDPOINTS > 0)
 #include "endpoints.h"
 #include "errors_events.h"
 #include "onewire_platform.h"
