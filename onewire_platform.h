@@ -9,7 +9,9 @@
 #include "priv/onewire.h"
 #include "priv/ds248x.h"
 #include "priv/ds1990x.h"
-#include "priv/ds18x20.h"
+#if (HAL_DS18X20 > 0)
+	#include "priv/ds18x20.h"				// header uses epw_t (endpoints) unconditionally
+#endif
 #include "priv/esp_rmt.h"
 
 #ifdef __cplusplus
