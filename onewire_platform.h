@@ -42,6 +42,7 @@ DUMB_STATIC_ASSERT(sizeof(owbi_t) == 13);
 // ###################################### Public functions #########################################
 
 owbi_t * psOWP_BusGetPointer(u8_t);
+int OWP_GetNumBus(void);
 void OWP_BusL2P(owdi_t *, u8_t);
 int	OWP_BusP2L(owdi_t *);
 int	OWP_BusSelect(owdi_t *);

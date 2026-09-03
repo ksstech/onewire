@@ -1,4 +1,4 @@
-// onewire.h - Copyright (c) 2017-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
+// onewire.h - Copyright (c) 2017-26 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #pragma once
 
@@ -134,6 +134,7 @@ int OWNext(owdi_t * psOW, bool alarm_only) ;
 int	OWSpeed(owdi_t * psOW, bool speed) ;
 int	OWLevel(owdi_t * psOW, bool level) ;
 u8_t OWCheckCRC(u8_t * buf, u8_t buflen) ;
+u8_t OWCalcCRC8(u8_t * buf, u8_t len);
 
 int	OWReadROM(owdi_t * psOW) ;
 void OWAddress(owdi_t * psOW, bool Skip) ;

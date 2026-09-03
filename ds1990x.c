@@ -7,10 +7,17 @@
 #include "errors_events.h"
 #include "onewire_platform.h"
 #include "options.h"
+#include "rules.h"
 #include "syslog.h"
 #include "systiming.h"								// timing debugging
 #include "task_events.h"
 #include "utilitiesX.h"								// vShowActivity
+#include "string_general.h"
+#include "string_parse.h"
+#include "string_to_values.h"
+#include "FreeRTOS_Support.h"
+
+#include <ctype.h>
 
 #define	debugFLAG					0xF000
 
@@ -72,4 +79,54 @@ int	ds1990Sense(epw_t * psEWP) {
 	IF_SYSTIMER_STOP(debugTIMING, stDS1990);
 	return iRV;
 }
+
+#if (cmakeAEP == 2)		// ThingsBoard test tool: drives the REAL actuation pipeline from rule
+						// text, which arrives unprivileged - excluded from every SiteWhere image
+/* Simulated tag presentation: CMD /ow/ds1990x 0 <chan> <rom>
+ * <rom> = 12 hex chars (tag serial MSB first, FAM 0x01 + CRC computed) or
+ *         16 hex chars (full ROM as engraved ie CRC,serial,FAM - CRC verified)
+ * Drives the REAL pipeline: dedup, psaOWBI, Events notify, rules, identity, actuation */
+char * pcEpDS1990_CMD(rule_t * psR, char * pSrc) {
+	if (psR->actPar1[psR->ActIdx] != 0)				// only code 0 (simulate) defined
+		return pcFAILURE;
+	u8_t Chan = 0;
+	char * pcRV = cvParseRangeX32(pSrc, (px_t) &Chan, cvU08, (x32_t) 0, (x32_t) 7);
+	if (pcRV == pcFAILURE || Chan >= OWP_GetNumBus())	// bad channel or OW absent/unconfigured
+		return pcFAILURE;
+	pcRV += xStringCountSpaces(pcRV);
+	char caTok[20];
+	int nChr = 0;
+	while (nChr < 17 && isxdigit((int) pcRV[nChr])) {	// bounded copy, 17+ digits fails below
+		caTok[nChr] = pcRV[nChr];
+		++nChr;
+	}
+	if (nChr != 12 && nChr != 16)
+		return pcFAILURE;
+	caTok[nChr] = 0;
+	u8_t caBin[8];
+	if (xParseHexString(caTok, caBin, sizeof(caBin)) != nChr)
+		return pcFAILURE;
+	owdi_t sOW = { 0 };
+	if (nChr == 16) {								// full ROM, engraved order -> FAM first
+		for (int i = 0; i < sizeof(ow_rom_t); ++i)
+			sOW.ROM.HexChars[i] = caBin[(sizeof(ow_rom_t) - 1) - i];
+		if (sOW.ROM.FAM != OWFAMILY_01 || OWCheckCRC(sOW.ROM.HexChars, sizeof(ow_rom_t)) == 0)
+			return pcFAILURE;
+	} else {										// serial only, MSB first
+		sOW.ROM.FAM = OWFAMILY_01;
+		for (int i = 0; i < SO_MEM(ow_rom_t, TAG); ++i)
+			sOW.ROM.TAG[(SO_MEM(ow_rom_t, TAG) - 1) - i] = caBin[i];
+		sOW.ROM.CRC = OWCalcCRC8(sOW.ROM.HexChars, sizeof(ow_rom_t) - 1);
+	}
+	OWP_BusL2P(&sOW, Chan);							// fills DevNum/PhyBus incl AC00Xlat
+	/* psaOWBI[] only writer (Sense task) holds shEPtiming across the scan - take the same
+	 * mutex so injection never races it; bounded, a wedged scan must not hang the caller */
+	if (xRtosSemaphoreTake(&shEPtiming, pdMS_TO_TICKS(5000)) != pdTRUE)
+		return pcFAILURE;
+	ds1990SenseCB(NULL, &sOW);						// real path: dedup, psaOWBI, notify
+	xRtosSemaphoreGive(&shEPtiming);
+	SL_NOT("SIM Tag %-.8hhY Ch=%d", &sOW.ROM, Chan);	// host-visible audit line
+	return pcRV + nChr;
+}
+#endif		// (cmakeAEP == 2)
 #endif

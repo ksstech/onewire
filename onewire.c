@@ -1,4 +1,4 @@
-// onewire.c - Copyright (c) 2014-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
+// onewire.c - Copyright (c) 2014-26 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 
@@ -258,6 +258,13 @@ u8_t OWCheckCRC(u8_t * buf, u8_t buflen) {
 	if (shift_reg)
 		SL_ERR("CRC=%x (%d) FAIL %'-+hhY", shift_reg, buflen, buflen, buf) ;
 	return shift_reg ? 0 : 1 ;
+}
+
+u8_t OWCalcCRC8(u8_t * buf, u8_t len) {					// Dallas/Maxim CRC8 over len bytes
+	u8_t crc = 0;
+	while (len--)
+		crc = OWUpdateCRC8(crc, *buf++);
+	return crc;
 }
 
 /**
