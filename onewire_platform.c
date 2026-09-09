@@ -31,11 +31,14 @@
 static const u8_t AC00Xlat[8] = { 3, 2, 1, 0, 4, 5, 6, 7 };
 #endif
 
-/* TEST 2026-08-31, REVERT (set 0) once proven: sweep channels 7->0 instead of 0->7. First-fault
- * attribution latches CurChan and every sweep started at Ch0 - if the "Ch0" wedge signatures
- * move to Ch7 they were a scan-order artefact; if they stay at Ch0 the DRST/config path or the
- * wiring is the source. SD-type faults are per-channel and should NOT move. */
-#define owpSCAN_REVERSE				1
+/* Sweep channels 0->7, the natural order: every log, event stream and correlation reads forward.
+ *
+ * From 2026-08-31 this was 1 (7->0) as a deliberate TEST, and the comment here said "REVERT (set 0)
+ * once proven". First-fault attribution latches CurChan and every sweep started at Ch0, so reversing
+ * the order told us whether the "Ch0" wedge signatures were a scan-order artefact (they would move
+ * to Ch7) or the DRST/config path and wiring (they would stay). That test is finished - Andre
+ * 2026-09-09: "A4 does not alter field behaviour. It was a test. 0-7 correct." */
+#define owpSCAN_REVERSE				0
 #define owpSCAN_BUS(n)				(owpSCAN_REVERSE ? (OWP_NumBus - 1 - (n)) : (n))
 
 // ################################# Platform related variables ####################################

@@ -80,13 +80,14 @@ int	ds1990Sense(epw_t * psEWP) {
 	return iRV;
 }
 
-#if (cmakeAEP == 2)		// ThingsBoard test tool: drives the REAL actuation pipeline from rule
-						// text, which arrives unprivileged - excluded from every SiteWhere image
+#if benchTEST_SIM_TAG
 /* Simulated tag presentation: CMD /ow/ds1990x 0 <chan> <rom>
  * <rom> = 12 hex chars (tag serial MSB first, FAM 0x01 + CRC computed) or
  *         16 hex chars (full ROM as engraved ie CRC,serial,FAM - CRC verified)
  * Drives the REAL pipeline: dedup, psaOWBI, Events notify, rules, identity, actuation */
 char * pcEpDS1990_CMD(rule_t * psR, char * pSrc) {
+	if (psR->fPriv == 0)							// console only, never from host-pushed rule text
+		return pcFAILURE;
 	if (psR->actPar1[psR->ActIdx] != 0)				// only code 0 (simulate) defined
 		return pcFAILURE;
 	u8_t Chan = 0;

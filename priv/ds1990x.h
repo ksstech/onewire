@@ -15,7 +15,7 @@ extern "C" {
 void ds1990xConfig(void);
 struct epw_t;
 int	ds1990Sense(struct epw_t * psEWP);
-#if (cmakeAEP == 2)
+#if benchTEST_SIM_TAG
 struct rule_t;
 char * pcEpDS1990_CMD(struct rule_t * psR, char * pSrc);	// CMD /ow/ds1990x 0 <chan> <rom>
 #endif
