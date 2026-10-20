@@ -295,9 +295,9 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		#endif
 		// No error in STATus register
 		#if	(appPRODUCTION == 0)
-		if (xOptionGet(dbgDS248X) > 1) {
+		if (OPT_GET(dbgDS248X) > 1) {
 			const u8_t DS248Xmask[3] = { 0b00001111, 0b00111111, 0b11111111 };
-			u8_t Mask = DS248Xmask[xOptionGet(dbgDS248X) - 1];
+			u8_t Mask = DS248Xmask[OPT_GET(dbgDS248X) - 1];
 			u8_t StatX = psDS248X->PrvStat[psDS248X->CurChan];
 			if ((psDS248X->Rstat & Mask) != (StatX & Mask)) {
 				PX("D=%d  C=%u  x%02X->x%02X  ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, StatX, psDS248X->Rstat);
@@ -333,7 +333,7 @@ static int ds248xCheckRead(ds248x_t * psDS248X, u8_t Value) {
 		}
 		// No error in CONF....
 		#if	(appPRODUCTION == 0)						// for DEVelopment builds
-		if (xOptionGet(dbgDS248X)) {				// if debug option enabled
+		if (OPT_GET(dbgDS248X)) {				// if debug option enabled
 			u8_t ConfX = psDS248X->PrvConf[psDS248X->CurChan];	// if configuration different from previous
 			if (psDS248X->Rconf != ConfX) {				// report old vs new config
 				PX("Dev=%d  Ch=%u  x%02X->x%02X ", psDS248X->psI2C->DevIdx, psDS248X->CurChan, ConfX, psDS248X->Rconf);
