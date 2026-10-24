@@ -47,14 +47,41 @@ void ds1990xConfig(void) {
 
 // #################################### 1W Platform support ########################################
 
+static u32_t owHeldSeen = 0, owHeldPrev = 0;			// buses with a tag present: this sweep / last sweep
+static const char * const HeldName[] = { "UNKNOWN", "GRANTED", "DENIED" };
+
 /* To avoid registering multiple reads if iButton is held in place too long we enforce a
- * period of 'x' seconds within which successive reads of the same tag will be ignored */
+ * period of 'x' seconds within which successive reads of the same tag will be ignored.
+ * A tag still present every sweep beyond that period is HELD: syslog ERROR at onset, every
+ * ioHeldRem minutes and on release; while ioHeldTag it is not re-accepted, so a valid tag no
+ * longer re-fires the strike every dlyDS1990 seconds and an invalid one no longer streams DENIED. */
 int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
 	seconds_t NowRead = xTimeStampSeconds(sTSZ.usecs);
 	u8_t LogChan = OWP_BusP2L(psOW);
 	owbi_t * psOW_CI = psOWP_BusGetPointer(LogChan);
 	u8_t Dly = xOptionGet(dlyDS1990);
-	if ((psOW_CI->LastROM.Value == psOW->ROM.Value) && (NowRead - psOW_CI->LastRead) <= Dly) {
+	u32_t Mask = 1UL << LogChan;
+	owHeldSeen |= Mask;
+	bool bSame = (psOW_CI->LastROM.Value == psOW->ROM.Value);
+	if (bSame && (owHeldPrev & Mask)) {					// present last sweep too: continuous
+		++psOW_CI->HeldCnt;
+		if (psOW_CI->Held == 0 && ((u32_t) psOW_CI->HeldCnt * DS1990X_T_SNS) > ((u32_t) Dly * 1000)) {
+			psOW_CI->Held = 1;
+			psOW_CI->HeldLog = NowRead;
+			SL_ERR("Tag %-.8hhY HELD Ch=%d %s %us", &psOW->ROM, LogChan, HeldName[psOW_CI->LastValid], NowRead - psOW_CI->LastRead);
+		} else if (psOW_CI->Held) {
+			u8_t Rem = xOptionGet(ioHeldRem);				// reminder interval, minutes, 0 = off
+			if (Rem && (NowRead - psOW_CI->HeldLog) >= (seconds_t) Rem * 60) {
+				psOW_CI->HeldLog = NowRead;
+				SL_ERR("Tag %-.8hhY still HELD Ch=%d %s %us", &psOW->ROM, LogChan, HeldName[psOW_CI->LastValid], NowRead - psOW_CI->LastRead);
+			}
+		}
+	} else {
+		psOW_CI->HeldCnt = 0;								// new tag, or re-presented after a gap
+	}
+	if (psOW_CI->Held && xOptionGet(ioHeldTag))
+		return erSUCCESS;									// suppressed: no accept, no event, no rule
+	if (bSame && (NowRead - psOW_CI->LastRead) <= Dly) {
 		IF_PX(debugTRACK && xOptionGet(dbgDS1990x), "Tag repeat %ds" strNL, Dly);
 	} else {
 		IF_PX(debugTRACK && xOptionGet(dbgDS1990x), "Tag %-.8hhY L=%d P=%d" strNL, &psOW->ROM, LogChan, psOW->PhyBus);
@@ -63,6 +90,7 @@ int	ds1990SenseCB(report_t * psR, owdi_t * psOW) {
 		#endif
 		psOW_CI->LastROM.Value = psOW->ROM.Value;
 		psOW_CI->LastRead = NowRead;
+		psOW_CI->LastValid = owHELD_UNKNOWN;				// rules engine fills in GRANTED/DENIED
 		if (EventsHandle)								// NULLed on Events task exit - Sense and Events
 			xTaskNotify(EventsHandle, 1UL << (LogChan + evtFIRST_OW), eSetBits);	// die in the same phase, unordered
 		portYIELD();
@@ -75,7 +103,20 @@ int	ds1990Sense(epw_t * psEWP) {
 	#if (HAL_DS248X > 0) && (ds248xCHAN_ATTRIB > 0)
 	ds248xAuditRun();								// I-3: deferred audits (boot baseline/degraded health)
 	#endif
+	owHeldSeen = 0;
 	int iRV = OWP_Scan(OWFAMILY_01, ds1990SenseCB);
+	// Release = HELD, absent this sweep, and the bus WAS scanned: a wedged/backed-off select is not "removed"
+	u32_t Gone = ~owHeldSeen & OWP_GetScanned();
+	seconds_t Now = xTimeStampSeconds(sTSZ.usecs);
+	for (u8_t Ch = 0; Ch < OWP_GetNumBus(); ++Ch) {
+		owbi_t * psOW_CI = psOWP_BusGetPointer(Ch);
+		if (psOW_CI->Held && (Gone & (1UL << Ch))) {
+			SL_ERR("Tag %-.8hhY RELEASED Ch=%d %s after %us", &psOW_CI->LastROM, Ch, HeldName[psOW_CI->LastValid], Now - psOW_CI->LastRead);
+			psOW_CI->Held = 0;
+			psOW_CI->HeldCnt = 0;
+		}
+	}
+	owHeldPrev = owHeldSeen;
 	IF_SYSTIMER_STOP(debugTIMING, stDS1990);
 	return iRV;
 }

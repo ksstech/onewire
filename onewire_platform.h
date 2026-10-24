@@ -22,6 +22,8 @@ extern "C" {
 
 // ######################################## Enumerations ###########################################
 
+enum { owHELD_UNKNOWN = 0, owHELD_GRANTED, owHELD_DENIED };	// owbi_t.LastValid, set by the rules engine
+
 // ######################################### Structures ############################################
 
 /* Bus related info, ie last device read (ROM & timestamp)
@@ -34,8 +36,18 @@ typedef struct __attribute__((packed)) owbi_t {
 		struct { u8_t ds18b20:4, ds18s20:4; };
 		u8_t ds18any;
 	};
+	// Held-tag detector (ds1990x.c): same ROM present every sweep for longer than dlyDS1990
+	seconds_t	HeldLog;			// last HELD syslog line, paces the ioHeldRem reminder
+	union __attribute__((packed)) {
+		struct __attribute__((packed)) {
+			u32_t	Held:1;			// 1 = HELD: repeat reads suppressed while ioHeldTag
+			u32_t	LastValid:2;	// owHELD_UNKNOWN/GRANTED/DENIED for the last accepted read
+			u32_t	HeldCnt:29;		// consecutive sweeps the same ROM was present
+		};
+		u32_t	HeldAll;
+	};
 } owbi_t;
-DUMB_STATIC_ASSERT(sizeof(owbi_t) == 13);
+DUMB_STATIC_ASSERT(sizeof(owbi_t) == 21);
 
 // #################################### Public Data structures #####################################
 
@@ -43,6 +55,7 @@ DUMB_STATIC_ASSERT(sizeof(owbi_t) == 13);
 
 owbi_t * psOWP_BusGetPointer(u8_t);
 int OWP_GetNumBus(void);
+u32_t OWP_GetScanned(void);			// bit per logical bus whose select succeeded in the last OWP_Scan
 void OWP_BusL2P(owdi_t *, u8_t);
 int	OWP_BusP2L(owdi_t *);
 int	OWP_BusSelect(owdi_t *);

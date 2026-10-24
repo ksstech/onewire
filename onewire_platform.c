@@ -45,6 +45,7 @@ static const u8_t AC00Xlat[8] = { 3, 2, 1, 0, 4, 5, 6, 7 };
 
 owbi_t * psaOWBI = NULL;
 static u8_t	OWP_NumBus = 0, OWP_NumDev = 0;
+static u32_t OWP_Scanned = 0;							// logical buses selected OK in the last OWP_Scan
 
 /* In order to avoid multiple successive reads of the same iButton on the same OW channel
  * we filter reads based on the value of the iButton read and time expired since the last
@@ -58,6 +59,8 @@ owbi_t * psOWP_BusGetPointer(u8_t LogBus) {
 }
 
 int OWP_GetNumBus(void) { return OWP_NumBus; }			// callers must range-check BEFORE L2P asserts
+
+u32_t OWP_GetScanned(void) { return OWP_Scanned; }
 
 /**
  * @brief	Map LOGICAL (platform) bus to PHYSICAL (device) bus
@@ -157,6 +160,8 @@ int	OWP_PrintChan_CB(report_t * psR, owbi_t * psCI) {
 		iRV += xReport(psR, "%R ", xTimeMakeTimeStamp(psCI->LastRead, 0));
 	if (psCI->ds18any)
 		iRV += xReport(psR, "DS18B=%d DS18S=%d", psCI->ds18b20, psCI->ds18s20);
+	if (psCI->Held || psCI->HeldCnt)
+		iRV += xReport(psR, " Held=%u Cnt=%lu Val=%u", (u32_t) psCI->Held, (u32_t) psCI->HeldCnt, (u32_t) psCI->LastValid);
 	if (fmTST(bNL))
 		iRV += xReport(psR, strNL);
 	return iRV;
@@ -220,11 +225,13 @@ int	OWP_Scan(u8_t Family, int (* Handler)(report_t *, owdi_t *)) {
 		.Size = repSIZE_SET(sNONE,sgrANSI,0,0,0),
 		.sFM.u32Val = makeMASK09x23(1,0,0,0,0,0,0,0,0,0),
 	};
+	OWP_Scanned = 0;
 	for (int n = 0; n < OWP_NumBus; ++n) {
 		int LogBus = owpSCAN_BUS(n);					// TEST: sweep direction, see owpSCAN_REVERSE
 		memset(&sOW, 0, sizeof(owdi_t));
 		OWP_BusL2P(&sOW, LogBus);
 		if (OWP_BusSelect(&sOW)) {
+			OWP_Scanned |= 1UL << LogBus;				// a failed select (wedge/back-off) stays clear
 			if (Family != 0) {
 				OWTargetSetup(&sOW, Family);
 				iRV = OWSearch(&sOW, 0);
@@ -339,6 +346,7 @@ int	OWP_Config(void) {
 		OWP_NumBus	+= (psDS248X->NumChan ? 8 : 1);
 	}
 	#endif
+	IF_myASSERT(debugPARAM, OWP_NumBus <= 32);			// OWP_Scanned and the held-tag bitmaps are u32
 
 	// When all technologies & devices individually enumerated
 	if (OWP_NumBus) {
