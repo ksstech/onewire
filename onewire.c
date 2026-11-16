@@ -218,6 +218,105 @@ int	OWFirst(owdi_t * psOW, bool alarm_only) {
  */
 int OWNext(owdi_t * psOW, bool alarm_only) { return OWSearch(psOW, alarm_only) ; }
 
+#if (owSEARCH_EXT > 0)
+/**
+ * @brief	OWSearch with a diagnosis. Same search, same state (LD, LFD, LDF), same return value.
+ *			In psOW->Ext: why a search failed, at which bit, and the time of each phase (us).
+ * @note	The search steps are a copy of OWSearch. If OWSearch changes, change this too.
+ */
+int OWSearchExt(owdi_t * psOW, bool alarm_only) {
+	u8_t BitNum = 1, LastZero = 0, u8SrcDir, u8Status, u8ByteMask = 1;
+	s8_t i8SrcRes = 0, i8ByteNum = 0;
+	u8_t crc8 = 0;
+	owext_t * psX = &psOW->Ext;
+	memset(psX, 0, sizeof(owext_t));
+	psX->Res = owXRES_OTHER;
+	u64_t uT0 = halTIMER_ReadRunTime(), uT1, uT2;
+	if (psOW->LDF == 0) {								// if the last call was not the last device
+		if (OWReset(psOW) == 0) {						// any device there?
+			psOW->LD = 0;								// no, reset the search
+			psOW->LDF = 0;
+			psOW->LFD = 0;
+			psX->Res = owXRES_NOPRES;
+			psX->tRst = psX->tTotal = (u32_t) (halTIMER_ReadRunTime() - uT0);
+			return 0;
+		}
+		uT1 = halTIMER_ReadRunTime();
+		psX->tRst = (u32_t) (uT1 - uT0);
+		OWWriteByte(psOW, alarm_only ? OW_CMD_SEARCHALARM : OW_CMD_SEARCHROM);
+		uT2 = halTIMER_ReadRunTime();
+		psX->tCmd = (u32_t) (uT2 - uT1);
+		do {
+		// if this discrepancy is before the Last Discrepancy
+		// on a previous next then pick the same as last time
+			if (BitNum < psOW->LD) {
+				u8SrcDir = ((psOW->ROM.HexChars[i8ByteNum] & u8ByteMask) > 0) ? 1 : 0 ;
+			} else {									// if equal to last pick 1, if not then pick 0
+				u8SrcDir = (BitNum == psOW->LD) ? 1 : 0;
+			}
+			u8Status = ds248xOWSearchTriplet(&psaDS248X[psOW->DevNum], u8SrcDir) ;
+			s8_t i8IdBit = ((u8Status & ds248xSTAT_SBR) == ds248xSTAT_SBR);
+			s8_t i8IdBitCmp	= ((u8Status & ds248xSTAT_TSB) == ds248xSTAT_TSB);
+			u8SrcDir = ((u8Status & ds248xSTAT_DIR) == ds248xSTAT_DIR) ? 1 : 0 ;
+			if (i8IdBit && i8IdBitCmp) {				// check for no devices on 1-Wire
+				psX->Res = owXRES_NODEV;				// presence was seen, no device took part at this bit
+				psX->Bit = BitNum;
+				break ;
+			} else {
+				if ((!i8IdBit) && (!i8IdBitCmp) && (u8SrcDir == 0)) {
+					LastZero = BitNum ;
+					if (LastZero < 9)
+						psOW->LFD = LastZero ;
+				}
+				if (u8SrcDir == 1)
+					psOW->ROM.HexChars[i8ByteNum] |= u8ByteMask ;
+				else
+					psOW->ROM.HexChars[i8ByteNum] &= ~u8ByteMask;
+				++BitNum ;						// increment the byte counter id_bit_number
+				u8ByteMask <<= 1 ;					// adjust mask for next bit
+				if (u8ByteMask == 0) {				// if mask is 0 byte is done
+					crc8 = OWUpdateCRC8(crc8, psOW->ROM.HexChars[i8ByteNum]);  // Accumulate CRC
+					++i8ByteNum ;					// Next ROM byte
+					u8ByteMask = 1 ;					// Reset the mask
+				}
+			}
+		} while(i8ByteNum < sizeof(ow_rom_t));			// loop till 8 bytes done
+		psX->tBits = (u32_t) (halTIMER_ReadRunTime() - uT2);
+
+		if (!((BitNum < 65) || (crc8 != 0))) {			// search successful ?
+			psOW->LD = LastZero;						// yes
+			if (psOW->LD == 0) 							// last discrepancy?
+				psOW->LDF = 1;							// set flag
+			i8SrcRes = 1;								// status = FOUND !!!
+			psX->Res = owXRES_OK;
+		} else if (psX->Res != owXRES_NODEV) {
+			psX->Res = owXRES_CRC;						// all 64 bits read, the CRC is wrong
+		}
+	} else {
+		psX->Res = owXRES_END;							// the previous call returned the last device
+	}
+
+	// if no device found then reset counters so next 'search' will be like a first
+	if ((i8SrcRes == 0) || (psOW->ROM.HexChars[owFAMILY] == 0)) {
+		psOW->LD = 0;
+		psOW->LDF = 0;
+		psOW->LFD = 0;
+		if (i8SrcRes)
+			psX->Res = owXRES_OTHER;					// found, but with family 0
+		i8SrcRes = 0;
+	}
+	psX->tTotal = (u32_t) (halTIMER_ReadRunTime() - uT0);
+	return i8SrcRes ;
+}
+
+int	OWFirstExt(owdi_t * psOW, bool alarm_only) {
+	psOW->LD = 0;					// reset the search state
+	psOW->LFD = 0;
+	psOW->LDF = 0;
+	return OWSearchExt(psOW, alarm_only);
+}
+#endif
+
 // ################################## Utility 1-Wire operations ####################################
 
 /**

@@ -87,6 +87,25 @@ typedef union ow_rom_t {
 } ow_rom_t;
 DUMB_STATIC_ASSERT( sizeof(ow_rom_t) == 8);
 
+// ############################ OWSearchExt: the search with a diagnosis ###########################
+// OWSearchExt is OWSearch plus the cause of a failed search, the bit it stopped at and the time of each phase, kept in
+// psOW->Ext. Compiled only when owSEARCH_EXT is 1 (default 0): owdi_t and the code are then exactly as before.
+#ifndef owSEARCH_EXT
+	#define owSEARCH_EXT	0
+#endif
+
+#if (owSEARCH_EXT > 0)
+enum { owXRES_OK = 0, owXRES_NOBUS, owXRES_NOPRES, owXRES_NODEV, owXRES_CRC, owXRES_END, owXRES_OTHER };
+typedef struct __attribute__((packed)) owext_t {
+	u8_t Res;						// owXRES_*
+	u8_t Bit;						// 1..64: the bit at which a search ended with no device taking part, else 0
+	u32_t tRst;						// us: OWReset, including the wait for the presence pulse
+	u32_t tCmd;						// us: the SEARCH ROM command byte
+	u32_t tBits;					// us: the search triplets
+	u32_t tTotal;					// us: the whole call
+} owext_t;
+#endif
+
 typedef	struct __attribute__((packed)) owdi_t {
 	ow_rom_t ROM;					// size = 8
 	u8_t LD;						// Last Discrepancy (bit #)
@@ -100,8 +119,15 @@ typedef	struct __attribute__((packed)) owdi_t {
 		u8_t PSU:1;					// 1=External Power
 		u8_t Spare:7;
 	};
+	#if (owSEARCH_EXT > 0)
+	owext_t Ext;					// written by OWSearchExt / OWFirstExt only
+	#endif
 } owdi_t;
+#if (owSEARCH_EXT > 0)
+DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12 + sizeof(owext_t));
+#else
 DUMB_STATIC_ASSERT(sizeof(owdi_t) == 12);
+#endif
 
 // LD must be same or bigger size as LFD
 // i8LastZero, check
@@ -128,6 +154,10 @@ void OWFamilySkipSetup(owdi_t * psOW) ;
 int OWSearch(owdi_t * psOW, bool alarm_only) ;
 int OWFirst(owdi_t * psOW, bool alarm_only) ;
 int OWNext(owdi_t * psOW, bool alarm_only) ;
+#if (owSEARCH_EXT > 0)
+int OWSearchExt(owdi_t * psOW, bool alarm_only) ;	// 1 found, 0 not; the cause is in psOW->Ext.Res
+int OWFirstExt(owdi_t * psOW, bool alarm_only) ;
+#endif
 
 // ############################## Utility 1-Wire operations ########################################
 
