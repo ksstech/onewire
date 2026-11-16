@@ -56,6 +56,8 @@ DUMB_STATIC_ASSERT(sizeof(owbi_t) == 21);
 owbi_t * psOWP_BusGetPointer(u8_t);
 int OWP_GetNumBus(void);
 u32_t OWP_GetScanned(void);			// bit per logical bus whose select succeeded in the last OWP_Scan
+void OWP_SetScanSkip(u8_t Mask);	// bit n = 1: logical bus n is not scanned by OWP_Scan / OWP_Scan2. Default 0 = all buses
+u8_t OWP_GetScanSkip(void);
 void OWP_BusL2P(owdi_t *, u8_t);
 int	OWP_BusP2L(owdi_t *);
 int	OWP_BusSelect(owdi_t *);
